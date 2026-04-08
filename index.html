@@ -11,7 +11,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;color:#2d3748;f
 header{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:white;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{font-size:1.1rem;font-weight:700;flex:1}
 .hbtn{padding:6px 14px;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
-.hbtn.exp{background:#48bb78;color:white}.hbtn.imp{background:#ed8936;color:white}.hbtn.gs{background:#805ad5;color:white}
+.hbtn.exp{background:#48bb78;color:white}.hbtn.imp{background:#ed8936;color:white}.hbtn.gs{background:#805ad5;color:white}.hbtn.fb{background:#dd6b20;color:white}
 .ynav{background:#2d3748;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ynav label{color:#a0aec0;font-size:.78rem;font-weight:600}
 #ySel{padding:5px 10px;border-radius:6px;border:none;font-size:.85rem;font-weight:700;color:#2d3748;width:110px}
@@ -146,6 +146,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .mbtn-save{flex:1;padding:10px;background:linear-gradient(135deg,#553c9a,#805ad5);color:white;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;min-width:120px}
 .mbtn-cancel{padding:10px 16px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;color:#718096;cursor:pointer;font-weight:600}
 .mbtn-clear{padding:10px 12px;background:#fff5f5;border:1.5px solid #fc8181;border-radius:8px;font-size:.78rem;color:#c53030;cursor:pointer;font-weight:600}
+.mbtn-fb{flex:1;padding:10px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;min-width:120px}
 .gs-status-bar{font-size:.73rem;margin-top:10px;padding:8px 12px;border-radius:7px;display:none}
 .gs-status-bar.show{display:block}
 .gs-status-bar.ok{background:#f0fff4;color:#276749;border:1px solid #9ae6b4}
@@ -186,6 +187,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <h1>โปรแกรมคำนวณเงินเดือน + OT</h1>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="hbtn gs" onclick="openCfg()">☁️ Google Sheets</button>
+    <button class="hbtn fb" onclick="openFbCfg()">🔥 Firebase</button>
     <button class="hbtn exp" onclick="doExport()">⬇️ Export CSV</button>
     <button class="hbtn imp" onclick="ge('fIn').click()">⬆️ Import CSV</button>
     <input type="file" id="fIn" accept=".csv" style="display:none" onchange="doImport(this)">
@@ -393,6 +395,43 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 </div>
 
+<!-- ── Firebase Config Modal ── -->
+<div id="fbModal" class="modal-overlay" onclick="if(event.target===this)closeFbCfg()">
+  <div class="modal-box">
+    <div class="modal-title">🔥 ตั้งค่า Firebase Firestore</div>
+    <div class="modal-sub">เชื่อมต่อกับ Firebase Firestore เพื่อบันทึกข้อมูลบน Cloud<br>เข้าถึงได้จากทุกเครื่องและทุก Browser</div>
+
+    <div class="steps">
+      <div class="steps-title">📋 วิธีตั้งค่าครั้งแรก (ทำครั้งเดียว)</div>
+      <ol>
+        <li>ไปที่ <strong>console.firebase.google.com</strong> แล้วสร้างโปรเจกต์ใหม่</li>
+        <li>เปิด <strong>Firestore Database</strong> → เลือก mode <strong>Test mode</strong></li>
+        <li>ไปที่ <strong>Project Settings → General</strong> แล้ว Copy<br>
+          &nbsp;&nbsp;• <strong>Web API Key</strong> และ <strong>Project ID</strong></li>
+        <li>กรอกข้อมูลด้านล่าง แล้วกด <strong>บันทึก Config</strong></li>
+      </ol>
+    </div>
+
+    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px">Web API Key</label>
+    <input id="fbApiKey" class="gsin" type="text" placeholder="AIzaSy...">
+
+    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px;margin-top:10px">Project ID</label>
+    <input id="fbProjectId" class="gsin" type="text" placeholder="my-project-12345">
+
+    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px;margin-top:10px">Document ID (ชื่อผู้ใช้/อุปกรณ์)</label>
+    <input id="fbDocId" class="gsin" type="text" placeholder="default">
+    <div class="gs-hint">Document ID ใช้แยกข้อมูลระหว่างผู้ใช้ — ใส่ชื่อใดก็ได้ (เช่น ชื่อของคุณ)</div>
+
+    <div id="fbStatus" class="gs-status-bar"></div>
+
+    <div class="modal-btns">
+      <button class="mbtn-fb" onclick="saveFbCfg()">🔥 บันทึก Config</button>
+      <button class="mbtn-cancel" onclick="closeFbCfg()">ยกเลิก</button>
+      <button class="mbtn-clear" onclick="clearFbCfg()">🗑️ ล้าง (ใช้ Local)</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Google Sheets Config Modal ── -->
 <div id="cfgModal" class="modal-overlay" onclick="if(event.target===this)closeCfg()">
   <div class="modal-box">
@@ -430,6 +469,10 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 
 <div class="toast" id="toast"></div>
 
+<!-- Firebase SDK (compat v9) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
 <script>
 'use strict';
 /* ── Constants ── */
@@ -439,6 +482,8 @@ const MF=['มกราคม','กุมภาพันธ์','มีนาค
 const SK='sol_v5';
 const SKM='sol_v5_meta';
 const GS_URL_KEY='sol_gs_url';
+const FB_CFG_KEY='sol_fb_cfg';
+const FB_APP_NAME='salary-calc-fb';
 const BRAK=[{a:0,b:150000,r:0},{a:150000,b:300000,r:.05},{a:300000,b:500000,r:.10},
   {a:500000,b:750000,r:.15},{a:750000,b:1e6,r:.20},{a:1e6,b:2e6,r:.25},
   {a:2e6,b:5e6,r:.30},{a:5e6,b:Infinity,r:.35}];
@@ -463,6 +508,9 @@ let A=[],D=[],I=[];
 let lastTax=undefined;
 let CH={c1:null,c2:null,c3:null};
 let gsUrl='';
+let fbDb=null;
+let fbCfg=null;
+let fbDocId='default';
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -509,12 +557,16 @@ async function gsPost(data){
 function setSyncSt(state,msg){
   const el=ge('syncSt');if(!el)return;
   const map={
-    loading:{txt:'🔄 กำลังโหลด GS...',   color:'#90cdf4'},
-    saving: {txt:'🔄 กำลังบันทึก GS...', color:'#90cdf4'},
-    ok:     {txt:'☁️ GS ซิงค์แล้ว',       color:'#68d391'},
-    error:  {txt:'❌ GS: '+(msg||'error'), color:'#fc8181'},
-    local:  {txt:'💾 Local เท่านั้น',      color:'#f6ad55'},
-    none:   {txt:'',                       color:'transparent'},
+    loading:   {txt:'🔄 กำลังโหลด GS...',          color:'#90cdf4'},
+    saving:    {txt:'🔄 กำลังบันทึก GS...',         color:'#90cdf4'},
+    ok:        {txt:'☁️ GS ซิงค์แล้ว',              color:'#68d391'},
+    error:     {txt:'❌ GS: '+(msg||'error'),        color:'#fc8181'},
+    local:     {txt:'💾 Local เท่านั้น',             color:'#f6ad55'},
+    fb_loading:{txt:'🔄 กำลังโหลด Firebase...',     color:'#90cdf4'},
+    fb_saving: {txt:'🔄 กำลังบันทึก Firebase...',   color:'#fbd38d'},
+    fb_ok:     {txt:'🔥 Firebase ซิงค์แล้ว',        color:'#ed8936'},
+    fb_error:  {txt:'❌ Firebase: '+(msg||'error'),  color:'#fc8181'},
+    none:      {txt:'',                              color:'transparent'},
   };
   const s=map[state]||map.none;
   el.textContent=s.txt;
@@ -582,6 +634,121 @@ function loadAllFromGS(data,lastSaved){
 }
 
 /* ════════════════════════════════════════════════════
+   Firebase / Firestore Integration
+   ════════════════════════════════════════════════════ */
+
+function fbInit(cfg){
+  if(!cfg||!cfg.apiKey||!cfg.projectId)return false;
+  try{
+    const existing=firebase.apps.find(a=>a.name===FB_APP_NAME);
+    if(existing){
+      fbDb=firebase.firestore(existing);
+      fbDocId=cfg.docId||'default';
+      return true;
+    }
+    const app=firebase.initializeApp({
+      apiKey:cfg.apiKey,
+      authDomain:`${cfg.projectId}.firebaseapp.com`,
+      projectId:cfg.projectId,
+    },FB_APP_NAME);
+    fbDb=firebase.firestore(app);
+    fbDocId=cfg.docId||'default';
+    return true;
+  }catch(e){
+    console.warn('Firebase init error:',e);
+    fbDb=null;
+    return false;
+  }
+}
+
+function openFbCfg(){
+  const cfg=fbCfg||{};
+  ge('fbApiKey').value=cfg.apiKey||'';
+  ge('fbProjectId').value=cfg.projectId||'';
+  ge('fbDocId').value=cfg.docId||'default';
+  showFbStatus('');
+  ge('fbModal').classList.add('open');
+}
+function closeFbCfg(){ge('fbModal').classList.remove('open');}
+function showFbStatus(msg,type='info'){
+  const el=ge('fbStatus');
+  el.textContent=msg;
+  el.className='gs-status-bar'+(msg?' show '+type:'');
+}
+
+async function saveFbCfg(){
+  const apiKey=ge('fbApiKey').value.trim();
+  const projectId=ge('fbProjectId').value.trim();
+  const docId=ge('fbDocId').value.trim()||'default';
+  if(!apiKey||!projectId){
+    showFbStatus('กรุณากรอก API Key และ Project ID ให้ครบ','err');
+    return;
+  }
+  /* ลบ app เก่าก่อน init ใหม่ (กรณีเปลี่ยน config) */
+  const existing=firebase.apps.find(a=>a.name===FB_APP_NAME);
+  if(existing){try{await existing.delete();}catch(e){}}
+  const cfg={apiKey,projectId,docId};
+  if(!fbInit(cfg)){
+    showFbStatus('ไม่สามารถ init Firebase ได้ — ตรวจสอบ API Key และ Project ID','err');
+    return;
+  }
+  fbCfg=cfg;
+  try{localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));}catch(e){}
+  showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
+  try{
+    const result=await fbLoad();
+    if(result&&result.data){
+      showFbStatus('เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล...','ok');
+      loadAllFromFB(result.data,result.lastSaved);
+    }else{
+      showFbStatus('เชื่อมต่อสำเร็จ! ยังไม่มีข้อมูลใน Firebase','ok');
+      setSyncSt('fb_ok');
+    }
+    setTimeout(closeFbCfg,1200);
+  }catch(e){
+    showFbStatus('เชื่อมต่อไม่ได้: '+e.message+' — ตรวจสอบ Config และ Firestore Rules','err');
+  }
+}
+
+function clearFbCfg(){
+  fbDb=null;fbCfg=null;fbDocId='default';
+  try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
+  closeFbCfg();
+  toast('ล้าง Firebase Config แล้ว — ใช้ localStorage แทน');
+  if(!gsUrl)setSyncSt('local');
+}
+
+async function fbSave(){
+  if(!fbDb)return;
+  const now=new Date();
+  const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
+  await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
+  return ts;
+}
+
+async function fbLoad(){
+  if(!fbDb)return null;
+  const snap=await fbDb.collection('salary_data').doc(fbDocId).get();
+  if(!snap.exists)return null;
+  return snap.data();
+}
+
+function loadAllFromFB(data,lastSaved){
+  if(data&&typeof data==='object'){
+    Object.keys(data).forEach(ym=>{
+      const rec=data[ym];
+      if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+      DB[ym]=rec;
+    });
+    try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  }
+  setSyncSt('fb_ok');
+  setBadge(lastSaved||null,'fb');
+  buildTabs();updateDots();switchTab(CT,true);
+  toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
+}
+
+/* ════════════════════════════════════════════════════
    Storage (localStorage + GS)
    ════════════════════════════════════════════════════ */
 async function persist(){
@@ -592,9 +759,23 @@ async function persist(){
   try{localStorage.setItem(SKM,ts);}catch(e){}
   setBadge(ts,'local');
 
-  /* 2. ถ้ามี GS URL → sync เดือนปัจจุบันไป GS */
+  /* 2. Firebase sync (ถ้ามี config) — priority สูงกว่า GS */
+  if(fbDb&&CT!==12){
+    setSyncSt('fb_saving');
+    try{
+      const fbTs=await fbSave();
+      setSyncSt('fb_ok');
+      setBadge(fbTs||ts,'fb');
+    }catch(e){
+      setSyncSt('fb_error',e.message);
+      console.warn('Firebase save failed:',e);
+    }
+    return;
+  }
+
+  /* 3. GS sync (ถ้ามี URL และไม่มี Firebase) */
   if(!gsUrl||CT===12){
-    if(!gsUrl)setSyncSt('local');
+    if(!gsUrl&&!fbDb)setSyncSt('local');
     return;
   }
   const ym=ymk(CT);
@@ -611,10 +792,32 @@ async function persist(){
 }
 
 async function restore(){
-  /* โหลด GS URL จาก localStorage ก่อน */
+  /* โหลด Firebase config จาก localStorage ก่อน */
+  try{
+    const raw=localStorage.getItem(FB_CFG_KEY);
+    if(raw){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
+  }catch(e){fbDb=null;}
+
+  /* 1. ลอง Firebase ก่อน (priority สูงสุด) */
+  if(fbDb){
+    setSyncSt('fb_loading');
+    try{
+      const result=await fbLoad();
+      if(result&&result.data){
+        loadAllFromFB(result.data,result.lastSaved);
+        return true;
+      }
+      setSyncSt('fb_ok');
+    }catch(e){
+      setSyncSt('fb_error','โหลดไม่ได้ — ใช้ข้อมูล local แทน');
+      console.warn('Firebase restore failed:',e);
+    }
+  }
+
+  /* 2. โหลด GS URL จาก localStorage */
   try{gsUrl=localStorage.getItem(GS_URL_KEY)||'';}catch(e){gsUrl='';}
 
-  if(gsUrl){
+  if(gsUrl&&!fbDb){
     setSyncSt('loading');
     try{
       const r=await gsGet({action:'getAll'});
@@ -629,7 +832,7 @@ async function restore(){
     }
   }
 
-  /* Fallback: localStorage */
+  /* 3. Fallback: localStorage */
   try{
     const raw=localStorage.getItem(SK);
     if(raw){
@@ -645,12 +848,12 @@ async function restore(){
     const ts=localStorage.getItem(SKM);
     setBadge(ts||null,'local');
   }catch(e){setBadge(null,'local');}
-  if(!gsUrl)setSyncSt('local');
+  if(!gsUrl&&!fbDb)setSyncSt('local');
   return false;
 }
 
 function setBadge(ts,source){
-  const src=source==='gs'?' ☁️':source==='local'?' 💾':'';
+  const src=source==='gs'?' ☁️':source==='fb'?' 🔥':source==='local'?' 💾':'';
   ge('bdg').innerHTML=ts
     ?`บันทึกล่าสุด${src}: <strong>${ts}</strong>`
     :`${src||'💾'} ยังไม่มีข้อมูลที่บันทึกไว้`;
