@@ -147,6 +147,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .mbtn-cancel{padding:10px 16px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;color:#718096;cursor:pointer;font-weight:600}
 .mbtn-clear{padding:10px 12px;background:#fff5f5;border:1.5px solid #fc8181;border-radius:8px;font-size:.78rem;color:#c53030;cursor:pointer;font-weight:600}
 .mbtn-fb{flex:1;padding:10px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;min-width:120px}
+.mbtn-share{width:100%;padding:9px;background:linear-gradient(135deg,#2b6cb0,#4299e1);color:white;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:6px}
 .gs-status-bar{font-size:.73rem;margin-top:10px;padding:8px 12px;border-radius:7px;display:none}
 .gs-status-bar.show{display:block}
 .gs-status-bar.ok{background:#f0fff4;color:#276749;border:1px solid #9ae6b4}
@@ -429,6 +430,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <button class="mbtn-cancel" onclick="closeFbCfg()">ยกเลิก</button>
       <button class="mbtn-clear" onclick="clearFbCfg()">🗑️ ล้าง (ใช้ Local)</button>
     </div>
+    <button class="mbtn-share" onclick="copyFbShareLink()">🔗 คัดลอก Link แชร์ (เปิดบนอุปกรณ์อื่นไม่ต้อง config ใหม่)</button>
   </div>
 </div>
 
@@ -718,6 +720,26 @@ function clearFbCfg(){
   if(!gsUrl)setSyncSt('local');
 }
 
+function copyFbShareLink(){
+  const apiKey=ge('fbApiKey').value.trim();
+  const projectId=ge('fbProjectId').value.trim();
+  const docId=ge('fbDocId').value.trim()||'default';
+  if(!apiKey||!projectId){
+    showFbStatus('กรุณากรอก API Key และ Project ID ก่อน','err');
+    return;
+  }
+  const cfg={k:apiKey,p:projectId,d:docId};
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
+  const url=location.href.split('#')[0]+'#fb='+encoded;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>{
+      showFbStatus('คัดลอก Link แล้ว! แชร์ให้อุปกรณ์อื่นเปิด URL นี้ได้เลย','ok');
+    }).catch(()=>{prompt('คัดลอก URL นี้แล้วแชร์:',url);});
+  }else{
+    prompt('คัดลอก URL นี้แล้วแชร์:',url);
+  }
+}
+
 async function fbSave(){
   if(!fbDb)return;
   const now=new Date();
@@ -792,10 +814,27 @@ async function persist(){
 }
 
 async function restore(){
+  /* ตรวจ URL hash สำหรับ Firebase config ที่แชร์มา */
+  try{
+    const hash=location.hash;
+    if(hash.startsWith('#fb=')){
+      const encoded=hash.slice(4);
+      const parsed=JSON.parse(decodeURIComponent(escape(atob(encoded))));
+      if(parsed.k&&parsed.p){
+        const cfg={apiKey:parsed.k,projectId:parsed.p,docId:parsed.d||'default'};
+        fbCfg=cfg;
+        fbInit(cfg);
+        localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));
+        history.replaceState(null,'',location.href.split('#')[0]);
+        toast('🔗 โหลด Firebase Config จาก Link สำเร็จ!','ts');
+      }
+    }
+  }catch(e){console.warn('URL hash FB config error:',e);}
+
   /* โหลด Firebase config จาก localStorage ก่อน */
   try{
     const raw=localStorage.getItem(FB_CFG_KEY);
-    if(raw){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
+    if(raw&&!fbDb){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
   }catch(e){fbDb=null;}
 
   /* 1. ลอง Firebase ก่อน (priority สูงสุด) */
