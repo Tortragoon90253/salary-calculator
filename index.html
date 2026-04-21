@@ -871,14 +871,16 @@ async function restore(){
   if(fbDb){
     setSyncSt('fb_loading');
     try{
-      const result=await fbLoad();
+      const fbTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
+      const result=await Promise.race([fbLoad(),fbTimeout]);
       if(result&&result.data){
         loadAllFromFB(result.data,result.lastSaved);
         return true;
       }
       setSyncSt('fb_ok');
     }catch(e){
-      setSyncSt('fb_error','โหลดไม่ได้ — ใช้ข้อมูล local แทน');
+      const msg=e.message==='timeout'?'Firebase หมดเวลาเชื่อมต่อ — ใช้ข้อมูล local แทน':'โหลดไม่ได้ — ใช้ข้อมูล local แทน';
+      setSyncSt('fb_error',msg);
       console.warn('Firebase restore failed:',e);
     }
   }
@@ -1110,8 +1112,21 @@ async function init(){
     o.textContent=`${y} (พ.ศ. ${y+543})`;
     if(y===CY)o.selected=true;sel.appendChild(o);
   }
-  const gsLoaded=await restore();
-  if(!gsLoaded){buildTabs();updateDots();switchTab(CT,true);}
+  /* แสดงข้อมูล localStorage ก่อนเสมอ เพื่อไม่ให้หน้าจอว่าง */
+  try{
+    const raw=localStorage.getItem(SK);
+    if(raw){
+      const obj=JSON.parse(raw);
+      Object.keys(obj).forEach(ym=>{
+        const rec=obj[ym];
+        if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+        DB[ym]=rec;
+      });
+    }
+  }catch(e){}
+  buildTabs();updateDots();switchTab(CT,true);
+  /* จากนั้น sync กับ cloud ใน background — ถ้ามีข้อมูลใหม่จะ re-render อัตโนมัติ */
+  await restore();
 }
 
 function buildTabs(){
@@ -1609,7 +1624,7 @@ function renderDedSum(){
   ge('dedFlt').innerHTML=cats.map(c=>{
     const active=dedActive[c.key];
     const solo=isSolo&&c.key===soloKey;
-    return`<button class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" onclick="toggleDed(${JSON.stringify(c.key)})" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'✓ ':''}${esc(c.label)}</button>`;
+    return`<button class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" onclick="toggleDed(${JSON.stringify(c.key).replace(/"/g,'&quot;')})" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'&#10003; ':''}${esc(c.label)}</button>`;
   }).join('')+(isSolo?`<button class="ded-show-all" onclick="showAllDed()">✕ แสดงทั้งหมด</button>`:'');
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
