@@ -155,6 +155,18 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .gs-status-bar.info{background:#ebf8ff;color:#2b6cb0;border:1px solid #90cdf4}
 .pdfbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:linear-gradient(135deg,#c53030,#e53e3e);color:white;border:none;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;margin-bottom:14px}
 .pdfbtn:hover{opacity:.88}
+/* Deduction category summary */
+.ded-flt-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
+.ded-flt-lbl{font-size:.72rem;font-weight:700;color:#718096;margin-right:2px}
+.ded-flt-btn{padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;border:2px solid transparent;transition:opacity .2s,filter .2s;white-space:nowrap}
+.ded-flt-btn.on{opacity:1}.ded-flt-btn.off{opacity:.35;filter:grayscale(.6)}
+.ded-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;margin-bottom:16px}
+.ded-stat-item{background:#f7fafc;border-radius:8px;padding:10px 12px;border-left:4px solid #e2e8f0}
+.ded-stat-lbl{font-size:.68rem;color:#718096;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ded-stat-val{font-size:1rem;font-weight:800;color:#2d3748}
+.ded-stat-sub{font-size:.65rem;color:#a0aec0;margin-top:2px}
+.ded-charts-wrap{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+@media(max-width:700px){.ded-charts-wrap{grid-template-columns:1fr}}
 @media print{
   header,.ynav,.tabs,.toast,.modal-overlay,.pdfbtn,.prbtn{display:none!important}
   #mv{display:none!important}
@@ -389,6 +401,17 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       </table>
     </div></div>
   </div>
+  <div class="card">
+    <div class="ch cpu">💸 สรุปรายการหักแยกตามหมวดหมู่</div>
+    <div class="cb">
+      <div class="ded-flt-wrap"><span class="ded-flt-lbl">กรองหมวด:</span><div id="dedFlt" style="display:contents"></div></div>
+      <div id="dedCatStat" class="ded-stat-grid"></div>
+      <div class="ded-charts-wrap">
+        <div class="cbx"><h3>📊 รายการหักรายเดือน (แยกหมวดหมู่)</h3><canvas id="cDedBar" height="180"></canvas></div>
+        <div class="cbx"><h3>🥧 สัดส่วนรายการหักทั้งปี</h3><canvas id="cDedPie" height="180"></canvas></div>
+      </div>
+    </div>
+  </div>
   <div class="cg">
     <div class="cbx full"><h3>📈 รายได้รวม / รายได้รับจริง / เงินใช้จริง</h3><canvas id="cInc" height="90"></canvas></div>
     <div class="cbx"><h3>⏱️ ชั่วโมง OT รายเดือน</h3><canvas id="cOT" height="160"></canvas></div>
@@ -508,7 +531,10 @@ let CT=new Date().getMonth();
 const DB={};
 let A=[],D=[],I=[];
 let lastTax=undefined;
-let CH={c1:null,c2:null,c3:null};
+let CH={c1:null,c2:null,c3:null,c4:null,c5:null};
+let dedActive={};
+const DED_COLORS=['rgba(66,153,225,.8)','rgba(56,178,172,.8)','rgba(245,101,101,.8)','rgba(237,137,54,.8)','rgba(104,211,145,.8)','rgba(154,117,217,.8)','rgba(237,100,166,.8)','rgba(251,211,141,.9)'];
+const DED_BORDERS=['#4299e1','#38b2ac','#f56565','#ed8936','#48bb78','#9b72cf','#ed64a6','#f6ad55'];
 let gsUrl='';
 let fbDb=null;
 let fbCfg=null;
@@ -1534,6 +1560,69 @@ function compM(ym){
   return{base,totA,ot15,ot20,ot30,totOT,totInc,totDed,takeHome,totInv,final,h15,h20,h30};
 }
 
+/* ── Deduction category helpers ── */
+function buildDedCats(){
+  const order=[];
+  const cats={};
+  const add=(k,label,i,v)=>{
+    if(!cats[k]){cats[k]={label,data:Array(12).fill(0),total:0};order.push(k);}
+    cats[k].data[i]+=v;cats[k].total+=v;
+  };
+  for(let i=0;i<12;i++){
+    const rec=DB[ymk(i)];if(!rec||!nf(rec.base))continue;
+    const base=nf(rec.base);
+    const sso=rec.sso?nf(rec.sso):Math.min(base*.05,875);
+    const pvd=rec.pvd?nf(rec.pvd):base*.07;
+    if(sso)add('sso','ประกันสังคม (SSO)',i,sso);
+    if(pvd)add('pvd','กองทุนสำรองเลี้ยงชีพ (PVD)',i,pvd);
+    (rec.d||[]).forEach(d=>{
+      const v=nf(d.v);if(!d.n||!v)return;
+      add('d_'+d.n,d.n,i,v);
+    });
+  }
+  return order.filter(k=>cats[k].total>0).map((k,idx)=>({
+    key:k,label:cats[k].label,data:cats[k].data,total:cats[k].total,
+    color:DED_COLORS[idx%DED_COLORS.length],border:DED_BORDERS[idx%DED_BORDERS.length]
+  }));
+}
+
+function renderDedSum(){
+  const cats=buildDedCats();
+  if(!cats.length){
+    ge('dedFlt').innerHTML='';
+    ge('dedCatStat').innerHTML='<div style="color:#a0aec0;font-style:italic;font-size:.78rem">— ยังไม่มีข้อมูลรายการหัก —</div>';
+    if(CH.c4){CH.c4.destroy();CH.c4=null;}
+    if(CH.c5){CH.c5.destroy();CH.c5=null;}
+    return;
+  }
+  cats.forEach(c=>{if(dedActive[c.key]===undefined)dedActive[c.key]=true;});
+  // Prune keys no longer present
+  Object.keys(dedActive).forEach(k=>{if(!cats.find(c=>c.key===k))delete dedActive[k];});
+
+  ge('dedFlt').innerHTML=cats.map(c=>`<button class="ded-flt-btn ${dedActive[c.key]?'on':'off'}" style="background:${c.color};color:white;border-color:${c.border}" onclick="toggleDed(${JSON.stringify(c.key)})">${esc(c.label)}</button>`).join('');
+
+  const grandTotal=cats.reduce((s,c)=>s+c.total,0);
+  ge('dedCatStat').innerHTML=cats.map(c=>{
+    const pct=grandTotal?((c.total/grandTotal)*100).toFixed(1):0;
+    return`<div class="ded-stat-item" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${c.label}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
+  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมหักทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`;
+
+  const activeCats=cats.filter(c=>dedActive[c.key]);
+  if(CH.c4){CH.c4.destroy();CH.c4=null;}
+  if(CH.c5){CH.c5.destroy();CH.c5=null;}
+  const coBar={responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
+  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:activeCats.map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
+  if(activeCats.length){
+    const pieData=activeCats.map(c=>+c.total.toFixed(2));
+    CH.c5=new Chart(ge('cDedPie'),{type:'doughnut',data:{labels:activeCats.map(c=>c.label),datasets:[{data:pieData,backgroundColor:activeCats.map(c=>c.color),borderColor:activeCats.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
+  }
+}
+
+function toggleDed(key){
+  dedActive[key]=!dedActive[key];
+  renderDedSum();
+}
+
 /* ── Summary render ── */
 function renderSum(){
   ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;
@@ -1582,6 +1671,7 @@ function renderSum(){
     {label:'สะสมจริง',data:dA2,borderColor:'#38b2ac',backgroundColor:'rgba(56,178,172,.15)',borderWidth:2.5,fill:true,tension:.35,pointBackgroundColor:'#38b2ac',pointRadius:4,spanGaps:false},
     {label:'Forecast',data:dF,borderColor:'#a0aec0',backgroundColor:'rgba(160,174,192,.08)',borderWidth:2,borderDash:[6,4],fill:false,tension:.35,pointBackgroundColor:'#a0aec0',pointRadius:3,spanGaps:false},
   ]},options:{...co,scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
+  renderDedSum();
 }
 
 document.addEventListener('visibilitychange',()=>{
