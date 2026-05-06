@@ -943,15 +943,15 @@ function rA(){
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
       const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
-      return`<div class="dr${a.ok?' ck':''}" style="border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:18px 100px 90px auto 1fr 28px 28px" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      return`<div class="dr${a.ok?' ck':''}" style="border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
         <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อ" oninput="dirtA('${a.id}')">
         <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" oninput="onBonusMthChg();dirtA('${a.id}')">
-        <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap">เดือน</span>
-        <span id="abm_disp_${a.id}" style="font-size:.8rem;color:#c05621;font-weight:700;padding-left:4px;white-space:nowrap">${amtDisp}</span>
-        <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}">
+        <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap;align-self:center">เดือน</span>
         <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
+        <span id="abm_disp_${a.id}" style="grid-column:2/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem">${amtDisp}</span>
+        <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
       </div>`;
     }
     return`<div class="dr${a.ok?' ck':''}"${bStyle} id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
@@ -1063,7 +1063,7 @@ function setIT(id,t){const it=I.find(x=>x.id===id);if(!it)return;it.t=t==='%'?'%
 function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv();}
 
 /* ── Collect DOM ── */
-function colA(){return A.map(a=>({id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`),ok:a.ok}));}
+function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,ok:a.ok};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
 function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ok:d.ok}));}
 function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v}));}
 
