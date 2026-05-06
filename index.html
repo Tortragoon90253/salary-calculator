@@ -938,8 +938,26 @@ function rA(){
   ge('aList').innerHTML=A.map(a=>{
     const isBonus=a.id===BONUS_ID;
     const bStyle=isBonus?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
+    if(isBonus){
+      const bm=a.bm||'';
+      const base=num('fBase');
+      const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
+      const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
+      return`<div class="dr${a.ok?' ck':''}"${bStyle} id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+        <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
+        <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')" style="max-width:120px">
+        <div style="display:flex;align-items:center;gap:5px;flex:1;min-width:0">
+          <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" style="width:100px;flex-shrink:0" oninput="onBonusMthChg();dirtA('${a.id}')">
+          <span style="font-size:.74rem;color:#718096;white-space:nowrap">เดือน</span>
+          <span id="abm_disp_${a.id}" style="font-size:.78rem;color:#c05621;font-weight:600;white-space:nowrap">${amtDisp}</span>
+        </div>
+        <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}">
+        <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
+        <button class="delbtn" onclick="delA('${a.id}')">✕</button>
+      </div>`;
+    }
     return`<div class="dr${a.ok?' ck':''}"${bStyle} id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
-      <span class="drag-handle" title="${isBonus?'โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.':'ลากเพื่อจัดเรียง'}">⠿</span>
+      <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')">
       <input type="number" id="av_${a.id}" value="${esc(a.v)}" placeholder="0.00" min="0" oninput="dirtA('${a.id}');updInv()">
       <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
@@ -1020,7 +1038,18 @@ function bindDrag(listId,arr,reFn){
 }
 
 /* ── Confirm / Dirty ── */
-function cfA(id){const it=A.find(x=>x.id===id);if(!it)return;it.n=gv(`an_${id}`);it.v=gv(`av_${id}`);it.ok=true;rA();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);if(id===BONUS_ID)applyBonusTax();}
+function cfA(id){
+  const it=A.find(x=>x.id===id);if(!it)return;
+  it.n=gv(`an_${id}`);
+  if(id===BONUS_ID){
+    const mth=parseFloat(ge(`abm_${id}`)?.value)||0;
+    const base=num('fBase');
+    it.bm=mth?String(mth):'';
+    it.v=(base*mth).toFixed(2);
+    const hid=ge(`av_${id}`);if(hid)hid.value=it.v;
+  }else{it.v=gv(`av_${id}`);}
+  it.ok=true;rA();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);if(id===BONUS_ID)applyBonusTax();
+}
 function cfD(id){const it=D.find(x=>x.id===id);if(!it)return;it.n=gv(`dn_${id}`);it.v=gv(`dv_${id}`);it.pm=gv(`dp_${id}`)||'bank';it.ok=true;rD();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
 function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
 function dirtD(id){const it=D.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
@@ -1105,11 +1134,23 @@ function updPaySummary(){
   const ps=getPaySummary();
   el.innerHTML=renderPmSum(ps);
 }
+function onBonusMthChg(){
+  const base=num('fBase');
+  const mthEl=ge(`abm_${BONUS_ID}`);
+  const dispEl=ge(`abm_disp_${BONUS_ID}`);
+  const hidEl=ge(`av_${BONUS_ID}`);
+  if(!mthEl)return;
+  const mth=parseFloat(mthEl.value)||0;
+  const amt=base*mth;
+  if(dispEl)dispEl.textContent=mth&&base?`= ฿${fmt(amt)}`:'';
+  if(hidEl)hidEl.value=amt?amt.toFixed(2):'';
+  updInv();
+}
 function onBaseChg(){
   const base=num('fBase');
   ge('fSso').placeholder=Math.min(base*.05,875).toFixed(2);
-  const totAChg=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value),0);
   ge('fPvd').placeholder=(base*.07).toFixed(2);
+  onBonusMthChg();
   updInv();
 }
 
