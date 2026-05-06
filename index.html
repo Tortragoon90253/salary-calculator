@@ -943,14 +943,12 @@ function rA(){
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
       const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
-      return`<div class="dr${a.ok?' ck':''}"${bStyle} id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      return`<div class="dr${a.ok?' ck':''}" style="border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:18px 100px 90px auto 1fr 28px 28px" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
-        <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')" style="max-width:120px">
-        <div style="display:flex;align-items:center;gap:5px;flex:1;min-width:0">
-          <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" style="width:100px;flex-shrink:0" oninput="onBonusMthChg();dirtA('${a.id}')">
-          <span style="font-size:.74rem;color:#718096;white-space:nowrap">เดือน</span>
-          <span id="abm_disp_${a.id}" style="font-size:.78rem;color:#c05621;font-weight:600;white-space:nowrap">${amtDisp}</span>
-        </div>
+        <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อ" oninput="dirtA('${a.id}')">
+        <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" oninput="onBonusMthChg();dirtA('${a.id}')">
+        <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap">เดือน</span>
+        <span id="abm_disp_${a.id}" style="font-size:.8rem;color:#c05621;font-weight:700;padding-left:4px;white-space:nowrap">${amtDisp}</span>
         <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}">
         <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
