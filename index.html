@@ -1352,11 +1352,14 @@ function calcBonusTax(){
   const bonusAmt=nf(ge(`av_${BONUS_ID}`)?.value||bonusItem?.v||'0');
   if(!bonusAmt)return 0;
   const base=num('fBase');if(!base)return 0;
+  const hr=base/23/8;const{h15,h20,h30}=getOTs();
+  const totOT=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
+  const regularA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value),0);
   const ssoA=getSso()*12,pvdA=getPvd()*12;
   const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
   const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
   const p5=nf(gv('tx5'));const perD=p1+p2v+p3+p4+p5;
-  const annualReg=base*12;
+  const annualReg=(base+regularA+totOT)*12;
   const empDReg=Math.min(annualReg*.5,100000);
   const taxableReg=Math.max(0,annualReg-empDReg-ssoA-pvdA-perD);
   const annualTotal=annualReg+bonusAmt;
@@ -1378,7 +1381,7 @@ function calcTax(){
   if(!base){res.innerHTML='<div style="color:#a0aec0;font-size:.78rem;text-align:center;padding:8px">กรุณากรอกเงินเดือนฐานก่อนครับ</div>';return;}
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const totOT=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
-  const totA=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value),0);
+  const totA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value),0);
   const totInc=base+totA+totOT;
   const mode=gv('txMode');
   const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
@@ -1399,7 +1402,8 @@ function calcTax(){
       const ym=`${cy}-${String(m).padStart(2,'0')}`;
       const mr=compM(ym);
       if(mr){
-        const mInc=mr.totInc-ntx;
+        const bonusPrev=nf(DB[ym]?.a?.find(x=>x.id===BONUS_ID)?.v);
+        const mInc=mr.totInc-bonusPrev-ntx;
         const mTaxPaid=getTaxFromD(DB[ym]?.d||[]);
         ytdInc+=mInc;ytdTax+=mTaxPaid;
         ytdRows+=`<div style="display:grid;grid-template-columns:60px 1fr auto auto;gap:4px;font-size:.71rem;padding:3px 0;border-bottom:1px solid #e2e8f0;color:#718096">
