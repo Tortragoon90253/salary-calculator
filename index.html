@@ -513,6 +513,9 @@ const SKM='sol_v5_meta';
 const GS_URL_KEY='sol_gs_url';
 const FB_CFG_KEY='sol_fb_cfg';
 const FB_APP_NAME='salary-calc-fb';
+const BONUS_ID='bonus';
+const BONUS_TAX_ID='bonus_tax';
+const BONUS_MONTHS=[4,10];
 const BRAK=[{a:0,b:150000,r:0},{a:150000,b:300000,r:.05},{a:300000,b:500000,r:.10},
   {a:500000,b:750000,r:.15},{a:750000,b:1e6,r:.20},{a:1e6,b:2e6,r:.25},
   {a:2e6,b:5e6,r:.30},{a:5e6,b:Infinity,r:.35}];
@@ -932,20 +935,25 @@ function setBadge(ts,source){
 
 /* ── Render rows ── */
 function rA(){
-  ge('aList').innerHTML=A.map(a=>`
-    <div class="dr${a.ok?' ck':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
-      <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
+  ge('aList').innerHTML=A.map(a=>{
+    const isBonus=a.id===BONUS_ID;
+    const bStyle=isBonus?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
+    return`<div class="dr${a.ok?' ck':''}"${bStyle} id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      <span class="drag-handle" title="${isBonus?'โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.':'ลากเพื่อจัดเรียง'}">⠿</span>
       <input type="text"   id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')">
       <input type="number" id="av_${a.id}" value="${esc(a.v)}" placeholder="0.00" min="0" oninput="dirtA('${a.id}');updInv()">
       <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
       <button class="delbtn" onclick="delA('${a.id}')">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   bindDrag('aList',A,rA);
 }
 function rD(){
-  ge('dList').innerHTML=D.map(d=>`
-    <div class="dr drd${d.ok?' ck':''}" id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
-      <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
+  ge('dList').innerHTML=D.map(d=>{
+    const isBTax=d.id===BONUS_TAX_ID;
+    const bStyle=isBTax?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
+    return`<div class="dr drd${d.ok?' ck':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
+      <span class="drag-handle" title="${isBTax?'ภาษีโบนัส — คำนวณอัตโนมัติ':'ลากเพื่อจัดเรียง'}">⠿</span>
       <input type="text"   id="dn_${d.id}" value="${esc(d.n)}" placeholder="ชื่อรายการหัก" oninput="dirtD('${d.id}')">
       <select id="dp_${d.id}" class="pmsel" onchange="dirtD('${d.id}');updPaySummary()">
         <option value="bank" ${(d.pm||'bank')==='bank'?'selected':''}>🏦 บัญชี</option>
@@ -955,7 +963,8 @@ function rD(){
       <input type="number" id="dv_${d.id}" value="${esc(d.v)}" placeholder="0.00" min="0" oninput="dirtD('${d.id}');updInv()">
       <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   bindDrag('dList',D,rD);
   updPaySummary();
 }
@@ -1011,7 +1020,7 @@ function bindDrag(listId,arr,reFn){
 }
 
 /* ── Confirm / Dirty ── */
-function cfA(id){const it=A.find(x=>x.id===id);if(!it)return;it.n=gv(`an_${id}`);it.v=gv(`av_${id}`);it.ok=true;rA();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
+function cfA(id){const it=A.find(x=>x.id===id);if(!it)return;it.n=gv(`an_${id}`);it.v=gv(`av_${id}`);it.ok=true;rA();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);if(id===BONUS_ID)applyBonusTax();}
 function cfD(id){const it=D.find(x=>x.id===id);if(!it)return;it.n=gv(`dn_${id}`);it.v=gv(`dv_${id}`);it.pm=gv(`dp_${id}`)||'bank';it.ok=true;rD();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
 function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
 function dirtD(id){const it=D.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
@@ -1210,8 +1219,8 @@ function loadM(mi){
     const prev=getPrev(mi);
     if(prev){
       sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
-      A=(prev.a||defA()).map(x=>({...x,v:'',ok:false}));
-      D=(prev.d||defD()).map(x=>({...x,v:'',ok:false}));
+      A=(prev.a||defA()).filter(x=>x.id!==BONUS_ID).map(x=>({...x,v:'',ok:false}));
+      D=(prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID).map(x=>({...x,v:'',ok:false}));
       I=(prev.i||defI()).map(x=>({...x,v:''}));
       onBaseChg();
     }else{
@@ -1219,6 +1228,13 @@ function loadM(mi){
       A=defA();D=defD();I=defI();
     }
     reOT();
+  }
+  if(BONUS_MONTHS.includes(mi)){
+    if(!A.find(x=>x.id===BONUS_ID))A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false});
+    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false});
+  }else{
+    A=A.filter(x=>x.id!==BONUS_ID);
+    D=D.filter(x=>x.id!==BONUS_TAX_ID);
   }
   rA();rD();rI();
 }
@@ -1331,6 +1347,23 @@ function resetM(){
 
 /* ── Tax Calc ── */
 function progTax(inc){if(inc<=0)return 0;let t=0;for(const b of BRAK){if(inc>b.a)t+=(Math.min(inc,b.b)-b.a)*b.r;}return t;}
+function calcBonusTax(){
+  const bonusItem=A.find(x=>x.id===BONUS_ID);
+  const bonusAmt=nf(ge(`av_${BONUS_ID}`)?.value||bonusItem?.v||'0');
+  if(!bonusAmt)return 0;
+  const base=num('fBase');if(!base)return 0;
+  const ssoA=getSso()*12,pvdA=getPvd()*12;
+  const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
+  const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
+  const p5=nf(gv('tx5'));const perD=p1+p2v+p3+p4+p5;
+  const annualReg=base*12;
+  const empDReg=Math.min(annualReg*.5,100000);
+  const taxableReg=Math.max(0,annualReg-empDReg-ssoA-pvdA-perD);
+  const annualTotal=annualReg+bonusAmt;
+  const empDTotal=Math.min(annualTotal*.5,100000);
+  const taxableTotal=Math.max(0,annualTotal-empDTotal-ssoA-pvdA-perD);
+  return Math.max(0,progTax(taxableTotal)-progTax(taxableReg));
+}
 function togTax(){
   const p=ge('txPanel'),ic=ge('txIco');const s=p.style.display!=='none';
   p.style.display=s?'none':'block';ic.textContent=s?'▼ แสดง':'▲ ซ่อน';if(!s)calcTax();
@@ -1447,6 +1480,17 @@ function applyTax(){
   if(it){it.v=lastTax.toFixed(2);it.ok=true;rD();setTimeout(()=>{const e=ge(`dv_${it.id}`);if(e)e.value=lastTax.toFixed(2);},50);}
   else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),ok:true});rD();}
   updInv();toast(`✓ บันทึกภาษี ฿${lastTax.toFixed(2)}/เดือน`);
+}
+function applyBonusTax(){
+  const bt=calcBonusTax();
+  const existing=D.find(x=>x.id===BONUS_TAX_ID);
+  if(bt>0){
+    if(existing){existing.v=bt.toFixed(2);existing.ok=true;}
+    else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ok:true});
+    rD();setTimeout(()=>{const e=ge(`dv_${BONUS_TAX_ID}`);if(e)e.value=bt.toFixed(2);},50);
+    toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
+  }else if(existing){D=D.filter(x=>x.id!==BONUS_TAX_ID);rD();}
+  updInv();
 }
 function clrTax(){
   ge('tx2').checked=false;ge('tx1').checked=true;
