@@ -209,6 +209,53 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .pmsum-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.78rem;border-bottom:1px solid #f0f4f8}
 .pmsum-row:last-child{border:none}
 .pm-tot{display:flex;justify-content:space-between;padding-top:7px;margin-top:5px;border-top:1.5px solid #e2e8f0;font-size:.82rem;font-weight:700}
+/* ── Refactored from inline styles ── */
+.input-ro{background:#edf2f7;pointer-events:none}
+.input-auto{background:#edf2f7}
+.ch-sub{margin-left:auto;font-size:.75rem;font-weight:400;color:#718096}
+.ot-legend{display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.ot-legend-item{font-size:.75rem;display:flex;align-items:center;gap:3px}
+.ot-dot{width:11px;height:11px;display:inline-block;border-radius:2px}
+.ot-dot-sat{background:#fff0f0;border:1px solid #fc8181}
+.ot-dot-sun{background:#ffe0e0;border:1px solid #f56565}
+.inv-info{font-size:.75rem;color:#718096;margin-bottom:10px;background:#f0fff4;padding:8px 10px;border-radius:7px;border-left:3px solid #48bb78}
+.inv-total-val{color:#276749}
+.inv-type-note{font-size:.78rem;color:#a0aec0;margin-bottom:8px}
+.tax-wrap{margin:10px 0;background:#fffaf0;border:1.5px solid #f6ad55;border-radius:9px;overflow:hidden}
+.tax-hdr{padding:9px 14px;background:#feebc8;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.tax-hdr-lbl{font-size:.82rem;font-weight:700;color:#c05621}
+.tax-hdr-ico{font-size:.78rem;color:#c05621}
+.tax-body{padding:14px}
+.tax-note{font-size:.73rem;color:#718096;margin-bottom:10px;background:white;padding:7px 10px;border-radius:6px;border-left:3px solid #f6ad55;line-height:1.6}
+.tax-mode-wrap{margin-bottom:10px}
+.tx-select{font-size:.8rem;padding:6px 9px;border:1px solid #cbd5e0;border-radius:6px;width:100%;background:#f7fafc}
+.tx-deduct-lbl{font-size:.76rem;font-weight:700;color:#4a5568;margin-bottom:6px}
+.tx-deduct-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
+.tx-row{display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px}
+.tx-row-full{grid-column:1/-1}
+.tx-lbl{font-size:.77rem;flex:1}
+.tx-val{font-size:.75rem;font-weight:700;color:#276749}
+.tx-hint{font-size:.7rem;color:#718096}
+.tx-sub{color:#a0aec0;font-size:.7rem}
+.tx-chk{width:15px;height:15px;accent-color:#276749}
+.tx-num-sm{width:48px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+.tx-num-md{width:110px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+.tx-num-lg{width:130px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+.tax-btns{display:flex;gap:8px;margin-top:10px}
+.tax-apply{flex:1;padding:9px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer}
+.tax-dismiss{padding:9px 14px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;color:#718096;cursor:pointer;font-weight:600}
+.res-period{font-size:.72rem;opacity:.75;font-weight:400}
+.nl-grn{color:#276749}.nl-teal{color:#234e52}.nl-blue{color:#2b6cb0}
+.nfml-exc{color:#c53030}
+.sum-sub{font-size:.75rem;opacity:.75;margin-bottom:4px}
+.chart-filter-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
+.ml-6{margin-left:6px}
+.ics-btn-inc{background:rgba(66,153,225,.12);border-color:#4299e1;color:#2b6cb0}
+.ics-btn-th{background:rgba(72,187,120,.12);border-color:#48bb78;color:#276749}
+.ics-btn-fin{background:rgba(102,126,234,.12);border-color:#667eea;color:#553c9a}
+.ics-btn-ded{background:rgba(245,101,101,.12);border-color:#f56565;color:#c53030}
+.modal-lbl{font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px}
+.modal-lbl-mt{margin-top:10px}
 </style>
 </head>
 <body>
@@ -245,23 +292,23 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="ch cbl">⚙️ ข้อมูลพื้นฐาน</div>
     <div class="cb">
       <div class="g2">
-        <div><label>เดือน / ปี</label><input id="fPrd" type="month" style="background:#edf2f7;pointer-events:none"></div>
+        <div><label>เดือน / ปี</label><input id="fPrd" type="month" class="input-ro"></div>
         <div><label>เงินเดือนฐาน (บาท)</label><input id="fBase" type="number" placeholder="0.00" min="0" oninput="onBaseChg()"></div>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">✓ ยืนยัน | ✕ ลบ</span></div>
     <div class="cb"><div id="aList"></div><button class="addbtn" onclick="addA()">＋ เพิ่มรายการ</button></div>
   </div>
 
   <div class="card">
-    <div class="ch cor">⏱️ แบบฟอร์ม OT รายวัน <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">กรอกนาทีที่ทำ OT จริง</span></div>
+    <div class="ch cor">⏱️ แบบฟอร์ม OT รายวัน <span class="ch-sub">กรอกนาทีที่ทำ OT จริง</span></div>
     <div class="cb">
-      <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
-        <span style="font-size:.7rem;display:flex;align-items:center;gap:3px"><span style="width:11px;height:11px;background:#fff0f0;border:1px solid #fc8181;display:inline-block;border-radius:2px"></span>เสาร์</span>
-        <span style="font-size:.7rem;display:flex;align-items:center;gap:3px"><span style="width:11px;height:11px;background:#ffe0e0;border:1px solid #f56565;display:inline-block;border-radius:2px"></span>อาทิตย์</span>
+      <div class="ot-legend">
+        <span class="ot-legend-item"><span class="ot-dot ot-dot-sat"></span>เสาร์</span>
+        <span class="ot-legend-item"><span class="ot-dot ot-dot-sun"></span>อาทิตย์</span>
         <span class="rb rb15">×1.5</span><span class="rb rb20">×2.0</span><span class="rb rb30">×3.0 หลัง 16:36</span>
       </div>
       <div class="otw-hint">← เลื่อนซ้าย-ขวาเพื่อดูตาราง →</div>
@@ -286,82 +333,82 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cte">📈 แบ่งเงินลงทุน <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
+    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
     <div class="cb">
-      <div style="font-size:.75rem;color:#718096;margin-bottom:10px;background:#f0fff4;padding:8px 10px;border-radius:7px;border-left:3px solid #48bb78">
-        ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" style="color:#276749">฿0.00</strong>
+      <div class="inv-info">
+        ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" class="inv-total-val">฿0.00</strong>
       </div>
-      <div style="font-size:.78rem;color:#a0aec0;margin-bottom:8px">฿ = จำนวนคงที่ &nbsp;|&nbsp; % = คำนวณจากฐาน</div>
+      <div class="inv-type-note">฿ = จำนวนคงที่ &nbsp;|&nbsp; % = คำนวณจากฐาน</div>
       <div id="iList"></div>
       <button class="addbtn gn" onclick="addI()">＋ เพิ่มแผนลงทุน</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="ch cre">➖ รายการหัก <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="ch cre">➖ รายการหัก <span class="ch-sub">✓ ยืนยัน | ✕ ลบ</span></div>
     <div class="cb">
       <div class="fr">
         <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">บัญชี</span></span>
-        <input id="fSso" type="number" placeholder="อัตโนมัติ" min="0" style="background:#edf2f7" oninput="updInv()">
+        <input id="fSso" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
       <div class="fr">
         <span class="fl">กองทุนสำรองเลี้ยงชีพ (7%) <span class="pm-bank">บัญชี</span></span>
-        <input id="fPvd" type="number" placeholder="อัตโนมัติ" min="0" style="background:#edf2f7" oninput="updInv()">
+        <input id="fPvd" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
-      <div style="margin:10px 0;background:#fffaf0;border:1.5px solid #f6ad55;border-radius:9px;overflow:hidden">
-        <div style="padding:9px 14px;background:#feebc8;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="togTax()">
-          <span style="font-size:.82rem;font-weight:700;color:#c05621">🧮 คำนวณภาษีหัก ณ ที่จ่าย</span>
-          <span id="txIco" style="font-size:.78rem;color:#c05621">▼ แสดง</span>
+      <div class="tax-wrap">
+        <div class="tax-hdr" onclick="togTax()">
+          <span class="tax-hdr-lbl">🧮 คำนวณภาษีหัก ณ ที่จ่าย</span>
+          <span id="txIco" class="tax-hdr-ico">▼ แสดง</span>
         </div>
-        <div id="txPanel" style="display:none;padding:14px">
-          <div style="font-size:.73rem;color:#718096;margin-bottom:10px;background:white;padding:7px 10px;border-radius:6px;border-left:3px solid #f6ad55;line-height:1.6">คำนวณตาม <strong>อัตราภาษีเงินได้บุคคลธรรมดา (ไทย 2024)</strong></div>
-          <div style="margin-bottom:10px">
+        <div id="txPanel" class="tax-body" style="display:none">
+          <div class="tax-note">คำนวณตาม <strong>อัตราภาษีเงินได้บุคคลธรรมดา (ไทย 2024)</strong></div>
+          <div class="tax-mode-wrap">
             <label>ฐานรายได้ที่ใช้ฉายภาพต่อปี</label>
-            <select id="txMode" onchange="onTxMode()" style="font-size:.8rem;padding:6px 9px;border:1px solid #cbd5e0;border-radius:6px;width:100%;background:#f7fafc">
+            <select id="txMode" onchange="onTxMode()" class="tx-select">
               <option value="total">รายได้รวม (เงินเดือน + OT + เบี้ย) × 12 เดือน</option>
               <option value="sal">เงินเดือนฐาน × 12 เดือน เท่านั้น</option>
               <option value="running">★ วิธีสะสม YTD (ใกล้เคียงบริษัท)</option>
             </select>
           </div>
-          <div id="txNonTaxRow" style="display:none;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px">
-              <span style="font-size:.77rem;flex:1">รายได้ไม่คิดภาษี/เดือน <span style="color:#a0aec0;font-size:.7rem">(เช่น ค่ารักษาพยาบาล)</span></span>
-              <input type="number" id="txNonTax" value="0" min="0" oninput="calcTax()" style="width:110px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc" placeholder="0.00">
+          <div id="txNonTaxRow" class="tax-mode-wrap" style="display:none">
+            <div class="tx-row">
+              <span class="tx-lbl">รายได้ไม่คิดภาษี/เดือน <span class="tx-sub">(เช่น ค่ารักษาพยาบาล)</span></span>
+              <input type="number" id="txNonTax" value="0" min="0" oninput="calcTax()" class="tx-num-md" placeholder="0.00">
             </div>
           </div>
-          <div style="font-size:.76rem;font-weight:700;color:#4a5568;margin-bottom:6px">ค่าลดหย่อนส่วนตัว</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px">
-              <input type="checkbox" id="tx1" checked onchange="calcTax()" style="width:15px;height:15px;accent-color:#276749">
-              <span style="font-size:.77rem;flex:1">ค่าลดหย่อนส่วนตัว</span>
-              <span style="font-size:.75rem;font-weight:700;color:#276749">60,000 ฿</span>
+          <div class="tx-deduct-lbl">ค่าลดหย่อนส่วนตัว</div>
+          <div class="tx-deduct-grid">
+            <div class="tx-row">
+              <input type="checkbox" id="tx1" checked onchange="calcTax()" class="tx-chk">
+              <span class="tx-lbl">ค่าลดหย่อนส่วนตัว</span>
+              <span class="tx-val">60,000 ฿</span>
             </div>
-            <div style="display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px">
-              <input type="checkbox" id="tx2" onchange="calcTax()" style="width:15px;height:15px;accent-color:#276749">
-              <span style="font-size:.77rem;flex:1">คู่สมรส (ไม่มีรายได้)</span>
-              <span style="font-size:.75rem;font-weight:700;color:#276749">60,000 ฿</span>
+            <div class="tx-row">
+              <input type="checkbox" id="tx2" onchange="calcTax()" class="tx-chk">
+              <span class="tx-lbl">คู่สมรส (ไม่มีรายได้)</span>
+              <span class="tx-val">60,000 ฿</span>
             </div>
-            <div style="display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px">
-              <span style="font-size:.77rem;flex:1">บุตร (คน)</span>
-              <input type="number" id="tx3" value="0" min="0" max="10" onchange="calcTax()" style="width:48px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc">
-              <span style="font-size:.7rem;color:#718096">×30,000</span>
+            <div class="tx-row">
+              <span class="tx-lbl">บุตร (คน)</span>
+              <input type="number" id="tx3" value="0" min="0" max="10" onchange="calcTax()" class="tx-num-sm">
+              <span class="tx-hint">×30,000</span>
             </div>
-            <div style="display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px">
-              <span style="font-size:.77rem;flex:1">เลี้ยงดูบิดา/มารดา (คน)</span>
-              <input type="number" id="tx4" value="0" min="0" max="4" onchange="calcTax()" style="width:48px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc">
-              <span style="font-size:.7rem;color:#718096">×30,000</span>
+            <div class="tx-row">
+              <span class="tx-lbl">เลี้ยงดูบิดา/มารดา (คน)</span>
+              <input type="number" id="tx4" value="0" min="0" max="4" onchange="calcTax()" class="tx-num-sm">
+              <span class="tx-hint">×30,000</span>
             </div>
-            <div style="grid-column:1/-1;display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px">
-              <span style="font-size:.77rem;flex:1">LTF / RMF / SSF / กบข. (บาท/ปี)</span>
-              <input type="number" id="tx5" value="0" min="0" oninput="calcTax()" style="width:130px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc" placeholder="0.00">
+            <div class="tx-row tx-row-full">
+              <span class="tx-lbl">LTF / RMF / SSF / กบข. (บาท/ปี)</span>
+              <input type="number" id="tx5" value="0" min="0" oninput="calcTax()" class="tx-num-lg" placeholder="0.00">
             </div>
           </div>
           <div id="txRes"></div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button onclick="applyTax()" style="flex:1;padding:9px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer">✓ ใช้ค่านี้ในรายการหัก</button>
-            <button onclick="clrTax()" style="padding:9px 14px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;color:#718096;cursor:pointer;font-weight:600">ล้าง</button>
+          <div class="tax-btns">
+            <button onclick="applyTax()" class="tax-apply">✓ ใช้ค่านี้ในรายการหัก</button>
+            <button onclick="clrTax()" class="tax-dismiss">ล้าง</button>
           </div>
         </div>
       </div>
@@ -383,7 +430,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <div id="res">
     <div class="thbox">
       <div class="thleft">
-        <div class="thtitle">💵 ยอดรายได้รับจริง &nbsp;<span id="resPer" style="font-size:.72rem;opacity:.75;font-weight:400">—</span></div>
+        <div class="thtitle">💵 ยอดรายได้รับจริง &nbsp;<span id="resPer" class="res-period">—</span></div>
         <div class="thsub">รายได้รวม − ประกันสังคม − กองทุนฯ − ภาษีหัก ณ ที่จ่าย</div>
       </div>
       <div class="thval" id="rTH">฿0</div>
@@ -397,12 +444,12 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="netbox">
       <div class="ntitle">💰 สรุปเงิน</div>
       <div class="netrow">
-        <div class="nc"><div class="nl" style="color:#276749">ยอดรายได้รับจริง</div><div class="vna" id="rTH2">฿0</div></div>
-        <div class="nc"><div class="nl" style="color:#234e52">แบ่งลงทุนรวม</div><div class="vni" id="rInvS">฿0</div></div>
-        <div class="nc"><div class="nl" style="color:#2b6cb0">เงินคงเหลือใช้จริง</div><div class="vnf" id="rFinal">฿0</div></div>
+        <div class="nc"><div class="nl nl-grn">ยอดรายได้รับจริง</div><div class="vna" id="rTH2">฿0</div></div>
+        <div class="nc"><div class="nl nl-teal">แบ่งลงทุนรวม</div><div class="vni" id="rInvS">฿0</div></div>
+        <div class="nc"><div class="nl nl-blue">เงินคงเหลือใช้จริง</div><div class="vnf" id="rFinal">฿0</div></div>
       </div>
       <div class="nfml">
-        ยอดรายได้รับจริง &minus; แบ่งลงทุนรวม &minus; รายการหัก<span style="color:#c53030">(ไม่รวม SSO, กองทุนฯ, ภาษี)</span> = เงินคงเหลือใช้จริง
+        ยอดรายได้รับจริง &minus; แบ่งลงทุนรวม &minus; รายการหัก<span class="nfml-exc">(ไม่รวม SSO, กองทุนฯ, ภาษี)</span> = เงินคงเหลือใช้จริง
       </div>
     </div>
     <button class="prbtn" onclick="printMonthly()">🖨️ พิมพ์ / บันทึก PDF</button>
@@ -412,7 +459,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 <!-- ── Summary View ── -->
 <div id="sv" class="wrap">
   <div class="sumhdr">
-    <div><div style="font-size:.75rem;opacity:.75;margin-bottom:4px">สรุปรายได้ประจำปี</div><h2 id="sTitle">—</h2></div>
+    <div><div class="sum-sub">สรุปรายได้ประจำปี</div><h2 id="sTitle">—</h2></div>
     <div class="yb" id="sYr">—</div>
   </div>
   <button class="pdfbtn" onclick="window.print()">🖨️ Export รายงาน PDF</button>
@@ -439,18 +486,18 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <div class="cg">
     <div class="cbx full">
       <h3>📈 รายได้รวม / รายได้รับจริง / เงินใช้จริง</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px">
+      <div class="chart-filter-row">
         <span class="ded-flt-lbl">รูปแบบ:</span>
         <button id="icT_bar"     class="ict-btn on" onclick="setIncType('bar')"    >📊 แท่ง</button>
         <button id="icT_stacked" class="ict-btn"    onclick="setIncType('stacked')">📊 แท่งซ้อน</button>
         <button id="icT_line"    class="ict-btn"    onclick="setIncType('line')"   >📈 เส้น</button>
         <button id="icT_area"    class="ict-btn"    onclick="setIncType('area')"   >🏔 พื้นที่</button>
         <button id="icT_mixed"   class="ict-btn"    onclick="setIncType('mixed')"  >🔀 ผสม</button>
-        <span class="ded-flt-lbl" style="margin-left:6px">แสดง:</span>
-        <button id="icS_inc" class="ics-btn" style="background:rgba(66,153,225,.12);border-color:#4299e1;color:#2b6cb0"   onclick="togIncSeries('inc')">รายได้รวม</button>
-        <button id="icS_th"  class="ics-btn" style="background:rgba(72,187,120,.12);border-color:#48bb78;color:#276749"   onclick="togIncSeries('th')" >รายได้รับจริง</button>
-        <button id="icS_fin" class="ics-btn" style="background:rgba(102,126,234,.12);border-color:#667eea;color:#553c9a" onclick="togIncSeries('fin')">เงินใช้จริง</button>
-        <button id="icS_ded" class="ics-btn" style="background:rgba(245,101,101,.12);border-color:#f56565;color:#c53030"  onclick="togIncSeries('ded')">รายการหัก</button>
+        <span class="ded-flt-lbl ml-6">แสดง:</span>
+        <button id="icS_inc" class="ics-btn ics-btn-inc" onclick="togIncSeries('inc')">รายได้รวม</button>
+        <button id="icS_th"  class="ics-btn ics-btn-th"  onclick="togIncSeries('th')" >รายได้รับจริง</button>
+        <button id="icS_fin" class="ics-btn ics-btn-fin" onclick="togIncSeries('fin')">เงินใช้จริง</button>
+        <button id="icS_ded" class="ics-btn ics-btn-ded" onclick="togIncSeries('ded')">รายการหัก</button>
       </div>
       <canvas id="cInc" height="110"></canvas>
     </div>
@@ -476,13 +523,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       </ol>
     </div>
 
-    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px">Web API Key</label>
+    <label class="modal-lbl">Web API Key</label>
     <input id="fbApiKey" class="gsin" type="text" placeholder="AIzaSy...">
 
-    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px;margin-top:10px">Project ID</label>
+    <label class="modal-lbl modal-lbl-mt">Project ID</label>
     <input id="fbProjectId" class="gsin" type="text" placeholder="my-project-12345">
 
-    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:4px;margin-top:10px">Document ID (ชื่อผู้ใช้/อุปกรณ์)</label>
+    <label class="modal-lbl modal-lbl-mt">Document ID (ชื่อผู้ใช้/อุปกรณ์)</label>
     <input id="fbDocId" class="gsin" type="text" placeholder="default">
     <div class="gs-hint">Document ID ใช้แยกข้อมูลระหว่างผู้ใช้ — ใส่ชื่อใดก็ได้ (เช่น ชื่อของคุณ)</div>
 
@@ -518,7 +565,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       </ol>
     </div>
 
-    <label style="font-size:.78rem;font-weight:700;color:#4a5568;display:block;margin-bottom:5px">Apps Script Deployment URL</label>
+    <label class="modal-lbl">Apps Script Deployment URL</label>
     <input id="gsUrlIn" class="gsin" type="url" placeholder="https://script.google.com/macros/s/AKfy.../exec">
     <div class="gs-hint">URL นี้เก็บไว้ใน Browser นี้เท่านั้น (localStorage) — ต้องกรอกใหม่ถ้าเปลี่ยน Browser</div>
 
