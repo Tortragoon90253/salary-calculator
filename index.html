@@ -63,11 +63,15 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .addbtn:hover{border-color:#4299e1;color:#2b6cb0;background:#ebf8ff}
 .addbtn.gn:hover{border-color:#48bb78;color:#276749;background:#f0fff4}
 .sep{border:none;border-top:1px dashed #e2e8f0;margin:8px 0}
-.otw{overflow-x:auto;margin-top:6px}
-table.ott{width:100%;border-collapse:collapse;font-size:.82rem;min-width:520px}
+.otw{overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch}
+.otw-hint{display:none;text-align:center;font-size:.75rem;color:#a0aec0;padding:5px 0 2px;letter-spacing:.02em}
+@media(max-width:600px){.otw-hint{display:block}}
+table.ott{width:100%;border-collapse:collapse;font-size:.82rem;min-width:480px}
 table.ott th{background:#2d3748;color:white;padding:7px 6px;text-align:center;white-space:nowrap;font-weight:600;line-height:1.3}
 th.th3{background:#7b341e;color:#fbd38d}
 table.ott td{padding:3px 4px;border:1px solid #e2e8f0;text-align:center;vertical-align:middle}
+@media(max-width:600px){table.ott th{padding:5px 4px;font-size:.75rem}table.ott td{padding:2px 3px}}
+.empty-hint{text-align:center;padding:14px 10px;color:#a0aec0;font-size:.82rem;border:1.5px dashed #e2e8f0;border-radius:8px;margin-bottom:6px;line-height:1.6}
 tr.rsat{background:#fff0f0}tr.rsun{background:#ffe0e0}
 tr.rsat td.dc,tr.rsun td.dc{color:#c53030;font-weight:700}
 td input.mi{width:66px;text-align:center;padding:4px 5px;font-size:.82rem;border:1px solid #cbd5e0;border-radius:4px;background:white}
@@ -260,6 +264,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         <span style="font-size:.7rem;display:flex;align-items:center;gap:3px"><span style="width:11px;height:11px;background:#ffe0e0;border:1px solid #f56565;display:inline-block;border-radius:2px"></span>อาทิตย์</span>
         <span class="rb rb15">×1.5</span><span class="rb rb20">×2.0</span><span class="rb rb30">×3.0 หลัง 16:36</span>
       </div>
+      <div class="otw-hint">← เลื่อนซ้าย-ขวาเพื่อดูตาราง →</div>
       <div class="otw">
         <table class="ott">
           <thead><tr>
@@ -969,6 +974,7 @@ function setBadge(ts,source){
 
 /* ── Render rows ── */
 function rA(){
+  if(!A.length){ge('aList').innerHTML='<div class="empty-hint">ยังไม่มีค่าเพิ่มเติม<br>กด ＋ เพิ่มรายการ ด้านล่าง</div>';return;}
   ge('aList').innerHTML=A.map(a=>{
     const isBonus=a.id===BONUS_ID;
     const bStyle=isBonus?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
@@ -999,6 +1005,7 @@ function rA(){
   bindDrag('aList',A,rA);
 }
 function rD(){
+  if(!D.length){ge('dList').innerHTML='<div class="empty-hint">ยังไม่มีรายการหัก<br>กด ＋ เพิ่มรายการหัก ด้านล่าง</div>';updPaySummary();return;}
   ge('dList').innerHTML=D.map(d=>{
     const isBTax=d.id===BONUS_TAX_ID;
     const bStyle=isBTax?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
@@ -1020,6 +1027,7 @@ function rD(){
 }
 function rI(){
   const base=calcBase();
+  if(!I.length){ge('iList').innerHTML='<div class="empty-hint">ยังไม่มีแผนลงทุน<br>กด ＋ เพิ่มแผนลงทุน ด้านล่าง</div>';updInv();return;}
   ge('iList').innerHTML=I.map(inv=>{
     const isP=inv.t==='%';
     const cv=isP?(base*nf(inv.v)/100):nf(inv.v);
