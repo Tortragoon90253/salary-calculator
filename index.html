@@ -10,8 +10,11 @@
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;color:#2d3748;font-size:15px}
 header{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:white;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{font-size:1.1rem;font-weight:700;flex:1}
-.hbtn{padding:6px 14px;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
+.hbtn{padding:5px 12px;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
 .hbtn.exp{background:#48bb78;color:white}.hbtn.imp{background:#ed8936;color:white}.hbtn.gs{background:#805ad5;color:white}.hbtn.fb{background:#dd6b20;color:white}
+.hactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hgrp{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:9px;padding:5px 10px}
+.hgrp-lbl{font-size:.68rem;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.05em;margin-right:3px;text-transform:uppercase;white-space:nowrap}
 .ynav{background:#2d3748;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ynav label{color:#a0aec0;font-size:.82rem;font-weight:600}
 #ySel{padding:5px 10px;border-radius:6px;border:none;font-size:.85rem;font-weight:700;color:#2d3748;width:110px}
@@ -207,19 +210,24 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 <body>
 
 <header>
-  <span>💼</span>
-  <h1>โปรแกรมคำนวณเงินเดือน + OT</h1>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="hbtn gs" onclick="openCfg()">☁️ Google Sheets</button>
-    <button class="hbtn fb" onclick="openFbCfg()">🔥 Firebase</button>
-    <button class="hbtn exp" onclick="doExport()">⬇️ Export CSV</button>
-    <button class="hbtn imp" onclick="ge('fIn').click()">⬆️ Import CSV</button>
+  <h1>💼 คำนวณเงินเดือน + OT</h1>
+  <div class="hactions">
+    <div class="hgrp">
+      <span class="hgrp-lbl">ซิงค์</span>
+      <button class="hbtn gs" onclick="openCfg()">☁️ Sheets</button>
+      <button class="hbtn fb" onclick="openFbCfg()">🔥 Firebase</button>
+    </div>
+    <div class="hgrp">
+      <span class="hgrp-lbl">ข้อมูล</span>
+      <button class="hbtn exp" onclick="doExport()">⬇️ Export</button>
+      <button class="hbtn imp" onclick="ge('fIn').click()">⬆️ Import</button>
+    </div>
     <input type="file" id="fIn" accept=".csv" style="display:none" onchange="doImport(this)">
   </div>
 </header>
 
 <div class="ynav">
-  <label>📅 ปี (ค.ศ.):</label>
+  <label>ปี (ค.ศ.):</label>
   <select id="ySel" onchange="onYrChange()"></select>
   <span id="bdg">⏳ กำลังโหลด...</span>
   <span id="syncSt"></span>
@@ -240,12 +248,12 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span style="margin-left:auto;font-size:.7rem;font-weight:400;color:#718096">✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">✓ ยืนยัน | ✕ ลบ</span></div>
     <div class="cb"><div id="aList"></div><button class="addbtn" onclick="addA()">＋ เพิ่มรายการ</button></div>
   </div>
 
   <div class="card">
-    <div class="ch cor">⏱️ แบบฟอร์ม OT รายวัน <span style="margin-left:auto;font-size:.68rem;font-weight:400;color:#718096">กรอกนาทีที่ทำ OT จริง</span></div>
+    <div class="ch cor">⏱️ แบบฟอร์ม OT รายวัน <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">กรอกนาทีที่ทำ OT จริง</span></div>
     <div class="cb">
       <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
         <span style="font-size:.7rem;display:flex;align-items:center;gap:3px"><span style="width:11px;height:11px;background:#fff0f0;border:1px solid #fc8181;display:inline-block;border-radius:2px"></span>เสาร์</span>
@@ -273,27 +281,27 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cte">📈 แบ่งเงินลงทุน <span style="margin-left:auto;font-size:.7rem;font-weight:400;color:#718096">ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
+    <div class="ch cte">📈 แบ่งเงินลงทุน <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
     <div class="cb">
       <div style="font-size:.75rem;color:#718096;margin-bottom:10px;background:#f0fff4;padding:8px 10px;border-radius:7px;border-left:3px solid #48bb78">
-        💡 ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" style="color:#276749">฿0.00</strong>
+        ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" style="color:#276749">฿0.00</strong>
       </div>
-      <div style="font-size:.72rem;color:#a0aec0;margin-bottom:8px">฿ = จำนวนคงที่ &nbsp;|&nbsp; % = คำนวณจากฐาน</div>
+      <div style="font-size:.78rem;color:#a0aec0;margin-bottom:8px">฿ = จำนวนคงที่ &nbsp;|&nbsp; % = คำนวณจากฐาน</div>
       <div id="iList"></div>
       <button class="addbtn gn" onclick="addI()">＋ เพิ่มแผนลงทุน</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="ch cre">➖ รายการหัก <span style="margin-left:auto;font-size:.7rem;font-weight:400;color:#718096">✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="ch cre">➖ รายการหัก <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:#718096">✓ ยืนยัน | ✕ ลบ</span></div>
     <div class="cb">
       <div class="fr">
-        <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">🏦 บัญชี</span></span>
+        <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">บัญชี</span></span>
         <input id="fSso" type="number" placeholder="อัตโนมัติ" min="0" style="background:#edf2f7" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
       <div class="fr">
-        <span class="fl">กองทุนสำรองเลี้ยงชีพ (7%) <span class="pm-bank">🏦 บัญชี</span></span>
+        <span class="fl">กองทุนสำรองเลี้ยงชีพ (7%) <span class="pm-bank">บัญชี</span></span>
         <input id="fPvd" type="number" placeholder="อัตโนมัติ" min="0" style="background:#edf2f7" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
