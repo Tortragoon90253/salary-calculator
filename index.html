@@ -1040,6 +1040,7 @@ function setBadge(ts,source){
 
 /* ── Render rows ── */
 function rA(){
+  A.forEach(a=>{const nEl=ge(`an_${a.id}`);const vEl=ge(`av_${a.id}`);if(nEl)a.n=nEl.value;if(vEl&&vEl.type!=='hidden')a.v=vEl.value;});
   if(!A.length){ge('aList').innerHTML='<div class="empty-hint">ยังไม่มีค่าเพิ่มเติม<br>กด ＋ เพิ่มรายการ ด้านล่าง</div>';return;}
   ge('aList').innerHTML=A.map(a=>{
     const isBonus=a.id===BONUS_ID;
@@ -1071,6 +1072,7 @@ function rA(){
   bindDrag('aList',A,rA);
 }
 function rD(){
+  D.forEach(d=>{const nEl=ge(`dn_${d.id}`);const vEl=ge(`dv_${d.id}`);const pEl=ge(`dp_${d.id}`);if(nEl)d.n=nEl.value;if(vEl)d.v=vEl.value;if(pEl)d.pm=pEl.value;});
   if(!D.length){ge('dList').innerHTML='<div class="empty-hint">ยังไม่มีรายการหัก<br>กด ＋ เพิ่มรายการหัก ด้านล่าง</div>';updPaySummary();return;}
   ge('dList').innerHTML=D.map(d=>{
     const isBTax=d.id===BONUS_TAX_ID;
