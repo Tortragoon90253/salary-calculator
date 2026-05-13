@@ -75,6 +75,10 @@ table.ott td{padding:3px 4px;border:1px solid #e2e8f0;text-align:center;vertical
 .empty-hint{text-align:center;padding:14px 10px;color:#a0aec0;font-size:.82rem;border:1.5px dashed #e2e8f0;border-radius:8px;margin-bottom:6px;line-height:1.6}
 tr.rsat{background:#fff0f0}tr.rsun{background:#ffe0e0}
 tr.rsat td.dc,tr.rsun td.dc{color:#c53030;font-weight:700}
+@keyframes today-blink{0%,100%{opacity:1}50%{opacity:0}}
+tr.rtoday{background:#ebf8ff!important;outline:2px solid #3182ce;outline-offset:-2px}
+tr.rtoday td:first-child{font-weight:700;color:#2b6cb0}
+.today-arrow{display:inline-block;color:#e53e3e;font-weight:900;margin-right:3px;animation:today-blink 1s ease-in-out infinite}
 td input.mi{width:66px;text-align:center;padding:4px 5px;font-size:.82rem;border:1px solid #cbd5e0;border-radius:4px;background:white}
 td input.mi:focus{border-color:#4299e1;outline:none}
 td input.mi:disabled{background:#f0f0f0;color:#aaa;cursor:not-allowed;border-color:#e2e8f0}
@@ -1386,10 +1390,13 @@ function getPrev(mi){for(let i=mi-1;i>=0;i--){const r=DB[ymk(i)];if(r)return r;}
 function buildOT(){
   const pv=gv('fPrd');if(!pv)return;
   const[y,m]=pv.split('-').map(Number);const cnt=new Date(y,m,0).getDate();let html='';
+  const now=new Date();const ty=now.getFullYear(),tm=now.getMonth()+1,td=now.getDate();
   for(let d=1;d<=cnt;d++){
     const dow=new Date(y,m-1,d).getDay();const wk=dow===6||dow===0;
-    const rc=dow===0?'rsun':dow===6?'rsat':'';const ds=`${d}-${p2(m)}`;
-    html+=`<tr class="${rc}"><td>${ds}</td><td class="dc">${DTH[dow]}</td>
+    const isToday=y===ty&&m===tm&&d===td;
+    const rc=(isToday?'rtoday ':(dow===0?'rsun':dow===6?'rsat':''));const ds=`${d}-${p2(m)}`;
+    const arrow=isToday?`<span class="today-arrow">◀</span>`:'';
+    html+=`<tr class="${rc}"><td>${arrow}${ds}</td><td class="dc">${DTH[dow]}</td>
       <td><input type="text" id="otn_${d}" style="width:86px;font-size:.7rem;padding:3px 5px;border:1px solid #e2e8f0;border-radius:4px;background:white" placeholder="—"></td>
       <td><input class="mi" type="number" id="ota_${d}" min="0" placeholder="0" oninput="reOT()"></td>
       <td><input class="mi${wk?' m3':''}" type="number" id="ot3_${d}" min="0" placeholder="${wk?'0':'—'}" ${wk?'':'disabled'} oninput="reOT()"></td>
