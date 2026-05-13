@@ -79,6 +79,7 @@ tr.rsat td.dc,tr.rsun td.dc{color:#c53030;font-weight:700}
 tr.rtoday{background:#ebf8ff!important;outline:2px solid #3182ce;outline-offset:-2px}
 tr.rtoday td:first-child{font-weight:700;color:#2b6cb0}
 .today-arrow{display:inline-block;color:#e53e3e;font-weight:900;margin-right:3px;animation:today-blink 1s ease-in-out infinite}
+.tb.cur::before{content:'◀';color:#e53e3e;font-size:.65rem;margin-right:3px;animation:today-blink 1s ease-in-out infinite;display:inline-block}
 td input.mi{width:66px;text-align:center;padding:4px 5px;font-size:.82rem;border:1px solid #cbd5e0;border-radius:4px;background:white}
 td input.mi:focus{border-color:#4299e1;outline:none}
 td input.mi:disabled{background:#f0f0f0;color:#aaa;cursor:not-allowed;border-color:#e2e8f0}
@@ -1286,8 +1287,10 @@ async function init(){
 
 function buildTabs(){
   const bar=ge('tabs');bar.innerHTML='';
+  const nowM=new Date().getMonth();const nowY=new Date().getFullYear();
   MS.forEach((nm,i)=>{
     const b=document.createElement('button');b.className='tb';b.id=`tb_${i}`;
+    if(CY===nowY&&i===nowM)b.classList.add('cur');
     b.textContent=nm;b.onclick=()=>switchTab(i);bar.appendChild(b);
   });
   const sb=document.createElement('button');sb.className='tb sum';sb.id='tb_12';
