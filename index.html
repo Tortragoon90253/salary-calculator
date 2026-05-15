@@ -652,6 +652,7 @@ let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
+let fbSkipNextSnapshot=false;
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -885,6 +886,7 @@ async function fbSave(){
   if(!fbDb)return;
   const now=new Date();
   const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
+  fbSkipNextSnapshot=true;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   return ts;
 }
@@ -904,6 +906,8 @@ function fbStartListener(){
   fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
     /* ครั้งแรกที่ listener fire จะถูกจัดการโดย restore() แล้ว ข้ามไป */
     if(firstSnapshot){firstSnapshot=false;return;}
+    /* เกิดจากการ save ของเครื่องนี้เอง — ไม่ต้อง re-render */
+    if(fbSkipNextSnapshot){fbSkipNextSnapshot=false;return;}
     if(!snap.exists)return;
     const d=snap.data();
     if(d&&d.data){
