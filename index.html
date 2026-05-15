@@ -651,6 +651,7 @@ let gsUrl='';
 let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
+let fbUnsubscribe=null;
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -844,6 +845,7 @@ async function saveFbCfg(){
       showFbStatus('เชื่อมต่อสำเร็จ! ยังไม่มีข้อมูลใน Firebase','ok');
       setSyncSt('fb_ok');
     }
+    fbStartListener();
     setTimeout(closeFbCfg,1200);
   }catch(e){
     showFbStatus('เชื่อมต่อไม่ได้: '+e.message+' — ตรวจสอบ Config และ Firestore Rules','err');
@@ -851,6 +853,7 @@ async function saveFbCfg(){
 }
 
 function clearFbCfg(){
+  if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   fbDb=null;fbCfg=null;fbDocId='default';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
   closeFbCfg();
@@ -891,6 +894,26 @@ async function fbLoad(){
   const snap=await fbDb.collection('salary_data').doc(fbDocId).get();
   if(!snap.exists)return null;
   return snap.data();
+}
+
+/* ติดตั้ง realtime listener — อัปเดตทันทีเมื่อเครื่องอื่นบันทึกข้อมูล */
+function fbStartListener(){
+  if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
+  if(!fbDb)return;
+  let firstSnapshot=true;
+  fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
+    /* ครั้งแรกที่ listener fire จะถูกจัดการโดย restore() แล้ว ข้ามไป */
+    if(firstSnapshot){firstSnapshot=false;return;}
+    if(!snap.exists)return;
+    const d=snap.data();
+    if(d&&d.data){
+      loadAllFromFB(d.data,d.lastSaved);
+      toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
+    }
+  },err=>{
+    console.warn('Firebase onSnapshot error:',err);
+    setSyncSt('fb_error',err.message);
+  });
 }
 
 function loadAllFromFB(data,lastSaved){
@@ -983,9 +1006,11 @@ async function restore(){
       const result=await Promise.race([fbLoad(),fbTimeout]);
       if(result&&result.data){
         loadAllFromFB(result.data,result.lastSaved);
+        fbStartListener();
         return true;
       }
       setSyncSt('fb_ok');
+      fbStartListener();
     }catch(e){
       const msg=e.message==='timeout'?'Firebase หมดเวลาเชื่อมต่อ — ใช้ข้อมูล local แทน':'โหลดไม่ได้ — ใช้ข้อมูล local แทน';
       setSyncSt('fb_error',msg);
