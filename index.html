@@ -652,7 +652,7 @@ let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
-let fbLastSavedTs=null;
+let fbLastKnownTs=null;
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -844,6 +844,7 @@ async function saveFbCfg(){
       loadAllFromFB(result.data,result.lastSaved);
     }else{
       showFbStatus('เชื่อมต่อสำเร็จ! ยังไม่มีข้อมูลใน Firebase','ok');
+      fbLastKnownTs=null;
       setSyncSt('fb_ok');
     }
     fbStartListener();
@@ -855,7 +856,7 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
-  fbDb=null;fbCfg=null;fbDocId='default';
+  fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
   closeFbCfg();
   toast('ล้าง Firebase Config แล้ว — ใช้ localStorage แทน');
@@ -886,7 +887,7 @@ async function fbSave(){
   if(!fbDb)return;
   const now=new Date();
   const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
-  fbLastSavedTs=ts;
+  fbLastKnownTs=ts;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   return ts;
 }
@@ -902,16 +903,14 @@ async function fbLoad(){
 function fbStartListener(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   if(!fbDb)return;
-  let firstSnapshot=true;
   fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
-    /* ครั้งแรกที่ listener fire จะถูกจัดการโดย restore() แล้ว ข้ามไป */
-    if(firstSnapshot){firstSnapshot=false;return;}
     if(!snap.exists)return;
     const d=snap.data();
     if(!d||!d.data)return;
-    /* เกิดจากการ save ของเครื่องนี้เอง (pending หรือ server confirm) — ไม่ต้อง re-render */
-    if(d.lastSaved&&d.lastSaved===fbLastSavedTs)return;
-    /* มาจากเครื่องอื่น — อัปเดต DB เงียบๆ ไม่รีเซ็ต UI */
+    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว (ทั้ง pending และ server confirm) */
+    if(d.lastSaved&&d.lastSaved===fbLastKnownTs)return;
+    /* timestamp ใหม่ — มาจากเครื่องอื่น อัปเดต DB เงียบๆ */
+    fbLastKnownTs=d.lastSaved||null;
     fbSyncFromRemote(d.data,d.lastSaved);
   },err=>{
     console.warn('Firebase onSnapshot error:',err);
@@ -928,17 +927,16 @@ function loadAllFromFB(data,lastSaved){
     });
     try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   }
+  fbLastKnownTs=lastSaved||null;
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   buildTabs();updateDots();switchTab(CT,true);
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
 }
 
-/* อัปเดตข้อมูลจากเครื่องอื่นแบบเงียบๆ — ไม่รีเซ็ต UI หรือซ่อนผลคำนวณ */
+/* อัปเดตข้อมูลจากเครื่องอื่นแบบเงียบๆ — ไม่แตะ UI, ไม่ซ่อนผลคำนวณ */
 function fbSyncFromRemote(data,lastSaved){
   if(!data||typeof data!=='object')return;
-  const curYm=ymk(CT);
-  const remoteChangedCurrent=!!data[curYm];
   Object.keys(data).forEach(ym=>{
     const rec=data[ym];
     if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
@@ -948,14 +946,7 @@ function fbSyncFromRemote(data,lastSaved){
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   updateDots();
-  /* โหลด form ของ tab ปัจจุบันใหม่เฉพาะเมื่อเดือนนี้มีข้อมูลเปลี่ยน และซ่อนผลคำนวณเก่า */
-  if(remoteChangedCurrent){
-    loadM(CT);
-    toast('🔄 ข้อมูลเดือนนี้อัปเดตจากเครื่องอื่น');
-  }else{
-    buildTabs();
-    toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
-  }
+  toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
 }
 
 /* ════════════════════════════════════════════════════
@@ -1036,6 +1027,7 @@ async function restore(){
         fbStartListener();
         return true;
       }
+      fbLastKnownTs=null;
       setSyncSt('fb_ok');
       fbStartListener();
     }catch(e){
