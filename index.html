@@ -652,7 +652,7 @@ let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
-let fbSkipNextSnapshot=false;
+let fbLastSavedTs=null;
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -886,7 +886,7 @@ async function fbSave(){
   if(!fbDb)return;
   const now=new Date();
   const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
-  fbSkipNextSnapshot=true;
+  fbLastSavedTs=ts;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   return ts;
 }
@@ -906,14 +906,13 @@ function fbStartListener(){
   fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
     /* ครั้งแรกที่ listener fire จะถูกจัดการโดย restore() แล้ว ข้ามไป */
     if(firstSnapshot){firstSnapshot=false;return;}
-    /* เกิดจากการ save ของเครื่องนี้เอง — ไม่ต้อง re-render */
-    if(fbSkipNextSnapshot){fbSkipNextSnapshot=false;return;}
     if(!snap.exists)return;
     const d=snap.data();
-    if(d&&d.data){
-      loadAllFromFB(d.data,d.lastSaved);
-      toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
-    }
+    if(!d||!d.data)return;
+    /* เกิดจากการ save ของเครื่องนี้เอง (pending หรือ server confirm) — ไม่ต้อง re-render */
+    if(d.lastSaved&&d.lastSaved===fbLastSavedTs)return;
+    /* มาจากเครื่องอื่น — อัปเดต DB เงียบๆ ไม่รีเซ็ต UI */
+    fbSyncFromRemote(d.data,d.lastSaved);
   },err=>{
     console.warn('Firebase onSnapshot error:',err);
     setSyncSt('fb_error',err.message);
@@ -933,6 +932,30 @@ function loadAllFromFB(data,lastSaved){
   setBadge(lastSaved||null,'fb');
   buildTabs();updateDots();switchTab(CT,true);
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
+}
+
+/* อัปเดตข้อมูลจากเครื่องอื่นแบบเงียบๆ — ไม่รีเซ็ต UI หรือซ่อนผลคำนวณ */
+function fbSyncFromRemote(data,lastSaved){
+  if(!data||typeof data!=='object')return;
+  const curYm=ymk(CT);
+  const remoteChangedCurrent=!!data[curYm];
+  Object.keys(data).forEach(ym=>{
+    const rec=data[ym];
+    if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+    DB[ym]=rec;
+  });
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  setSyncSt('fb_ok');
+  setBadge(lastSaved||null,'fb');
+  updateDots();
+  /* โหลด form ของ tab ปัจจุบันใหม่เฉพาะเมื่อเดือนนี้มีข้อมูลเปลี่ยน และซ่อนผลคำนวณเก่า */
+  if(remoteChangedCurrent){
+    loadM(CT);
+    toast('🔄 ข้อมูลเดือนนี้อัปเดตจากเครื่องอื่น');
+  }else{
+    buildTabs();
+    toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
+  }
 }
 
 /* ════════════════════════════════════════════════════
