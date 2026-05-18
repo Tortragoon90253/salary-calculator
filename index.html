@@ -633,6 +633,7 @@ const fN=n=>n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let _uid=0;const uid=()=>'u'+(++_uid);
 const p2=n=>String(n).padStart(2,'0');
+const normDays=rec=>{if(rec&&rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}return rec;};
 
 /* ── State ── */
 let CY=new Date().getFullYear();
@@ -652,7 +653,7 @@ let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
-let fbLastSavedTs=null;
+let fbLastKnownTs=null;
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -764,7 +765,7 @@ function loadAllFromGS(data,lastSaved){
   if(data&&typeof data==='object'){
     Object.keys(data).forEach(ym=>{
       const rec=data[ym];
-      if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+      normDays(rec);
       DB[ym]=rec;
     });
     try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
@@ -844,6 +845,7 @@ async function saveFbCfg(){
       loadAllFromFB(result.data,result.lastSaved);
     }else{
       showFbStatus('เชื่อมต่อสำเร็จ! ยังไม่มีข้อมูลใน Firebase','ok');
+      fbLastKnownTs=null;
       setSyncSt('fb_ok');
     }
     fbStartListener();
@@ -855,7 +857,7 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
-  fbDb=null;fbCfg=null;fbDocId='default';
+  fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
   closeFbCfg();
   toast('ล้าง Firebase Config แล้ว — ใช้ localStorage แทน');
@@ -886,7 +888,7 @@ async function fbSave(){
   if(!fbDb)return;
   const now=new Date();
   const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
-  fbLastSavedTs=ts;
+  fbLastKnownTs=ts;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   return ts;
 }
@@ -902,16 +904,14 @@ async function fbLoad(){
 function fbStartListener(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   if(!fbDb)return;
-  let firstSnapshot=true;
   fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
-    /* ครั้งแรกที่ listener fire จะถูกจัดการโดย restore() แล้ว ข้ามไป */
-    if(firstSnapshot){firstSnapshot=false;return;}
     if(!snap.exists)return;
     const d=snap.data();
     if(!d||!d.data)return;
-    /* เกิดจากการ save ของเครื่องนี้เอง (pending หรือ server confirm) — ไม่ต้อง re-render */
-    if(d.lastSaved&&d.lastSaved===fbLastSavedTs)return;
-    /* มาจากเครื่องอื่น — อัปเดต DB เงียบๆ ไม่รีเซ็ต UI */
+    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว (ทั้ง pending และ server confirm) */
+    if(d.lastSaved&&d.lastSaved===fbLastKnownTs)return;
+    /* timestamp ใหม่ — มาจากเครื่องอื่น อัปเดต DB เงียบๆ */
+    fbLastKnownTs=d.lastSaved||null;
     fbSyncFromRemote(d.data,d.lastSaved);
   },err=>{
     console.warn('Firebase onSnapshot error:',err);
@@ -923,39 +923,31 @@ function loadAllFromFB(data,lastSaved){
   if(data&&typeof data==='object'){
     Object.keys(data).forEach(ym=>{
       const rec=data[ym];
-      if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+      normDays(rec);
       DB[ym]=rec;
     });
     try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   }
+  fbLastKnownTs=lastSaved||null;
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   buildTabs();updateDots();switchTab(CT,true);
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
 }
 
-/* อัปเดตข้อมูลจากเครื่องอื่นแบบเงียบๆ — ไม่รีเซ็ต UI หรือซ่อนผลคำนวณ */
+/* อัปเดตข้อมูลจากเครื่องอื่นแบบเงียบๆ — ไม่แตะ UI, ไม่ซ่อนผลคำนวณ */
 function fbSyncFromRemote(data,lastSaved){
   if(!data||typeof data!=='object')return;
-  const curYm=ymk(CT);
-  const remoteChangedCurrent=!!data[curYm];
   Object.keys(data).forEach(ym=>{
     const rec=data[ym];
-    if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+    normDays(rec);
     DB[ym]=rec;
   });
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   updateDots();
-  /* โหลด form ของ tab ปัจจุบันใหม่เฉพาะเมื่อเดือนนี้มีข้อมูลเปลี่ยน และซ่อนผลคำนวณเก่า */
-  if(remoteChangedCurrent){
-    loadM(CT);
-    toast('🔄 ข้อมูลเดือนนี้อัปเดตจากเครื่องอื่น');
-  }else{
-    buildTabs();
-    toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
-  }
+  toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
 }
 
 /* ════════════════════════════════════════════════════
@@ -1036,6 +1028,7 @@ async function restore(){
         fbStartListener();
         return true;
       }
+      fbLastKnownTs=null;
       setSyncSt('fb_ok');
       fbStartListener();
     }catch(e){
@@ -1070,7 +1063,7 @@ async function restore(){
       const obj=JSON.parse(raw);
       Object.keys(obj).forEach(ym=>{
         const rec=obj[ym];
-        if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+        normDays(rec);
         DB[ym]=rec;
       });
     }
@@ -1231,7 +1224,7 @@ function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv
 
 /* ── Derived ── */
 function getSso(){const v=gv('fSso');return v!==''?nf(v):Math.min(num('fBase')*.05,875);}
-function getPvd(totInc){const v=gv('fPvd');return v!==''?nf(v):num('fBase')*.07;}
+function getPvd(){const v=gv('fPvd');return v!==''?nf(v):num('fBase')*.07;}
 function getTaxFromD(arr){return arr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s+nf(x.v):s,0);}
 function getOTs(){
   const pv=gv('fPrd');if(!pv)return{h15:0,h20:0,h30:0};
@@ -1329,7 +1322,7 @@ async function init(){
       const obj=JSON.parse(raw);
       Object.keys(obj).forEach(ym=>{
         const rec=obj[ym];
-        if(rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+        normDays(rec);
         DB[ym]=rec;
       });
     }
@@ -1542,8 +1535,13 @@ function resetM(){
   rA();rD();rI();buildOT();reOT();updateDots();
   /* บันทึก localStorage */
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
-  /* ลบจาก GS ด้วย */
-  if(gsUrl){
+  /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
+  if(fbDb){
+    setSyncSt('fb_saving');
+    fbSave()
+      .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');})
+      .catch(e=>setSyncSt('fb_error',e.message));
+  }else if(gsUrl){
     setSyncSt('saving');
     gsPost({action:'deleteMonth',ym})
       .then(r=>setSyncSt(r.ok?'ok':'error',r.error))
@@ -1781,8 +1779,13 @@ function doImport(input){
       if(first){CY=parseInt(first.split('-')[0]);ge('ySel').value=CY;buildTabs();}
       updateDots();switchTab(CT,true);
       toast(`✅ Import สำเร็จ! ${cnt} เดือน`);
-      /* sync ทั้งหมดไป GS ถ้ามี URL */
-      if(gsUrl){
+      /* sync ทั้งหมด — Firebase ก่อน (priority) ไม่งั้น GS */
+      if(fbDb){
+        setSyncSt('fb_saving');
+        fbSave()
+          .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
+          .catch(e=>setSyncSt('fb_error',e.message));
+      }else if(gsUrl){
         setSyncSt('saving');
         gsPost({action:'saveAll',db:DB})
           .then(r=>{
