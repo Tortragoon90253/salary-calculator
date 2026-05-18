@@ -168,6 +168,9 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .gs-status-bar.ok{background:#f0fff4;color:#276749;border:1px solid #9ae6b4}
 .gs-status-bar.err{background:#fff5f5;color:#c53030;border:1px solid #fc8181}
 .gs-status-bar.info{background:#ebf8ff;color:#2b6cb0;border:1px solid #90cdf4}
+.conflict-banner{background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:.85rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:500}
+.conflict-banner button{background:#1a365d;color:white;border:none;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:.78rem;font-weight:600}
+.conflict-banner button:hover{background:#2b6cb0}
 .pdfbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:linear-gradient(135deg,#c53030,#e53e3e);color:white;border:none;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;margin-bottom:14px}
 .pdfbtn:hover{opacity:.88}
 /* Deduction category summary */
@@ -306,6 +309,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 
 <!-- ── Month View ── -->
 <div id="mv" class="wrap">
+
+  <div id="conflictBanner" class="conflict-banner" style="display:none"></div>
 
   <div class="card">
     <div class="ch cbl">⚙️ ข้อมูลพื้นฐาน</div>
@@ -634,6 +639,7 @@ const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&g
 let _uid=0;const uid=()=>'u'+(++_uid);
 const p2=n=>String(n).padStart(2,'0');
 const normDays=rec=>{if(rec&&rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}return rec;};
+const fbTs=()=>{const n=new Date();return `${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}:${p2(n.getSeconds())}.${String(n.getMilliseconds()).padStart(3,'0')}`;};
 
 /* ── State ── */
 let CY=new Date().getFullYear();
@@ -654,6 +660,10 @@ let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
 let fbLastKnownTs=null;
+let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
+let fbKnownMonths=new Set();  /* เดือนที่เห็นใน Firebase แล้ว — ใช้ตัดสินใจว่าควรลบ local หรือไม่ */
+let formDirty=false;  /* true เมื่อมีการแก้ใน form แต่ยังไม่ save */
+let pendingRemote=null;  /* { ym } — มี remote update ค้างให้ user ตัดสินใจ */
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -836,6 +846,7 @@ async function saveFbCfg(){
     return;
   }
   fbCfg=cfg;
+  fbReady=false;  /* บล็อก save ระหว่างโหลด */
   try{localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));}catch(e){}
   showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
   try{
@@ -852,12 +863,14 @@ async function saveFbCfg(){
     setTimeout(closeFbCfg,1200);
   }catch(e){
     showFbStatus('เชื่อมต่อไม่ได้: '+e.message+' — ตรวจสอบ Config และ Firestore Rules','err');
-  }
+  }finally{fbReady=true;}
 }
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;
+  fbKnownMonths=new Set();pendingRemote=null;
+  const cb=ge('conflictBanner');if(cb)cb.style.display='none';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
   closeFbCfg();
   toast('ล้าง Firebase Config แล้ว — ใช้ localStorage แทน');
@@ -886,10 +899,37 @@ function copyFbShareLink(){
 
 async function fbSave(){
   if(!fbDb)return;
-  const now=new Date();
-  const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
+  const ts=fbTs();
   fbLastKnownTs=ts;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
+  return ts;
+}
+
+async function fbSaveMonth(ym){
+  if(!fbDb||!ym)return;
+  const ts=fbTs();
+  fbLastKnownTs=ts;
+  fbKnownMonths.add(ym);
+  const ref=fbDb.collection('salary_data').doc(fbDocId);
+  try{
+    await ref.update({[`data.${ym}`]:DB[ym],lastSaved:ts});
+  }catch(e){
+    await ref.set({data:{[ym]:DB[ym]},lastSaved:ts},{merge:true});
+  }
+  return ts;
+}
+
+async function fbDeleteMonth(ym){
+  if(!fbDb||!ym)return;
+  const ts=fbTs();
+  fbLastKnownTs=ts;
+  fbKnownMonths.delete(ym);
+  try{
+    await fbDb.collection('salary_data').doc(fbDocId).update({
+      [`data.${ym}`]:firebase.firestore.FieldValue.delete(),
+      lastSaved:ts
+    });
+  }catch(e){/* doc ไม่มีอยู่ — ถือว่าเสร็จ */}
   return ts;
 }
 
@@ -905,14 +945,15 @@ function fbStartListener(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   if(!fbDb)return;
   fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
-    if(!snap.exists)return;
+    if(!snap.exists){fbKnownMonths=new Set();return;}
     const d=snap.data();
     if(!d||!d.data)return;
-    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว (ทั้ง pending และ server confirm) */
-    if(d.lastSaved&&d.lastSaved===fbLastKnownTs)return;
-    /* timestamp ใหม่ — มาจากเครื่องอื่น อัปเดต DB เงียบๆ */
+    const remoteMonths=new Set(Object.keys(d.data));
+    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว แต่อย่าลืม sync known-months ด้วย */
+    if(d.lastSaved&&d.lastSaved===fbLastKnownTs){fbKnownMonths=remoteMonths;return;}
+    /* timestamp ใหม่ — มาจากเครื่องอื่น */
     fbLastKnownTs=d.lastSaved||null;
-    fbSyncFromRemote(d.data,d.lastSaved);
+    fbSyncFromRemote(d.data,d.lastSaved,remoteMonths);
   },err=>{
     console.warn('Firebase onSnapshot error:',err);
     setSyncSt('fb_error',err.message);
@@ -921,6 +962,7 @@ function fbStartListener(){
 
 function loadAllFromFB(data,lastSaved){
   if(data&&typeof data==='object'){
+    fbKnownMonths=new Set(Object.keys(data));
     Object.keys(data).forEach(ym=>{
       const rec=data[ym];
       normDays(rec);
@@ -935,19 +977,62 @@ function loadAllFromFB(data,lastSaved){
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
 }
 
-/* อัปเดตข้อมูลจากเครื่องอื่นแบบเงียบๆ — ไม่แตะ UI, ไม่ซ่อนผลคำนวณ */
-function fbSyncFromRemote(data,lastSaved){
+/* อัปเดตข้อมูลจากเครื่องอื่น — refresh form ถ้าไม่ dirty, มิฉะนั้นแสดง banner ให้ user เลือก */
+function fbSyncFromRemote(data,lastSaved,remoteMonths){
   if(!data||typeof data!=='object')return;
+  if(!remoteMonths)remoteMonths=new Set(Object.keys(data));
+  const curYm=ymk(CT);
+  const remoteCur=data[curYm];
+  const localCur=DB[curYm];
+  const curChanged=CT!==12 && JSON.stringify(remoteCur||null)!==JSON.stringify(localCur||null);
+
+  /* merge ทุกเดือนที่ remote ส่งมา */
   Object.keys(data).forEach(ym=>{
     const rec=data[ym];
     normDays(rec);
     DB[ym]=rec;
   });
+  /* ลบเฉพาะเดือนที่เคยอยู่ใน Firebase แต่หายไป (= มีคนกด reset/delete จากอีกเครื่อง) — ไม่ลบเดือนที่เป็น local-only */
+  Object.keys(DB).forEach(ym=>{
+    if(fbKnownMonths.has(ym)&&!remoteMonths.has(ym))delete DB[ym];
+  });
+  fbKnownMonths=remoteMonths;
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   updateDots();
+
+  if(curChanged){
+    if(formDirty){
+      pendingRemote={ym:curYm};
+      showConflictBanner();
+      toast('⚠️ มีข้อมูลใหม่ของเดือนนี้จากอีกเครื่อง');
+    }else{
+      const resWasShown=ge('res').style.display!=='none';
+      loadM(CT);
+      if(resWasShown)ge('res').style.display='block';
+      toast('🔄 อัปเดตข้อมูลเดือนนี้จากอีกเครื่อง');
+    }
+    return;
+  }
   toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
+}
+
+function showConflictBanner(){
+  const el=ge('conflictBanner');if(!el)return;
+  el.innerHTML='⚠️ มีข้อมูลใหม่ของเดือนนี้จากอีกเครื่อง — <button onclick="acceptRemote()">ใช้ข้อมูลใหม่</button> <button onclick="dismissRemote()">เก็บที่แก้ไว้</button>';
+  el.style.display='flex';
+}
+function acceptRemote(){
+  pendingRemote=null;
+  const el=ge('conflictBanner');if(el)el.style.display='none';
+  loadM(CT);
+  toast('✅ โหลดข้อมูลใหม่จาก cloud');
+}
+function dismissRemote(){
+  pendingRemote=null;
+  const el=ge('conflictBanner');if(el)el.style.display='none';
+  toast('ℹ️ ยังใช้ข้อมูลที่แก้ไว้ — บันทึกจะเขียนทับของอีกเครื่อง');
 }
 
 /* ════════════════════════════════════════════════════
@@ -965,9 +1050,9 @@ async function persist(){
   if(fbDb&&CT!==12){
     setSyncSt('fb_saving');
     try{
-      const fbTs=await fbSave();
+      const savedTs=await fbSaveMonth(ymk(CT));
       setSyncSt('fb_ok');
-      setBadge(fbTs||ts,'fb');
+      setBadge(savedTs||ts,'fb');
     }catch(e){
       setSyncSt('fb_error',e.message);
       console.warn('Firebase save failed:',e);
@@ -1329,7 +1414,7 @@ async function init(){
   }catch(e){}
   buildTabs();updateDots();switchTab(CT,true);
   /* จากนั้น sync กับ cloud ใน background — ถ้ามีข้อมูลใหม่จะ re-render อัตโนมัติ */
-  await restore();
+  try{await restore();}finally{fbReady=true;}
 }
 
 function buildTabs(){
@@ -1367,8 +1452,16 @@ function ymk(mi){return `${CY}-${p2(mi+1)}`;}
 /* ── SAVE ── */
 function saveM(fb=false){
   if(CT===12)return;
+  /* กัน initial-load race — Firebase ยังโหลดไม่เสร็จ ห้าม save ทับ */
+  if(fbDb&&!fbReady){if(fb)toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  /* มี remote update ค้างอยู่ — ให้ user ตัดสินใจก่อน */
+  const ymCur=ymk(CT);
+  if(pendingRemote&&pendingRemote.ym===ymCur){
+    if(fb){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อนบันทึก');ge('conflictBanner')?.scrollIntoView({behavior:'smooth',block:'center'});}
+    return;
+  }
   A=colA();D=colD();I=colI();
-  const ym=ymk(CT);
+  const ym=ymCur;
   const cnt=new Date(CY,CT+1,0).getDate();
   const days={};
   for(let d=1;d<=cnt;d++){
@@ -1382,6 +1475,7 @@ function saveM(fb=false){
     a:JSON.parse(JSON.stringify(A)),
     d:JSON.parse(JSON.stringify(D)),
     i:JSON.parse(JSON.stringify(I)),days};
+  formDirty=false;
   updateDots();
   persist();
   if(fb){
@@ -1395,6 +1489,7 @@ function saveM(fb=false){
 function loadM(mi){
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
   ge('res').style.display='none';ge('savSt').style.opacity='0';
+  formDirty=false;
   const rec=DB[ym];
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
@@ -1538,7 +1633,7 @@ function resetM(){
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
   if(fbDb){
     setSyncSt('fb_saving');
-    fbSave()
+    fbDeleteMonth(ym)
       .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');})
       .catch(e=>setSyncSt('fb_error',e.message));
   }else if(gsUrl){
@@ -2010,6 +2105,16 @@ function renderSum(){
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'&&CT!==12)saveM();
 });
+
+/* mark dirty เมื่อมีการแก้ใน form (event delegation) */
+['input','change'].forEach(ev=>{
+  ge('mv')?.addEventListener(ev,e=>{
+    if(CT===12)return;
+    const t=e.target;
+    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'))formDirty=true;
+  });
+});
+
 init();
 </script>
 </body>
