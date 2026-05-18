@@ -636,9 +636,14 @@ const num=id=>nf(gv(id));
 const fmt=n=>'฿'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const fN=n=>n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-let _uid=0;const uid=()=>'u'+(++_uid);
+let _uid=0;const uid=()=>'u'+Date.now().toString(36)+(++_uid).toString(36)+Math.random().toString(36).slice(2,6);
+const dedupeIds=arr=>{if(!Array.isArray(arr))return arr;const seen=new Set();arr.forEach(it=>{if(!it||typeof it!=='object')return;if(!it.id||seen.has(it.id))it.id=uid();seen.add(it.id);});return arr;};
 const p2=n=>String(n).padStart(2,'0');
-const normDays=rec=>{if(rec&&rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}return rec;};
+const normDays=rec=>{
+  if(rec&&rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
+  if(rec){dedupeIds(rec.a);dedupeIds(rec.d);dedupeIds(rec.i);}
+  return rec;
+};
 const fbTs=()=>{const n=new Date();return `${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}:${p2(n.getSeconds())}.${String(n.getMilliseconds()).padStart(3,'0')}`;};
 
 /* ── State ── */
@@ -1493,9 +1498,9 @@ function loadM(mi){
   const rec=DB[ym];
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
-    A=JSON.parse(JSON.stringify(rec.a||defA()));
-    D=JSON.parse(JSON.stringify(rec.d||defD()));
-    I=JSON.parse(JSON.stringify(rec.i||defI()));
+    A=dedupeIds(JSON.parse(JSON.stringify(rec.a||defA())));
+    D=dedupeIds(JSON.parse(JSON.stringify(rec.d||defD())));
+    I=dedupeIds(JSON.parse(JSON.stringify(rec.i||defI())));
     if(rec.days){
       Object.keys(rec.days).forEach(dk=>{
         const dv=rec.days[dk];
@@ -1510,9 +1515,9 @@ function loadM(mi){
     const prev=getPrev(mi);
     if(prev){
       sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
-      A=(prev.a||defA()).filter(x=>x.id!==BONUS_ID).map(x=>({...x,v:'',ok:false}));
-      D=(prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID).map(x=>({...x,v:'',ok:false}));
-      I=(prev.i||defI()).map(x=>({...x,v:''}));
+      A=dedupeIds((prev.a||defA()).filter(x=>x.id!==BONUS_ID).map(x=>({...x,v:'',ok:false})));
+      D=dedupeIds((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID).map(x=>({...x,v:'',ok:false})));
+      I=dedupeIds((prev.i||defI()).map(x=>({...x,v:''})));
       onBaseChg();
     }else{
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
@@ -1527,6 +1532,8 @@ function loadM(mi){
     A=A.filter(x=>x.id!==BONUS_ID);
     D=D.filter(x=>x.id!==BONUS_TAX_ID);
   }
+  /* ล้าง DOM ของเดือนก่อนก่อน render — กัน rA/rD pre-sync ดึงค่าข้ามเดือน */
+  ['aList','dList','iList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rI();
 }
 function getPrev(mi){for(let i=mi-1;i>=0;i--){const r=DB[ymk(i)];if(r)return r;}return null;}
@@ -1627,7 +1634,10 @@ function resetM(){
   ge('otBody').innerHTML='';ge('res').style.display='none';
   delete DB[ym];
   A=defA();D=defD();I=defI();
+  /* ล้าง DOM ของรายการเก่าก่อน render — กัน rA/rD pre-sync ดึงค่าเก่ามาทับ defaults */
+  ['aList','dList','iList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rI();buildOT();reOT();updateDots();
+  formDirty=false;
   /* บันทึก localStorage */
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
@@ -1867,6 +1877,7 @@ function doImport(input){
         else if(T==='OT')r.days[String(key)]={ac:val,o3:extra||'',nt:name};
       }
       const cnt=Object.keys(tmp).length;if(!cnt)throw new Error('ไม่พบข้อมูลในไฟล์');
+      Object.keys(tmp).forEach(ym=>normDays(tmp[ym]));
       Object.assign(DB,tmp);
       /* บันทึก localStorage */
       try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
