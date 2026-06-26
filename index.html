@@ -2418,7 +2418,7 @@ init();
 
   // Alt+C = เปิด/ปิดเครื่องคิดเลขจากทุกที่
   document.addEventListener('keydown',function(e){
-    if((e.altKey)&&(e.key==='c'||e.key==='C')){e.preventDefault();toggleCalc();return;}
+    if(e.altKey&&e.code==='KeyC'){e.preventDefault();toggleCalc();return;}
   });
 
   // keyboard support when panel open
