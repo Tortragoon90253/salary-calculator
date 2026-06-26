@@ -2216,6 +2216,8 @@ init();
 /* Color themes */
 .ck-fn{color:rgba(255,255,255,.75);font-size:.95rem;background:rgba(255,255,255,.07)}
 .ck-fn:hover{background:rgba(255,255,255,.13)}
+.ck-bs{color:#fc8181;font-size:1.2rem}
+.ck-bs:hover{background:rgba(252,129,129,.15)}
 .ck-op{color:#a78bfa;font-size:1.2rem;background:rgba(167,139,250,.1)}
 .ck-op:hover{background:rgba(167,139,250,.2)}
 .ck-num{background:rgba(255,255,255,.05)}
@@ -2280,7 +2282,7 @@ init();
     <!-- Row 1 -->
     <button class="ck-btn ck-fn" onclick="calcFn('ac',event)">AC</button>
     <button class="ck-btn ck-fn" onclick="calcFn('sign',event)">+/−</button>
-    <button class="ck-btn ck-fn" onclick="calcFn('pct',event)">%</button>
+    <button class="ck-btn ck-fn ck-bs" onclick="calcFn('bs',event)">⌫</button>
     <button class="ck-btn ck-op" onclick="calcOp('÷',event)">÷</button>
     <!-- Row 2 -->
     <button class="ck-btn ck-num" onclick="calcNum('7',event)">7</button>
@@ -2378,6 +2380,10 @@ init();
     addRipple(e);
     if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_newNum=false;_expr='';
       document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');}
+    else if(fn==='bs'){
+      if(_justEq||_newNum){return;}
+      _cur=_cur.length>1?_cur.slice(0,-1):'0';
+    }
     else if(fn==='sign'){_cur=fmt(-parseFloat(_cur));}
     else if(fn==='pct'){_cur=fmt(parseFloat(_cur)/100);}
     upd();
