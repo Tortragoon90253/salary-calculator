@@ -2306,13 +2306,23 @@ init();
 
 <script>
 (function(){
-  let _cur='0',_prev=null,_op=null,_justEq=false,_expr='',_mem=0,_hasMem=false;
+  let _cur='0',_prev=null,_op=null,_justEq=false,_newNum=false,_expr='',_mem=0,_hasMem=false;
+
+  function fmtDisplay(s){
+    if(s==='Error')return s;
+    const neg=s.startsWith('-');
+    const abs=neg?s.slice(1):s;
+    const [int,dec]=abs.split('.');
+    const intFmt=int.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    return (neg?'-':'')+intFmt+(dec!==undefined?'.'+dec:'');
+  }
 
   function upd(){
     const el=document.getElementById('calc-main');
     const ex=document.getElementById('calc-expr');
-    el.textContent=_cur;
-    el.className='calc-main'+(_cur.length>9?' shrink':'');
+    const disp=fmtDisplay(_cur);
+    el.textContent=disp;
+    el.className='calc-main'+(disp.length>11?' shrink':'');
     ex.textContent=_expr;
   }
 
@@ -2327,27 +2337,27 @@ init();
 
   window.calcNum=function(n,e){
     addRipple(e);
-    if(_justEq){_cur='0';_expr='';_justEq=false;}
+    if(_justEq||_newNum){_cur='0';if(_justEq)_expr='';_justEq=false;_newNum=false;}
     if(_cur==='0'&&n!=='.')_cur=n;
     else _cur+=n;
     upd();
   };
   window.calcDot=function(e){
     addRipple(e);
-    if(_justEq){_cur='0';_expr='';_justEq=false;}
+    if(_justEq||_newNum){_cur='0';if(_justEq)_expr='';_justEq=false;_newNum=false;}
     if(!_cur.includes('.'))_cur+='.';
     upd();
   };
   window.calcOp=function(op,e){
     addRipple(e);
-    if(_op&&!_justEq){
+    if(_op&&!_justEq&&!_newNum){
       const r=compute(_prev,parseFloat(_cur),_op);
       _prev=r;_cur=fmt(r);
     } else {
       _prev=parseFloat(_cur);
     }
-    _op=op;_justEq=false;
-    _expr=_cur+' '+op;
+    _op=op;_justEq=false;_newNum=true;
+    _expr=fmtDisplay(_cur)+' '+op;
     upd();
     // highlight active op button
     document.querySelectorAll('.ck-op').forEach(b=>{
@@ -2358,15 +2368,15 @@ init();
     addRipple(e);
     if(_op===null){_justEq=true;upd();return;}
     const b=parseFloat(_cur);
-    _expr=(_prev)+' '+_op+' '+b+' =';
+    _expr=fmtDisplay(fmt(_prev))+' '+_op+' '+fmtDisplay(fmt(b))+' =';
     const r=compute(_prev,b,_op);
-    _cur=fmt(r);_prev=null;_op=null;_justEq=true;
+    _cur=fmt(r);_prev=null;_op=null;_justEq=true;_newNum=false;
     document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
     upd();
   };
   window.calcFn=function(fn,e){
     addRipple(e);
-    if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_expr='';
+    if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_newNum=false;_expr='';
       document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');}
     else if(fn==='sign'){_cur=fmt(-parseFloat(_cur));}
     else if(fn==='pct'){_cur=fmt(parseFloat(_cur)/100);}
