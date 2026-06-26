@@ -2000,7 +2000,7 @@ function renderDedSum(){
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
   if(CH.c5){CH.c5.destroy();CH.c5=null;}
   const coBar={responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
-  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:activeCats.map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
+  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
   if(activeCats.length){
     const pieData=activeCats.map(c=>+c.total.toFixed(2));
     CH.c5=new Chart(ge('cDedPie'),{type:'doughnut',data:{labels:activeCats.map(c=>c.label),datasets:[{data:pieData,backgroundColor:activeCats.map(c=>c.color),borderColor:activeCats.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
