@@ -2259,7 +2259,7 @@ init();
 .ck-mem.active{color:#68d391;background:rgba(104,211,145,.1)}
 </style>
 
-<button id="calc-fab" aria-label="เครื่องคิดเลข" onclick="toggleCalc()">
+<button id="calc-fab" aria-label="เครื่องคิดเลข (Alt+C)" title="เครื่องคิดเลข (Alt+C)" onclick="toggleCalc()">
   <span class="fab-icon">&#8801;</span>
 </button>
 
@@ -2415,6 +2415,11 @@ init();
     btn.appendChild(r);
     setTimeout(()=>r.remove(),600);
   }
+
+  // Alt+C = เปิด/ปิดเครื่องคิดเลขจากทุกที่
+  document.addEventListener('keydown',function(e){
+    if((e.altKey)&&(e.key==='c'||e.key==='C')){e.preventDefault();toggleCalc();return;}
+  });
 
   // keyboard support when panel open
   document.addEventListener('keydown',function(e){
