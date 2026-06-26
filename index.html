@@ -2278,29 +2278,29 @@ init();
   </div>
   <div class="calc-keys">
     <!-- Row 1 -->
-    <button class="ck-btn ck-fn" onclick="calcFn('ac')">AC</button>
-    <button class="ck-btn ck-fn" onclick="calcFn('sign')">+/−</button>
-    <button class="ck-btn ck-fn" onclick="calcFn('pct')">%</button>
-    <button class="ck-btn ck-op" onclick="calcOp('÷')">÷</button>
+    <button class="ck-btn ck-fn" onclick="calcFn('ac',event)">AC</button>
+    <button class="ck-btn ck-fn" onclick="calcFn('sign',event)">+/−</button>
+    <button class="ck-btn ck-fn" onclick="calcFn('pct',event)">%</button>
+    <button class="ck-btn ck-op" onclick="calcOp('÷',event)">÷</button>
     <!-- Row 2 -->
-    <button class="ck-btn ck-num" onclick="calcNum('7')">7</button>
-    <button class="ck-btn ck-num" onclick="calcNum('8')">8</button>
-    <button class="ck-btn ck-num" onclick="calcNum('9')">9</button>
-    <button class="ck-btn ck-op" onclick="calcOp('×')">×</button>
+    <button class="ck-btn ck-num" onclick="calcNum('7',event)">7</button>
+    <button class="ck-btn ck-num" onclick="calcNum('8',event)">8</button>
+    <button class="ck-btn ck-num" onclick="calcNum('9',event)">9</button>
+    <button class="ck-btn ck-op" onclick="calcOp('×',event)">×</button>
     <!-- Row 3 -->
-    <button class="ck-btn ck-num" onclick="calcNum('4')">4</button>
-    <button class="ck-btn ck-num" onclick="calcNum('5')">5</button>
-    <button class="ck-btn ck-num" onclick="calcNum('6')">6</button>
-    <button class="ck-btn ck-op" onclick="calcOp('−')">−</button>
+    <button class="ck-btn ck-num" onclick="calcNum('4',event)">4</button>
+    <button class="ck-btn ck-num" onclick="calcNum('5',event)">5</button>
+    <button class="ck-btn ck-num" onclick="calcNum('6',event)">6</button>
+    <button class="ck-btn ck-op" onclick="calcOp('−',event)">−</button>
     <!-- Row 4 -->
-    <button class="ck-btn ck-num" onclick="calcNum('1')">1</button>
-    <button class="ck-btn ck-num" onclick="calcNum('2')">2</button>
-    <button class="ck-btn ck-num" onclick="calcNum('3')">3</button>
-    <button class="ck-btn ck-op" onclick="calcOp('+')">+</button>
+    <button class="ck-btn ck-num" onclick="calcNum('1',event)">1</button>
+    <button class="ck-btn ck-num" onclick="calcNum('2',event)">2</button>
+    <button class="ck-btn ck-num" onclick="calcNum('3',event)">3</button>
+    <button class="ck-btn ck-op" onclick="calcOp('+',event)">+</button>
     <!-- Row 5 -->
-    <button class="ck-btn ck-num ck-zero" onclick="calcNum('0')">0</button>
-    <button class="ck-btn ck-num" onclick="calcDot()">.</button>
-    <button class="ck-btn ck-eq" onclick="calcEq()">=</button>
+    <button class="ck-btn ck-num ck-zero" onclick="calcNum('0',event)">0</button>
+    <button class="ck-btn ck-num" onclick="calcDot(event)">.</button>
+    <button class="ck-btn ck-eq" onclick="calcEq(event)">=</button>
   </div>
 </div>
 
@@ -2325,21 +2325,21 @@ init();
     f.querySelector('.fab-icon').innerHTML=open?'&#10005;':'&#8801;';
   };
 
-  window.calcNum=function(n){
-    addRipple(event);
+  window.calcNum=function(n,e){
+    addRipple(e);
     if(_justEq){_cur='0';_expr='';_justEq=false;}
     if(_cur==='0'&&n!=='.')_cur=n;
     else _cur+=n;
     upd();
   };
-  window.calcDot=function(){
-    addRipple(event);
+  window.calcDot=function(e){
+    addRipple(e);
     if(_justEq){_cur='0';_expr='';_justEq=false;}
     if(!_cur.includes('.'))_cur+='.';
     upd();
   };
-  window.calcOp=function(op){
-    addRipple(event);
+  window.calcOp=function(op,e){
+    addRipple(e);
     if(_op&&!_justEq){
       const r=compute(_prev,parseFloat(_cur),_op);
       _prev=r;_cur=fmt(r);
@@ -2354,8 +2354,8 @@ init();
       b.style.background=b.textContent.trim()===op?'rgba(167,139,250,.45)':'';
     });
   };
-  window.calcEq=function(){
-    addRipple(event);
+  window.calcEq=function(e){
+    addRipple(e);
     if(_op===null){_justEq=true;upd();return;}
     const b=parseFloat(_cur);
     _expr=(_prev)+' '+_op+' '+b+' =';
@@ -2364,8 +2364,8 @@ init();
     document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
     upd();
   };
-  window.calcFn=function(fn){
-    addRipple(event);
+  window.calcFn=function(fn,e){
+    addRipple(e);
     if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_expr='';
       document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');}
     else if(fn==='sign'){_cur=fmt(-parseFloat(_cur));}
@@ -2410,18 +2410,24 @@ init();
   document.addEventListener('keydown',function(e){
     const p=document.getElementById('calc-panel');
     if(!p.classList.contains('open'))return;
-    if(e.key>='0'&&e.key<='9')calcNum(e.key);
-    else if(e.key==='.')calcDot();
-    else if(e.key==='+'||e.key==='-'||e.key==='*'||e.key==='/'){
+    // ไม่ขัดแทรก shortcut ของ browser (Ctrl/Cmd+...)
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    const key=e.key;
+    if(key>='0'&&key<='9'){e.preventDefault();calcNum(key);}
+    else if(key==='.'){e.preventDefault();calcDot();}
+    else if(key==='+'||key==='-'||key==='*'||key==='/'){
+      e.preventDefault();
       const map={'+':'+','-':'−','*':'×','/':'÷'};
-      calcOp(map[e.key]);
+      calcOp(map[key]);
     }
-    else if(e.key==='Enter'||e.key==='=')calcEq();
-    else if(e.key==='Backspace'){
+    else if(key==='Enter'||key==='='){e.preventDefault();calcEq();}
+    else if(key==='Backspace'){
+      e.preventDefault();
       if(_cur.length>1)_cur=_cur.slice(0,-1); else _cur='0';
       upd();
     }
-    else if(e.key==='Escape')toggleCalc();
+    else if(key==='Delete'||key==='c'||key==='C'){e.preventDefault();calcFn('ac');}
+    else if(key==='Escape'){e.preventDefault();toggleCalc();}
   });
   upd();
 })();
