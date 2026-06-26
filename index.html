@@ -1991,7 +1991,7 @@ function renderDedSum(){
   }).join('')+(isSolo?`<button class="ded-show-all" onclick="showAllDed()">✕ แสดงทั้งหมด</button>`:'');
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
-  ge('dedCatStat').innerHTML=cats.map(c=>{
+  ge('dedCatStat').innerHTML=[...cats].sort((a,b)=>b.total-a.total).map(c=>{
     const pct=grandTotal?((c.total/grandTotal)*100).toFixed(1):0;
     const dimmed=!dedActive[c.key]?' dimmed':'';
     return`<div class="ded-stat-item${dimmed}" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${c.label}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
@@ -2000,10 +2000,11 @@ function renderDedSum(){
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
   if(CH.c5){CH.c5.destroy();CH.c5=null;}
   const coBar={responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
-  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:activeCats.map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
+  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
   if(activeCats.length){
-    const pieData=activeCats.map(c=>+c.total.toFixed(2));
-    CH.c5=new Chart(ge('cDedPie'),{type:'doughnut',data:{labels:activeCats.map(c=>c.label),datasets:[{data:pieData,backgroundColor:activeCats.map(c=>c.color),borderColor:activeCats.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
+    const sortedPie=[...activeCats].sort((a,b)=>b.total-a.total);
+    const pieData=sortedPie.map(c=>+c.total.toFixed(2));
+    CH.c5=new Chart(ge('cDedPie'),{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
   }
 }
 
@@ -2127,6 +2128,303 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 init();
+</script>
+
+<!-- ======= FLOATING CALCULATOR WIDGET ======= -->
+<style>
+/* --- FAB Button --- */
+#calc-fab{
+  position:fixed;right:20px;bottom:30px;z-index:9000;
+  width:54px;height:54px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  color:white;font-size:1.4rem;cursor:pointer;
+  box-shadow:0 4px 20px rgba(102,126,234,.55);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;
+  user-select:none;
+}
+#calc-fab:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(102,126,234,.75)}
+#calc-fab.open{transform:rotate(45deg) scale(1.05)}
+#calc-fab .fab-icon{transition:transform .3s,opacity .3s;font-style:normal}
+
+/* --- Panel --- */
+#calc-panel{
+  position:fixed;right:20px;bottom:96px;z-index:8999;
+  width:300px;
+  background:linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);
+  border-radius:24px;
+  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.07);
+  overflow:hidden;
+  transform-origin:bottom right;
+  transform:scale(0.7) translateY(20px);
+  opacity:0;
+  pointer-events:none;
+  transition:transform .35s cubic-bezier(.34,1.3,.64,1),opacity .3s ease;
+}
+#calc-panel.open{
+  transform:scale(1) translateY(0);
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* --- Display --- */
+.calc-display{
+  padding:22px 20px 12px;
+  text-align:right;
+}
+.calc-expr{
+  font-size:.75rem;color:rgba(255,255,255,.38);
+  min-height:18px;letter-spacing:.03em;
+  font-family:'SF Mono','Consolas',monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.calc-main{
+  font-size:2.6rem;font-weight:300;color:white;
+  letter-spacing:-.02em;line-height:1.1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  min-height:58px;display:flex;align-items:flex-end;justify-content:flex-end;
+  font-family:'SF Pro Display','Segoe UI',sans-serif;
+}
+.calc-main.shrink{font-size:1.8rem}
+
+/* --- Keypad --- */
+.calc-keys{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:rgba(255,255,255,.04);
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.ck-btn{
+  border:none;cursor:pointer;
+  padding:0;height:66px;
+  font-size:1.1rem;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .12s,transform .08s;
+  position:relative;overflow:hidden;
+  background:transparent;color:white;
+  letter-spacing:-.01em;
+}
+.ck-btn:active{transform:scale(.93)}
+.ck-btn::after{
+  content:'';position:absolute;inset:0;
+  background:rgba(255,255,255,.08);
+  opacity:0;transition:opacity .1s;
+}
+.ck-btn:active::after{opacity:1}
+
+/* Color themes */
+.ck-fn{color:rgba(255,255,255,.75);font-size:.95rem;background:rgba(255,255,255,.07)}
+.ck-fn:hover{background:rgba(255,255,255,.13)}
+.ck-op{color:#a78bfa;font-size:1.2rem;background:rgba(167,139,250,.1)}
+.ck-op:hover{background:rgba(167,139,250,.2)}
+.ck-num{background:rgba(255,255,255,.05)}
+.ck-num:hover{background:rgba(255,255,255,.11)}
+.ck-zero{grid-column:span 2}
+.ck-eq{
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  color:white;font-size:1.3rem;
+}
+.ck-eq:hover{background:linear-gradient(135deg,#7c93f7,#8b5cf6)}
+
+/* Ripple on press */
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+.ripple-el{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.25);
+  width:40px;height:40px;margin:-20px;
+  animation:ripple .5s ease-out forwards;
+  pointer-events:none;
+}
+
+/* --- Brand bar --- */
+.calc-brand{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 0;
+}
+.calc-brand-name{
+  font-size:.65rem;font-weight:700;letter-spacing:.15em;
+  text-transform:uppercase;color:rgba(255,255,255,.25);
+}
+.calc-mem-row{
+  display:flex;gap:6px;
+}
+.ck-mem{
+  font-size:.62rem;font-weight:700;letter-spacing:.05em;
+  background:rgba(255,255,255,.07);border:none;cursor:pointer;
+  color:rgba(255,255,255,.4);border-radius:5px;padding:3px 6px;
+  transition:background .15s,color .15s;
+}
+.ck-mem:hover{background:rgba(167,139,250,.2);color:#a78bfa}
+.ck-mem.active{color:#68d391;background:rgba(104,211,145,.1)}
+</style>
+
+<button id="calc-fab" aria-label="เครื่องคิดเลข" onclick="toggleCalc()">
+  <span class="fab-icon">&#8801;</span>
+</button>
+
+<div id="calc-panel" role="dialog" aria-label="เครื่องคิดเลข">
+  <div class="calc-brand">
+    <span class="calc-brand-name">Calculator</span>
+    <div class="calc-mem-row">
+      <button class="ck-mem" id="cm-mc" onclick="calcMem('mc')">MC</button>
+      <button class="ck-mem" id="cm-mr" onclick="calcMem('mr')">MR</button>
+      <button class="ck-mem" id="cm-ms" onclick="calcMem('ms')">M+</button>
+    </div>
+  </div>
+  <div class="calc-display">
+    <div class="calc-expr" id="calc-expr"></div>
+    <div class="calc-main" id="calc-main">0</div>
+  </div>
+  <div class="calc-keys">
+    <!-- Row 1 -->
+    <button class="ck-btn ck-fn" onclick="calcFn('ac')">AC</button>
+    <button class="ck-btn ck-fn" onclick="calcFn('sign')">+/−</button>
+    <button class="ck-btn ck-fn" onclick="calcFn('pct')">%</button>
+    <button class="ck-btn ck-op" onclick="calcOp('÷')">÷</button>
+    <!-- Row 2 -->
+    <button class="ck-btn ck-num" onclick="calcNum('7')">7</button>
+    <button class="ck-btn ck-num" onclick="calcNum('8')">8</button>
+    <button class="ck-btn ck-num" onclick="calcNum('9')">9</button>
+    <button class="ck-btn ck-op" onclick="calcOp('×')">×</button>
+    <!-- Row 3 -->
+    <button class="ck-btn ck-num" onclick="calcNum('4')">4</button>
+    <button class="ck-btn ck-num" onclick="calcNum('5')">5</button>
+    <button class="ck-btn ck-num" onclick="calcNum('6')">6</button>
+    <button class="ck-btn ck-op" onclick="calcOp('−')">−</button>
+    <!-- Row 4 -->
+    <button class="ck-btn ck-num" onclick="calcNum('1')">1</button>
+    <button class="ck-btn ck-num" onclick="calcNum('2')">2</button>
+    <button class="ck-btn ck-num" onclick="calcNum('3')">3</button>
+    <button class="ck-btn ck-op" onclick="calcOp('+')">+</button>
+    <!-- Row 5 -->
+    <button class="ck-btn ck-num ck-zero" onclick="calcNum('0')">0</button>
+    <button class="ck-btn ck-num" onclick="calcDot()">.</button>
+    <button class="ck-btn ck-eq" onclick="calcEq()">=</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  let _cur='0',_prev=null,_op=null,_justEq=false,_expr='',_mem=0,_hasMem=false;
+
+  function upd(){
+    const el=document.getElementById('calc-main');
+    const ex=document.getElementById('calc-expr');
+    el.textContent=_cur;
+    el.className='calc-main'+(_cur.length>9?' shrink':'');
+    ex.textContent=_expr;
+  }
+
+  window.toggleCalc=function(){
+    const p=document.getElementById('calc-panel');
+    const f=document.getElementById('calc-fab');
+    const open=p.classList.toggle('open');
+    f.classList.toggle('open',open);
+    // swap icon
+    f.querySelector('.fab-icon').innerHTML=open?'&#10005;':'&#8801;';
+  };
+
+  window.calcNum=function(n){
+    addRipple(event);
+    if(_justEq){_cur='0';_expr='';_justEq=false;}
+    if(_cur==='0'&&n!=='.')_cur=n;
+    else _cur+=n;
+    upd();
+  };
+  window.calcDot=function(){
+    addRipple(event);
+    if(_justEq){_cur='0';_expr='';_justEq=false;}
+    if(!_cur.includes('.'))_cur+='.';
+    upd();
+  };
+  window.calcOp=function(op){
+    addRipple(event);
+    if(_op&&!_justEq){
+      const r=compute(_prev,parseFloat(_cur),_op);
+      _prev=r;_cur=fmt(r);
+    } else {
+      _prev=parseFloat(_cur);
+    }
+    _op=op;_justEq=false;
+    _expr=_cur+' '+op;
+    upd();
+    // highlight active op button
+    document.querySelectorAll('.ck-op').forEach(b=>{
+      b.style.background=b.textContent.trim()===op?'rgba(167,139,250,.45)':'';
+    });
+  };
+  window.calcEq=function(){
+    addRipple(event);
+    if(_op===null){_justEq=true;upd();return;}
+    const b=parseFloat(_cur);
+    _expr=(_prev)+' '+_op+' '+b+' =';
+    const r=compute(_prev,b,_op);
+    _cur=fmt(r);_prev=null;_op=null;_justEq=true;
+    document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
+    upd();
+  };
+  window.calcFn=function(fn){
+    addRipple(event);
+    if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_expr='';
+      document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');}
+    else if(fn==='sign'){_cur=fmt(-parseFloat(_cur));}
+    else if(fn==='pct'){_cur=fmt(parseFloat(_cur)/100);}
+    upd();
+  };
+  window.calcMem=function(action){
+    if(action==='mc'){_mem=0;_hasMem=false;}
+    else if(action==='mr'){if(_hasMem){_cur=fmt(_mem);_justEq=true;upd();}}
+    else if(action==='ms'){_mem+=parseFloat(_cur)||0;_hasMem=true;}
+    document.getElementById('cm-mr').classList.toggle('active',_hasMem);
+    document.getElementById('cm-ms').classList.toggle('active',_hasMem);
+  };
+
+  function compute(a,b,op){
+    if(op==='÷')return b===0?NaN:a/b;
+    if(op==='×')return a*b;
+    if(op==='−')return a-b;
+    if(op==='+')return a+b;
+    return b;
+  }
+  function fmt(n){
+    if(!isFinite(n))return 'Error';
+    // avoid floating point mess
+    const s=parseFloat(n.toPrecision(12));
+    return String(s);
+  }
+  function addRipple(e){
+    if(!e)return;
+    const btn=e.currentTarget||e.target;
+    if(!btn)return;
+    const r=document.createElement('span');
+    r.className='ripple-el';
+    const rect=btn.getBoundingClientRect();
+    r.style.left=(e.clientX-rect.left)+'px';
+    r.style.top=(e.clientY-rect.top)+'px';
+    btn.appendChild(r);
+    setTimeout(()=>r.remove(),600);
+  }
+
+  // keyboard support when panel open
+  document.addEventListener('keydown',function(e){
+    const p=document.getElementById('calc-panel');
+    if(!p.classList.contains('open'))return;
+    if(e.key>='0'&&e.key<='9')calcNum(e.key);
+    else if(e.key==='.')calcDot();
+    else if(e.key==='+'||e.key==='-'||e.key==='*'||e.key==='/'){
+      const map={'+':'+','-':'−','*':'×','/':'÷'};
+      calcOp(map[e.key]);
+    }
+    else if(e.key==='Enter'||e.key==='=')calcEq();
+    else if(e.key==='Backspace'){
+      if(_cur.length>1)_cur=_cur.slice(0,-1); else _cur='0';
+      upd();
+    }
+    else if(e.key==='Escape')toggleCalc();
+  });
+  upd();
+})();
 </script>
 </body>
 </html>
