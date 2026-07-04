@@ -2503,6 +2503,7 @@ init();
 .ai-msg.a code{background:#e2e8f0;padding:1px 5px;border-radius:4px;font-size:.78rem}
 .ai-msg.a strong{color:#0f172a}
 .ai-msg.err{align-self:flex-start;background:#fff5f5;color:#c53030;border:1px solid #fc8181;font-size:.8rem}
+.ai-note{align-self:center;background:#fffaf0;color:#c05621;border:1px dashed #f6ad55;border-radius:10px;padding:6px 12px;font-size:.74rem;font-weight:600;text-align:center;max-width:92%}
 .ai-msg .ai-img-thumb{max-width:150px;border-radius:8px;margin-top:6px;display:block}
 .ai-typing{align-self:flex-start;background:#f1f5f9;padding:11px 14px;border-radius:14px;display:flex;gap:4px}
 .ai-typing span{width:7px;height:7px;border-radius:50%;background:#94a3b8;animation:ai-bounce 1.2s infinite}
@@ -2764,7 +2765,7 @@ init();
     const curParts=[{text:'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n'+userText}];
     if(imgPart)curParts.push({inlineData:{mimeType:imgPart.mimeType,data:imgPart.data}});
     contents.push({role:'user',parts:curParts});
-    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:1600}};
+    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:4096}};
 
     let url,opts;
     if(aiCfg&&aiCfg.mode==='proxy'){
@@ -2783,8 +2784,18 @@ init();
     try{data=await res.json();}catch(e){data=null;}
     if(!res.ok)throw new Error((data&&data.error&&data.error.message)||('HTTP '+res.status));
     const cand=data&&data.candidates&&data.candidates[0];
-    if(!cand){throw new Error('ไม่ได้รับคำตอบจากโมเดล (อาจถูกกรองด้วยนโยบายความปลอดภัย)');}
-    return (cand.content&&cand.content.parts||[]).map(p=>p.text||'').join('').trim();
+    const pf=data&&data.promptFeedback;
+    if(!cand){
+      if(pf&&pf.blockReason)throw new Error('คำถาม/รูปถูกกรองด้วยนโยบายความปลอดภัยของ Gemini ('+pf.blockReason+')');
+      throw new Error('ไม่ได้รับคำตอบจากโมเดล');
+    }
+    const text=(cand.content&&cand.content.parts||[]).map(p=>p.text||'').join('').trim();
+    const fr=cand.finishReason||'';
+    if(!text){
+      if(fr==='SAFETY'||fr==='RECITATION')throw new Error('คำตอบถูกกรองด้วยนโยบายความปลอดภัยของ Gemini — ลองปรับคำถามดูครับ');
+      throw new Error('ไม่ได้รับคำตอบจากโมเดล'+(fr?' ('+fr+')':''));
+    }
+    return {text,truncated:fr==='MAX_TOKENS'};
   }
 
   /* ── render helpers ── */
@@ -2800,9 +2811,11 @@ init();
     const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg a';d.innerHTML=mdLite(raw);log.appendChild(d);scrollLog();
   }
   function addError(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg err';d.textContent='⚠️ '+msg;log.appendChild(d);scrollLog();}
+  function addNote(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-note';d.textContent='✂️ '+msg;log.appendChild(d);scrollLog();}
   function scrollLog(){const log=ge('ai-log');log.scrollTop=log.scrollHeight;}
   function mdLite(raw){
-    const noAction=raw.replace(/```json[\s\S]*?```/g,'').replace(/```[\s\S]*?```/g,'').trim();
+    /* ตัดบล็อค json/โค้ดออกจากการแสดงผล + กัน fence ที่ถูกตัดกลางคัน (unclosed) โผล่ดิบ */
+    const noAction=raw.replace(/```json[\s\S]*?```/g,'').replace(/```[\s\S]*?```/g,'').replace(/```[\s\S]*$/,'').trim();
     const lines=noAction.split(/\n/);let html='',inList=false;
     const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+?)`/g,'<code>$1</code>');
     for(const ln of lines){
@@ -2871,10 +2884,12 @@ init();
     aiClearImg();ge('ai-input').value='';autoGrow();
     aiBusy=true;ge('ai-send').disabled=true;addTyping();
     try{
-      const reply=await callGemini(userText||'อ่านรูปสลิปเงินเดือนนี้ แล้วดึงตัวเลขมากรอกลงฟอร์มเดือนที่เลือกให้',img);
+      const out=await callGemini(userText||'อ่านรูปสลิปเงินเดือนนี้ แล้วดึงตัวเลขมากรอกลงฟอร์มเดือนที่เลือกให้',img);
+      const reply=out.text;
       rmTyping();
       aiHistory.push({role:'model',text:reply});
       addAssistant(reply);
+      if(out.truncated)addNote('คำตอบยาวเกินขนาด เลยถูกตัดกลางคัน — พิมพ์ "เขียนต่อ" เพื่ออ่านส่วนที่เหลือได้ครับ');
       const fields=extractAction(reply);
       if(fields)renderActionCard(fields);
     }catch(e){rmTyping();addError(e.message||'เรียก Gemini ไม่สำเร็จ');}
