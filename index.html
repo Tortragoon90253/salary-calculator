@@ -2779,10 +2779,25 @@ init();
       url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey);
       opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
     }
+    /* ── เรียกจริง + ลองใหม่อัตโนมัติเมื่อเจอ overload/ชั่วคราว (429/5xx) ── */
+    const sleep=ms=>new Promise(rs=>setTimeout(rs,ms));
+    const TRANSIENT=new Set([429,500,502,503,504]);
+    const MAX_TRY=3;
     let res,data;
-    try{res=await fetch(url,opts);}catch(e){throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));}
-    try{data=await res.json();}catch(e){data=null;}
-    if(!res.ok)throw new Error((data&&data.error&&data.error.message)||('HTTP '+res.status));
+    for(let attempt=1;;attempt++){
+      try{res=await fetch(url,opts);}
+      catch(e){
+        if(attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
+        throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));
+      }
+      try{data=await res.json();}catch(e){data=null;}
+      if(res.ok)break;
+      const msg=(data&&data.error&&data.error.message)||('HTTP '+res.status);
+      const overloaded=res.status===503||res.status===429||/overload|high demand|unavailable|try again later/i.test(msg);
+      if(TRANSIENT.has(res.status)&&attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
+      if(overloaded)throw new Error('โมเดลกำลังมีคนใช้งานเยอะ (โหลดหนักฝั่ง Google) — ลองใหม่อีกครั้งสักครู่ หรือสลับไปโมเดล gemini-2.0-flash ใน ⚙️ ซึ่งมักว่างกว่า');
+      throw new Error(msg);
+    }
     const cand=data&&data.candidates&&data.candidates[0];
     const pf=data&&data.promptFeedback;
     if(!cand){
