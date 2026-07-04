@@ -2503,7 +2503,9 @@ init();
 .ai-msg.a code{background:#e2e8f0;padding:1px 5px;border-radius:4px;font-size:.78rem}
 .ai-msg.a strong{color:#0f172a}
 .ai-msg.err{align-self:flex-start;background:#fff5f5;color:#c53030;border:1px solid #fc8181;font-size:.8rem}
-.ai-note{align-self:center;background:#fffaf0;color:#c05621;border:1px dashed #f6ad55;border-radius:10px;padding:6px 12px;font-size:.74rem;font-weight:600;text-align:center;max-width:92%}
+.ai-note{align-self:center;background:#fffaf0;color:#c05621;border:1px dashed #f6ad55;border-radius:10px;padding:6px 12px;font-size:.74rem;font-weight:600;text-align:center;max-width:92%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+.ai-note-btn{border:none;border-radius:14px;background:linear-gradient(135deg,#0ea5a4,#2563eb);color:#fff;font-size:.74rem;font-weight:700;padding:4px 12px;cursor:pointer}
+.ai-note-btn:hover{opacity:.9}
 .ai-msg .ai-img-thumb{max-width:150px;border-radius:8px;margin-top:6px;display:block}
 .ai-typing{align-self:flex-start;background:#f1f5f9;padding:11px 14px;border-radius:14px;display:flex;gap:4px}
 .ai-typing span{width:7px;height:7px;border-radius:50%;background:#94a3b8;animation:ai-bounce 1.2s infinite}
@@ -2765,7 +2767,7 @@ init();
     const curParts=[{text:'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n'+userText}];
     if(imgPart)curParts.push({inlineData:{mimeType:imgPart.mimeType,data:imgPart.data}});
     contents.push({role:'user',parts:curParts});
-    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:4096}};
+    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:8192}};
 
     let url,opts;
     if(aiCfg&&aiCfg.mode==='proxy'){
@@ -2779,10 +2781,25 @@ init();
       url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey);
       opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
     }
+    /* ── เรียกจริง + ลองใหม่อัตโนมัติเมื่อเจอ overload/ชั่วคราว (429/5xx) ── */
+    const sleep=ms=>new Promise(rs=>setTimeout(rs,ms));
+    const TRANSIENT=new Set([429,500,502,503,504]);
+    const MAX_TRY=3;
     let res,data;
-    try{res=await fetch(url,opts);}catch(e){throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));}
-    try{data=await res.json();}catch(e){data=null;}
-    if(!res.ok)throw new Error((data&&data.error&&data.error.message)||('HTTP '+res.status));
+    for(let attempt=1;;attempt++){
+      try{res=await fetch(url,opts);}
+      catch(e){
+        if(attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
+        throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));
+      }
+      try{data=await res.json();}catch(e){data=null;}
+      if(res.ok)break;
+      const msg=(data&&data.error&&data.error.message)||('HTTP '+res.status);
+      const overloaded=res.status===503||res.status===429||/overload|high demand|unavailable|try again later/i.test(msg);
+      if(TRANSIENT.has(res.status)&&attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
+      if(overloaded)throw new Error('โมเดลกำลังมีคนใช้งานเยอะ (โหลดหนักฝั่ง Google) — ลองใหม่อีกครั้งสักครู่ หรือสลับไปโมเดล gemini-2.0-flash ใน ⚙️ ซึ่งมักว่างกว่า');
+      throw new Error(msg);
+    }
     const cand=data&&data.candidates&&data.candidates[0];
     const pf=data&&data.promptFeedback;
     if(!cand){
@@ -2812,6 +2829,13 @@ init();
   }
   function addError(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg err';d.textContent='⚠️ '+msg;log.appendChild(d);scrollLog();}
   function addNote(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-note';d.textContent='✂️ '+msg;log.appendChild(d);scrollLog();}
+  function addContinueNote(){
+    const log=ge('ai-log');const d=document.createElement('div');d.className='ai-note';
+    d.appendChild(document.createTextNode('✂️ คำตอบยาวเลยถูกตัด — '));
+    const b=document.createElement('button');b.className='ai-note-btn';b.textContent='▶ เขียนต่อ';
+    b.onclick=()=>{if(aiBusy)return;d.remove();run('เขียนต่อจากที่ค้างไว้');};
+    d.appendChild(b);log.appendChild(d);scrollLog();
+  }
   function scrollLog(){const log=ge('ai-log');log.scrollTop=log.scrollHeight;}
   function mdLite(raw){
     /* ตัดบล็อค json/โค้ดออกจากการแสดงผล + กัน fence ที่ถูกตัดกลางคัน (unclosed) โผล่ดิบ */
@@ -2880,16 +2904,17 @@ init();
     if(!aiReady()){aiToggleEnsureOpen();aiOpenCfg();return;}
     const img=aiImg;const imgUrl=img?img.url:null;
     addUser(userText,imgUrl);
-    aiHistory.push({role:'user',text:userText||'(ผู้ใช้ส่งรูปสลิปเงินเดือน)'});
     aiClearImg();ge('ai-input').value='';autoGrow();
     aiBusy=true;ge('ai-send').disabled=true;addTyping();
     try{
       const out=await callGemini(userText||'อ่านรูปสลิปเงินเดือนนี้ แล้วดึงตัวเลขมากรอกลงฟอร์มเดือนที่เลือกให้',img);
       const reply=out.text;
       rmTyping();
+      /* push หลังสำเร็จ เพื่อไม่ให้ข้อความปัจจุบันซ้ำกับ turn ที่แนบ context (ถ้าพลาดก็ retry ได้สะอาด) */
+      aiHistory.push({role:'user',text:userText||'(ผู้ใช้ส่งรูปสลิปเงินเดือน)'});
       aiHistory.push({role:'model',text:reply});
       addAssistant(reply);
-      if(out.truncated)addNote('คำตอบยาวเกินขนาด เลยถูกตัดกลางคัน — พิมพ์ "เขียนต่อ" เพื่ออ่านส่วนที่เหลือได้ครับ');
+      if(out.truncated)addContinueNote();
       const fields=extractAction(reply);
       if(fields)renderActionCard(fields);
     }catch(e){rmTyping();addError(e.message||'เรียก Gemini ไม่สำเร็จ');}
