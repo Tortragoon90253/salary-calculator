@@ -2532,6 +2532,11 @@ init();
 .ai-send:disabled{opacity:.45;cursor:not-allowed}
 /* config warning box */
 .ai-warn{background:#fffaf0;border:1px solid #f6ad55;border-radius:8px;padding:9px 11px;font-size:.72rem;color:#c05621;line-height:1.6;margin-bottom:12px}
+.ai-warn.ok{background:#f0fdfa;border-color:#5eead4;color:#0f766e}
+.ai-mode-row{display:flex;gap:8px;margin-bottom:14px}
+.ai-mode-btn{flex:1;padding:10px 8px;border:1.5px solid #cbd5e0;border-radius:9px;background:#fff;color:#64748b;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;line-height:1.3}
+.ai-mode-btn:hover{border-color:#94a3b8}
+.ai-mode-btn.on{border-color:#2563eb;background:#ebf8ff;color:#1e40af;box-shadow:0 0 0 2px rgba(37,99,235,.12)}
 /* --- Mobile: bottom sheet --- */
 @media(max-width:640px){
   #ai-fab{left:16px;bottom:20px;width:50px;height:50px;font-size:1.35rem}
@@ -2576,18 +2581,38 @@ init();
 <div id="aiCfgModal" class="modal-overlay" onclick="if(event.target===this)aiCloseCfg()">
   <div class="modal-box">
     <div class="modal-title">✨ ตั้งค่าผู้ช่วย AI (Gemini)</div>
-    <div class="modal-sub">ใส่ Google Gemini API Key เพื่อเปิดใช้ผู้ช่วยการเงิน<br>ใช้งานได้ฟรีในโควตาที่ Google ให้</div>
-    <div class="steps">
-      <div class="steps-title">📋 วิธีขอ API Key (ฟรี)</div>
-      <ol>
-        <li>เปิด <strong>aistudio.google.com/app/apikey</strong></li>
-        <li>Sign in ด้วยบัญชี Google แล้วกด <strong>Create API key</strong></li>
-        <li>Copy คีย์ (ขึ้นต้น <code>AIza…</code>) มาวางด้านล่าง</li>
-      </ol>
+    <div class="modal-sub">เลือกวิธีเชื่อมต่อ Gemini</div>
+
+    <div class="ai-mode-row">
+      <button type="button" id="aiModeKeyBtn" class="ai-mode-btn on" onclick="aiSetMode('key')">🔑 คีย์ส่วนตัว<br><span style="font-size:.65rem;font-weight:500">เรียก Gemini ตรง</span></button>
+      <button type="button" id="aiModeProxyBtn" class="ai-mode-btn" onclick="aiSetMode('proxy')">🛡️ ผ่านเซิร์ฟเวอร์<br><span style="font-size:.65rem;font-weight:500">Proxy · ซ่อน key</span></button>
     </div>
-    <div class="ai-warn">🔒 <strong>ความเป็นส่วนตัว:</strong> คีย์นี้เก็บไว้ในเครื่องนี้เท่านั้น (localStorage) และเรียก Gemini โดยตรงจากเบราว์เซอร์ ข้อมูลสรุปเงินเดือนของคุณจะถูกส่งให้ Google Gemini เพื่อวิเคราะห์ — ควรใช้กับเครื่องส่วนตัวเท่านั้น</div>
-    <label class="modal-lbl">Gemini API Key</label>
-    <input id="aiApiKey" class="gsin" type="password" placeholder="AIzaSy...">
+
+    <!-- โหมด: คีย์ส่วนตัว -->
+    <div id="aiPanelKey">
+      <div class="steps">
+        <div class="steps-title">📋 วิธีขอ API Key (ฟรี)</div>
+        <ol>
+          <li>เปิด <strong>aistudio.google.com/app/apikey</strong></li>
+          <li>Sign in ด้วยบัญชี Google แล้วกด <strong>Create API key</strong></li>
+          <li>Copy คีย์ (ขึ้นต้น <code>AIza…</code>) มาวางด้านล่าง</li>
+        </ol>
+      </div>
+      <div class="ai-warn">🔒 <strong>ความเป็นส่วนตัว:</strong> คีย์เก็บในเครื่องนี้เท่านั้น (localStorage) เรียก Gemini ตรงจากเบราว์เซอร์ — เหมาะกับเครื่องส่วนตัว</div>
+      <label class="modal-lbl">Gemini API Key</label>
+      <input id="aiApiKey" class="gsin" type="password" placeholder="AIzaSy...">
+    </div>
+
+    <!-- โหมด: ผ่านเซิร์ฟเวอร์ (proxy) -->
+    <div id="aiPanelProxy" style="display:none">
+      <div class="ai-warn ok">🛡️ <strong>ปลอดภัยกว่า:</strong> เบราว์เซอร์ไม่เก็บ Gemini key เลย — key อยู่บนเซิร์ฟเวอร์ ใช้ key กลางร่วมกันได้ เหมาะกับการแชร์ให้คนอื่น<br><small>วิธีติดตั้ง proxy อยู่ในไฟล์ <code>functions/README.md</code></small></div>
+      <label class="modal-lbl">Proxy URL (Cloud Function)</label>
+      <input id="aiProxyUrl" class="gsin" type="url" placeholder="https://asia-southeast1-xxx.cloudfunctions.net/askAI">
+      <label class="modal-lbl modal-lbl-mt">รหัสเข้าใช้ (Access Code)</label>
+      <input id="aiAccessCode" class="gsin" type="password" placeholder="รหัสที่ตั้งไว้ตอน deploy">
+      <div class="gs-hint">รหัสนี้เก็บในเครื่องนี้เท่านั้น ไม่ติดไปกับลิงก์แชร์</div>
+    </div>
+
     <label class="modal-lbl modal-lbl-mt">โมเดล</label>
     <select id="aiModel" class="gsin">
       <option value="gemini-2.5-flash">gemini-2.5-flash (แนะนำ · เร็ว+ฉลาด)</option>
@@ -2600,7 +2625,7 @@ init();
     <div class="modal-btns">
       <button class="mbtn-save" style="background:linear-gradient(135deg,#0d9488,#2563eb)" onclick="aiSaveCfg()">✅ บันทึก</button>
       <button class="mbtn-cancel" onclick="aiCloseCfg()">ยกเลิก</button>
-      <button class="mbtn-clear" onclick="aiClearCfg()">🗑️ ล้างคีย์</button>
+      <button class="mbtn-clear" onclick="aiClearCfg()">🗑️ ล้าง</button>
     </div>
   </div>
 </div>
@@ -2609,7 +2634,7 @@ init();
 (function(){
   'use strict';
   const AI_CFG_KEY='sol_ai_cfg';
-  let aiCfg=null;                 /* {apiKey, model} */
+  let aiCfg=null;                 /* {mode:'key'|'proxy', apiKey, model, proxyUrl, accessCode} */
   let aiHistory=[];               /* [{role:'user'|'model', text}] — clean, no context */
   let aiImg=null;                 /* {mimeType, data(base64), url} */
   let aiPendingFields=null;
@@ -2629,19 +2654,42 @@ init();
 - pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต`;
 
   /* ── config ── */
+  function aiReady(){return !!(aiCfg&&(aiCfg.mode==='proxy'?aiCfg.proxyUrl:aiCfg.apiKey));}
   function loadCfg(){try{const raw=localStorage.getItem(AI_CFG_KEY);if(raw)aiCfg=JSON.parse(raw);}catch(e){}updFab();}
-  function updFab(){const f=ge('ai-fab');if(f)f.classList.toggle('cfgless',!(aiCfg&&aiCfg.apiKey));}
+  function updFab(){const f=ge('ai-fab');if(f)f.classList.toggle('cfgless',!aiReady());}
+  window.aiSetMode=function(m){
+    const proxy=(m==='proxy');
+    ge('aiModeKeyBtn').classList.toggle('on',!proxy);
+    ge('aiModeProxyBtn').classList.toggle('on',proxy);
+    ge('aiPanelKey').style.display=proxy?'none':'block';
+    ge('aiPanelProxy').style.display=proxy?'block':'none';
+  };
   window.aiOpenCfg=function(){
-    if(aiCfg){ge('aiApiKey').value=aiCfg.apiKey||'';if(aiCfg.model)ge('aiModel').value=aiCfg.model;}
+    const mode=(aiCfg&&aiCfg.mode)||'key';
+    aiSetMode(mode);
+    if(aiCfg){
+      ge('aiApiKey').value=aiCfg.apiKey||'';
+      ge('aiProxyUrl').value=aiCfg.proxyUrl||'';
+      ge('aiAccessCode').value=aiCfg.accessCode||'';
+      if(aiCfg.model)ge('aiModel').value=aiCfg.model;
+    }
     ge('aiCfgStatus').className='gs-status-bar';ge('aiCfgStatus').textContent='';
     ge('aiCfgModal').classList.add('open');
   };
   window.aiCloseCfg=function(){ge('aiCfgModal').classList.remove('open');};
   window.aiSaveCfg=function(){
-    const apiKey=ge('aiApiKey').value.trim();const model=ge('aiModel').value;
     const st=ge('aiCfgStatus');
-    if(!apiKey){st.className='gs-status-bar show err';st.textContent='กรุณากรอก API Key';return;}
-    aiCfg={apiKey,model};
+    const model=ge('aiModel').value;
+    const proxy=ge('aiModeProxyBtn').classList.contains('on');
+    if(proxy){
+      let proxyUrl=ge('aiProxyUrl').value.trim();const accessCode=ge('aiAccessCode').value.trim();
+      if(!/^https:\/\//i.test(proxyUrl)){st.className='gs-status-bar show err';st.textContent='กรุณากรอก Proxy URL (ขึ้นต้น https://)';return;}
+      aiCfg={mode:'proxy',proxyUrl,accessCode,model,apiKey:''};
+    }else{
+      const apiKey=ge('aiApiKey').value.trim();
+      if(!apiKey){st.className='gs-status-bar show err';st.textContent='กรุณากรอก API Key';return;}
+      aiCfg={mode:'key',apiKey,model,proxyUrl:'',accessCode:''};
+    }
     try{localStorage.setItem(AI_CFG_KEY,JSON.stringify(aiCfg));}catch(e){}
     updFab();
     st.className='gs-status-bar show ok';st.textContent='บันทึกแล้ว! เปิดผู้ช่วย AI ได้เลย';
@@ -2649,8 +2697,8 @@ init();
   };
   window.aiClearCfg=function(){
     aiCfg=null;try{localStorage.removeItem(AI_CFG_KEY);}catch(e){}
-    ge('aiApiKey').value='';updFab();
-    const st=ge('aiCfgStatus');st.className='gs-status-bar show info';st.textContent='ล้างคีย์แล้ว';
+    ge('aiApiKey').value='';ge('aiProxyUrl').value='';ge('aiAccessCode').value='';updFab();
+    const st=ge('aiCfgStatus');st.className='gs-status-bar show info';st.textContent='ล้างการตั้งค่าแล้ว';
   };
 
   /* ── panel ── */
@@ -2663,7 +2711,7 @@ init();
   function renderHelloIfEmpty(){
     const log=ge('ai-log');
     if(aiHistory.length||log.querySelector('.ai-msg'))return;
-    log.innerHTML=`<div class="ai-hello">👋 สวัสดีครับ! ผมช่วย<b>วิเคราะห์เงินเดือน</b> ตอบคำถามการเงิน แนะนำภาษี และ<b>กรอกข้อมูลจากรูปสลิป</b>ให้ได้<br><br>ลองกดปุ่มลัดด้านบน หรือพิมพ์ถามได้เลย ✨${aiCfg&&aiCfg.apiKey?'':'<br><br>⚠️ ยังไม่ได้ตั้งค่า — กด ⚙️ เพื่อใส่ API Key ก่อน'}</div>`;
+    log.innerHTML=`<div class="ai-hello">👋 สวัสดีครับ! ผมช่วย<b>วิเคราะห์เงินเดือน</b> ตอบคำถามการเงิน แนะนำภาษี และ<b>กรอกข้อมูลจากรูปสลิป</b>ให้ได้<br><br>ลองกดปุ่มลัดด้านบน หรือพิมพ์ถามได้เลย ✨${aiReady()?'':'<br><br>⚠️ ยังไม่ได้ตั้งค่า — กด ⚙️ เพื่อใส่ API Key หรือ Proxy ก่อน'}</div>`;
   }
 
   /* ── image ── */
@@ -2708,18 +2756,31 @@ init();
     return JSON.stringify(ctx);
   }
 
-  /* ── Gemini REST call ── */
+  /* ── Gemini call (โหมด key = เรียกตรง / โหมด proxy = ผ่านเซิร์ฟเวอร์) ── */
   async function callGemini(userText,imgPart){
     const model=(aiCfg&&aiCfg.model)||'gemini-2.5-flash';
-    const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey);
     const contents=[];
     aiHistory.slice(-12).forEach(h=>contents.push({role:h.role,parts:[{text:h.text}]}));
     const curParts=[{text:'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n'+userText}];
     if(imgPart)curParts.push({inlineData:{mimeType:imgPart.mimeType,data:imgPart.data}});
     contents.push({role:'user',parts:curParts});
-    const body={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:1600}};
-    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await res.json();
+    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:1600}};
+
+    let url,opts;
+    if(aiCfg&&aiCfg.mode==='proxy'){
+      /* ส่งให้ proxy — เบราว์เซอร์ไม่มี Gemini key เลย */
+      url=aiCfg.proxyUrl;
+      opts={method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(Object.assign({model,code:aiCfg.accessCode||''},payload))};
+      if(aiCfg.accessCode)opts.headers['Authorization']='Bearer '+aiCfg.accessCode;
+    }else{
+      /* เรียก Gemini ตรงด้วยคีย์ส่วนตัว */
+      url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey);
+      opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
+    }
+    let res,data;
+    try{res=await fetch(url,opts);}catch(e){throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));}
+    try{data=await res.json();}catch(e){data=null;}
     if(!res.ok)throw new Error((data&&data.error&&data.error.message)||('HTTP '+res.status));
     const cand=data&&data.candidates&&data.candidates[0];
     if(!cand){throw new Error('ไม่ได้รับคำตอบจากโมเดล (อาจถูกกรองด้วยนโยบายความปลอดภัย)');}
@@ -2803,7 +2864,7 @@ init();
   /* ── send pipeline ── */
   async function run(userText){
     if(aiBusy)return;
-    if(!(aiCfg&&aiCfg.apiKey)){aiToggleEnsureOpen();aiOpenCfg();return;}
+    if(!aiReady()){aiToggleEnsureOpen();aiOpenCfg();return;}
     const img=aiImg;const imgUrl=img?img.url:null;
     addUser(userText,imgUrl);
     aiHistory.push({role:'user',text:userText||'(ผู้ใช้ส่งรูปสลิปเงินเดือน)'});
@@ -2834,7 +2895,7 @@ init();
     goal:'ฉันอยากวางแผนการออม/ลงทุน ช่วยดูอัตราการออมปัจจุบันของฉันและแนะนำแผนให้หน่อย ถ้ายังไม่รู้เป้าหมายของฉันให้ถามฉันก่อน'
   };
   window.aiQuick=function(k){
-    if(!(aiCfg&&aiCfg.apiKey)){aiToggleEnsureOpen();aiOpenCfg();return;}
+    if(!aiReady()){aiToggleEnsureOpen();aiOpenCfg();return;}
     aiToggleEnsureOpen();
     if(aiBusy)return;
     run(QUICK[k]||k);
