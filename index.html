@@ -2453,5 +2453,469 @@ init();
   upd();
 })();
 </script>
+
+<!-- ======= AI ASSISTANT (Gemini) ======= -->
+<style>
+/* --- AI FAB (bottom-left, opposite the calculator) --- */
+#ai-fab{
+  position:fixed;left:20px;bottom:30px;z-index:9000;
+  width:54px;height:54px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#0ea5a4,#2563eb);
+  color:white;font-size:1.5rem;cursor:pointer;
+  box-shadow:0 4px 20px rgba(37,99,235,.5);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;
+  user-select:none;
+}
+#ai-fab:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,99,235,.7)}
+#ai-fab.open{transform:scale(1.05)}
+#ai-fab .ai-dot{position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:#f6ad55;border:2px solid #16213e;display:none}
+#ai-fab.cfgless .ai-dot{display:block}
+
+/* --- Panel: desktop floating card --- */
+#ai-panel{
+  position:fixed;left:20px;bottom:96px;z-index:8998;
+  width:380px;max-width:calc(100vw - 40px);height:min(74vh,640px);
+  background:#fff;border-radius:20px;
+  box-shadow:0 24px 60px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.05);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform-origin:bottom left;transform:scale(.7) translateY(20px);
+  opacity:0;pointer-events:none;
+  transition:transform .32s cubic-bezier(.34,1.3,.64,1),opacity .28s ease;
+}
+#ai-panel.open{transform:scale(1) translateY(0);opacity:1;pointer-events:auto}
+.ai-head{background:linear-gradient(135deg,#0ea5a4,#2563eb);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ai-head .ai-title{font-size:.95rem;font-weight:700;flex:1;display:flex;flex-direction:column;line-height:1.25}
+.ai-head .ai-title small{font-size:.66rem;font-weight:500;opacity:.8}
+.ai-ico-btn{width:30px;height:30px;border:none;border-radius:8px;background:rgba(255,255,255,.15);color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ai-ico-btn:hover{background:rgba(255,255,255,.28)}
+.ai-quick{display:flex;gap:6px;overflow-x:auto;padding:9px 12px;background:#f7fafc;border-bottom:1px solid #e2e8f0;flex-shrink:0;scrollbar-width:none}
+.ai-quick::-webkit-scrollbar{display:none}
+.ai-qbtn{white-space:nowrap;flex-shrink:0;padding:6px 11px;border:1px solid #cbd5e0;border-radius:16px;background:#fff;color:#2b6cb0;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s}
+.ai-qbtn:hover{border-color:#2563eb;background:#ebf8ff}
+.ai-log{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;background:#fdfdfe;-webkit-overflow-scrolling:touch}
+.ai-msg{max-width:88%;padding:9px 12px;border-radius:14px;font-size:.83rem;line-height:1.6;word-wrap:break-word}
+.ai-msg.u{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#0ea5a4);color:#fff;border-bottom-right-radius:4px}
+.ai-msg.a{align-self:flex-start;background:#f1f5f9;color:#1e293b;border-bottom-left-radius:4px}
+.ai-msg.a p{margin:0 0 6px}.ai-msg.a p:last-child{margin:0}
+.ai-msg.a ul{margin:4px 0 6px;padding-left:18px}.ai-msg.a li{margin:2px 0}
+.ai-msg.a h4{font-size:.85rem;margin:6px 0 3px;color:#0f766e}
+.ai-msg.a code{background:#e2e8f0;padding:1px 5px;border-radius:4px;font-size:.78rem}
+.ai-msg.a strong{color:#0f172a}
+.ai-msg.err{align-self:flex-start;background:#fff5f5;color:#c53030;border:1px solid #fc8181;font-size:.8rem}
+.ai-msg .ai-img-thumb{max-width:150px;border-radius:8px;margin-top:6px;display:block}
+.ai-typing{align-self:flex-start;background:#f1f5f9;padding:11px 14px;border-radius:14px;display:flex;gap:4px}
+.ai-typing span{width:7px;height:7px;border-radius:50%;background:#94a3b8;animation:ai-bounce 1.2s infinite}
+.ai-typing span:nth-child(2){animation-delay:.2s}.ai-typing span:nth-child(3){animation-delay:.4s}
+@keyframes ai-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.ai-hello{color:#64748b;font-size:.82rem;line-height:1.7;text-align:center;padding:18px 10px}
+.ai-hello b{color:#0f766e}
+.ai-action-card{align-self:flex-start;max-width:92%;background:#f0fdfa;border:1.5px solid #5eead4;border-radius:12px;padding:11px 12px;font-size:.8rem}
+.ai-action-card .aac-title{font-weight:700;color:#0f766e;margin-bottom:6px;font-size:.8rem}
+.ai-action-card .aac-row{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #ccfbf1;color:#334155}
+.ai-action-card .aac-row:last-of-type{border:none}
+.ai-action-card .aac-btns{display:flex;gap:7px;margin-top:9px}
+.ai-action-card button{flex:1;padding:7px;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer}
+.aac-apply{background:linear-gradient(135deg,#0d9488,#059669);color:#fff}
+.aac-skip{background:#fff;border:1px solid #cbd5e0!important;color:#64748b}
+.ai-inbar{border-top:1px solid #e2e8f0;padding:9px 10px;background:#fff;flex-shrink:0}
+.ai-imgchip{display:none;align-items:center;gap:7px;background:#ebf8ff;border:1px solid #90cdf4;border-radius:8px;padding:5px 8px;margin-bottom:7px;font-size:.74rem;color:#2b6cb0;font-weight:600}
+.ai-imgchip.show{display:flex}
+.ai-imgchip img{width:26px;height:26px;object-fit:cover;border-radius:5px}
+.ai-imgchip button{margin-left:auto;border:none;background:none;color:#c53030;cursor:pointer;font-size:.9rem;font-weight:700}
+.ai-inrow{display:flex;gap:7px;align-items:flex-end}
+.ai-attach{width:38px;height:38px;flex-shrink:0;border:1px solid #cbd5e0;border-radius:10px;background:#f7fafc;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ai-attach:hover{border-color:#2563eb;background:#ebf8ff}
+#ai-input{flex:1;resize:none;max-height:96px;min-height:38px;padding:9px 11px;border:1px solid #cbd5e0;border-radius:10px;font-size:16px;font-family:inherit;background:#f7fafc;line-height:1.4}
+#ai-input:focus{outline:none;border-color:#2563eb;background:#fff}
+.ai-send{width:38px;height:38px;flex-shrink:0;border:none;border-radius:10px;background:linear-gradient(135deg,#0ea5a4,#2563eb);color:#fff;font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ai-send:disabled{opacity:.45;cursor:not-allowed}
+/* config warning box */
+.ai-warn{background:#fffaf0;border:1px solid #f6ad55;border-radius:8px;padding:9px 11px;font-size:.72rem;color:#c05621;line-height:1.6;margin-bottom:12px}
+.ai-warn.ok{background:#f0fdfa;border-color:#5eead4;color:#0f766e}
+.ai-mode-row{display:flex;gap:8px;margin-bottom:14px}
+.ai-mode-btn{flex:1;padding:10px 8px;border:1.5px solid #cbd5e0;border-radius:9px;background:#fff;color:#64748b;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;line-height:1.3}
+.ai-mode-btn:hover{border-color:#94a3b8}
+.ai-mode-btn.on{border-color:#2563eb;background:#ebf8ff;color:#1e40af;box-shadow:0 0 0 2px rgba(37,99,235,.12)}
+/* --- Mobile: bottom sheet --- */
+@media(max-width:640px){
+  #ai-fab{left:16px;bottom:20px;width:50px;height:50px;font-size:1.35rem}
+  #ai-panel{left:0;right:0;bottom:0;width:100%;max-width:100%;height:88vh;border-radius:20px 20px 0 0;transform-origin:bottom center}
+  .ai-msg{max-width:90%}
+}
+@media(max-width:640px) and (display-mode:standalone){#ai-fab{bottom:26px}}
+</style>
+
+<button id="ai-fab" aria-label="ผู้ช่วย AI" title="ผู้ช่วย AI (Gemini)" onclick="aiToggle()">
+  <span>✨</span><span class="ai-dot" title="ยังไม่ได้ตั้งค่า"></span>
+</button>
+
+<div id="ai-panel" role="dialog" aria-label="ผู้ช่วย AI">
+  <div class="ai-head">
+    <span style="font-size:1.2rem">✨</span>
+    <div class="ai-title">ผู้ช่วยการเงิน AI<small>ขับเคลื่อนด้วย Google Gemini</small></div>
+    <button class="ai-ico-btn" title="ล้างแชท" onclick="aiClearChat()">🧹</button>
+    <button class="ai-ico-btn" title="ตั้งค่า API Key" onclick="aiOpenCfg()">⚙️</button>
+    <button class="ai-ico-btn" title="ปิด" onclick="aiToggle()">✕</button>
+  </div>
+  <div class="ai-quick">
+    <button class="ai-qbtn" onclick="aiQuick('month')">📊 วิเคราะห์เดือนนี้</button>
+    <button class="ai-qbtn" onclick="aiQuick('year')">📈 สรุปทั้งปี</button>
+    <button class="ai-qbtn" onclick="aiQuick('tax')">🧮 แนะนำภาษี</button>
+    <button class="ai-qbtn" onclick="aiQuick('anomaly')">🔍 ตรวจความผิดปกติ</button>
+    <button class="ai-qbtn" onclick="aiQuick('goal')">🎯 วางแผนออม</button>
+  </div>
+  <div class="ai-log" id="ai-log"></div>
+  <div class="ai-inbar">
+    <div class="ai-imgchip" id="ai-imgchip"><img id="ai-imgprev" alt=""><span>แนบรูปสลิปแล้ว</span><button onclick="aiClearImg()" title="เอาออก">✕</button></div>
+    <div class="ai-inrow">
+      <button class="ai-attach" title="แนบ/ถ่ายรูปสลิป" onclick="ge('ai-img').click()">📷</button>
+      <textarea id="ai-input" rows="1" placeholder="ถามอะไรก็ได้ เช่น เดือนนี้ควรออมเท่าไหร่…"></textarea>
+      <button class="ai-send" id="ai-send" title="ส่ง" onclick="aiSend()">➤</button>
+    </div>
+    <input type="file" id="ai-img" accept="image/*" style="display:none" onchange="aiOnImg(this)">
+  </div>
+</div>
+
+<!-- AI Config Modal -->
+<div id="aiCfgModal" class="modal-overlay" onclick="if(event.target===this)aiCloseCfg()">
+  <div class="modal-box">
+    <div class="modal-title">✨ ตั้งค่าผู้ช่วย AI (Gemini)</div>
+    <div class="modal-sub">เลือกวิธีเชื่อมต่อ Gemini</div>
+
+    <div class="ai-mode-row">
+      <button type="button" id="aiModeKeyBtn" class="ai-mode-btn on" onclick="aiSetMode('key')">🔑 คีย์ส่วนตัว<br><span style="font-size:.65rem;font-weight:500">เรียก Gemini ตรง</span></button>
+      <button type="button" id="aiModeProxyBtn" class="ai-mode-btn" onclick="aiSetMode('proxy')">🛡️ ผ่านเซิร์ฟเวอร์<br><span style="font-size:.65rem;font-weight:500">Proxy · ซ่อน key</span></button>
+    </div>
+
+    <!-- โหมด: คีย์ส่วนตัว -->
+    <div id="aiPanelKey">
+      <div class="steps">
+        <div class="steps-title">📋 วิธีขอ API Key (ฟรี)</div>
+        <ol>
+          <li>เปิด <strong>aistudio.google.com/app/apikey</strong></li>
+          <li>Sign in ด้วยบัญชี Google แล้วกด <strong>Create API key</strong></li>
+          <li>Copy คีย์ (ขึ้นต้น <code>AIza…</code>) มาวางด้านล่าง</li>
+        </ol>
+      </div>
+      <div class="ai-warn">🔒 <strong>ความเป็นส่วนตัว:</strong> คีย์เก็บในเครื่องนี้เท่านั้น (localStorage) เรียก Gemini ตรงจากเบราว์เซอร์ — เหมาะกับเครื่องส่วนตัว</div>
+      <label class="modal-lbl">Gemini API Key</label>
+      <input id="aiApiKey" class="gsin" type="password" placeholder="AIzaSy...">
+    </div>
+
+    <!-- โหมด: ผ่านเซิร์ฟเวอร์ (proxy) -->
+    <div id="aiPanelProxy" style="display:none">
+      <div class="ai-warn ok">🛡️ <strong>ปลอดภัยกว่า:</strong> เบราว์เซอร์ไม่เก็บ Gemini key เลย — key อยู่บนเซิร์ฟเวอร์ ใช้ key กลางร่วมกันได้ เหมาะกับการแชร์ให้คนอื่น<br><small>วิธีติดตั้ง proxy อยู่ในไฟล์ <code>functions/README.md</code></small></div>
+      <label class="modal-lbl">Proxy URL (Cloud Function)</label>
+      <input id="aiProxyUrl" class="gsin" type="url" placeholder="https://asia-southeast1-xxx.cloudfunctions.net/askAI">
+      <label class="modal-lbl modal-lbl-mt">รหัสเข้าใช้ (Access Code)</label>
+      <input id="aiAccessCode" class="gsin" type="password" placeholder="รหัสที่ตั้งไว้ตอน deploy">
+      <div class="gs-hint">รหัสนี้เก็บในเครื่องนี้เท่านั้น ไม่ติดไปกับลิงก์แชร์</div>
+    </div>
+
+    <label class="modal-lbl modal-lbl-mt">โมเดล</label>
+    <select id="aiModel" class="gsin">
+      <option value="gemini-2.5-flash">gemini-2.5-flash (แนะนำ · เร็ว+ฉลาด)</option>
+      <option value="gemini-2.0-flash">gemini-2.0-flash (เร็วมาก)</option>
+      <option value="gemini-2.5-pro">gemini-2.5-pro (ฉลาดสุด · ช้ากว่า)</option>
+      <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+    </select>
+    <div class="gs-hint">รองรับการอ่านรูปสลิป (multimodal) ทุกโมเดลข้างต้น</div>
+    <div id="aiCfgStatus" class="gs-status-bar"></div>
+    <div class="modal-btns">
+      <button class="mbtn-save" style="background:linear-gradient(135deg,#0d9488,#2563eb)" onclick="aiSaveCfg()">✅ บันทึก</button>
+      <button class="mbtn-cancel" onclick="aiCloseCfg()">ยกเลิก</button>
+      <button class="mbtn-clear" onclick="aiClearCfg()">🗑️ ล้าง</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const AI_CFG_KEY='sol_ai_cfg';
+  let aiCfg=null;                 /* {mode:'key'|'proxy', apiKey, model, proxyUrl, accessCode} */
+  let aiHistory=[];               /* [{role:'user'|'model', text}] — clean, no context */
+  let aiImg=null;                 /* {mimeType, data(base64), url} */
+  let aiPendingFields=null;
+  let aiBusy=false;
+  const r=n=>Math.round(Number(n)||0);
+
+  const SYS=`คุณคือผู้ช่วยการเงินส่วนตัวในเว็บแอป "คำนวณเงินเดือน + OT" (ภาษาไทย)
+- ตอบเป็นภาษาไทยที่กระชับ อ่านง่าย เป็นกันเอง ใช้สัญลักษณ์ ฿ และ bullet (-) เมื่อเหมาะสม
+- บริบทข้อมูลของผู้ใช้จะถูกแนบมาเป็น JSON (สกุลเงินบาท) ให้ใช้ตัวเลขจากตรงนั้นเท่านั้น ห้ามแต่งตัวเลขเอง ถ้าข้อมูลไม่พอให้บอกตรงๆ และถามกลับ
+- ความรู้ภาษีอ้างอิงภาษีเงินได้บุคคลธรรมดาไทย: ขั้นบันได (0/5/10/15/20/25/30/35%), ค่าลดหย่อนส่วนตัว 60,000, หักค่าใช้จ่าย 50% สูงสุด 100,000, ประกันสังคมสูงสุด 9,000/ปี, RMF/SSF/ประกันเป็นสิทธิลดหย่อนเพิ่ม
+- เมื่อผู้ใช้ต้องการ "กรอก/บันทึก" ข้อมูลลงฟอร์ม (เช่น พิมพ์รายการ OT, ค่าเบี้ย, รายการหัก) หรือส่งรูปสลิปเงินเดือน ให้สรุปสิ่งที่อ่านได้เป็นข้อความสั้นๆ ก่อน แล้ว "ต่อท้ายสุด" ด้วยบล็อคโค้ด json รูปแบบนี้เท่านั้น:
+\`\`\`json
+{"action":"fill","fields":{"base":0,"sso":0,"pvd":0,"allowances":[{"n":"","v":0}],"deductions":[{"n":"","v":0,"pm":"bank"}],"investments":[{"n":"","t":"%","v":0}],"otDays":[{"d":1,"minutes":0,"night3":0,"note":""}]},"note":""}
+\`\`\`
+- ใส่เฉพาะฟิลด์ที่มั่นใจ ตัดฟิลด์ที่ไม่เกี่ยวออกทั้งหมด ถ้าเป็นแค่คำถาม/วิเคราะห์ "ห้าม" ใส่บล็อค json เด็ดขาด
+- otDays: d=วันที่ในเดือน, minutes=นาที OT ปกติของวันนั้น, night3=นาที OT ×3 (เฉพาะเสาร์/อาทิตย์หลัง 16:36); ระบบจะเลือกเรต ×1.5 (วันธรรมดา/เสาร์) หรือ ×2.0 (อาทิตย์) ให้เองตามวันในสัปดาห์
+- pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต`;
+
+  /* ── config ── */
+  function aiReady(){return !!(aiCfg&&(aiCfg.mode==='proxy'?aiCfg.proxyUrl:aiCfg.apiKey));}
+  function loadCfg(){try{const raw=localStorage.getItem(AI_CFG_KEY);if(raw)aiCfg=JSON.parse(raw);}catch(e){}updFab();}
+  function updFab(){const f=ge('ai-fab');if(f)f.classList.toggle('cfgless',!aiReady());}
+  window.aiSetMode=function(m){
+    const proxy=(m==='proxy');
+    ge('aiModeKeyBtn').classList.toggle('on',!proxy);
+    ge('aiModeProxyBtn').classList.toggle('on',proxy);
+    ge('aiPanelKey').style.display=proxy?'none':'block';
+    ge('aiPanelProxy').style.display=proxy?'block':'none';
+  };
+  window.aiOpenCfg=function(){
+    const mode=(aiCfg&&aiCfg.mode)||'key';
+    aiSetMode(mode);
+    if(aiCfg){
+      ge('aiApiKey').value=aiCfg.apiKey||'';
+      ge('aiProxyUrl').value=aiCfg.proxyUrl||'';
+      ge('aiAccessCode').value=aiCfg.accessCode||'';
+      if(aiCfg.model)ge('aiModel').value=aiCfg.model;
+    }
+    ge('aiCfgStatus').className='gs-status-bar';ge('aiCfgStatus').textContent='';
+    ge('aiCfgModal').classList.add('open');
+  };
+  window.aiCloseCfg=function(){ge('aiCfgModal').classList.remove('open');};
+  window.aiSaveCfg=function(){
+    const st=ge('aiCfgStatus');
+    const model=ge('aiModel').value;
+    const proxy=ge('aiModeProxyBtn').classList.contains('on');
+    if(proxy){
+      let proxyUrl=ge('aiProxyUrl').value.trim();const accessCode=ge('aiAccessCode').value.trim();
+      if(!/^https:\/\//i.test(proxyUrl)){st.className='gs-status-bar show err';st.textContent='กรุณากรอก Proxy URL (ขึ้นต้น https://)';return;}
+      aiCfg={mode:'proxy',proxyUrl,accessCode,model,apiKey:''};
+    }else{
+      const apiKey=ge('aiApiKey').value.trim();
+      if(!apiKey){st.className='gs-status-bar show err';st.textContent='กรุณากรอก API Key';return;}
+      aiCfg={mode:'key',apiKey,model,proxyUrl:'',accessCode:''};
+    }
+    try{localStorage.setItem(AI_CFG_KEY,JSON.stringify(aiCfg));}catch(e){}
+    updFab();
+    st.className='gs-status-bar show ok';st.textContent='บันทึกแล้ว! เปิดผู้ช่วย AI ได้เลย';
+    setTimeout(()=>{aiCloseCfg();if(!ge('ai-panel').classList.contains('open'))aiToggle();},900);
+  };
+  window.aiClearCfg=function(){
+    aiCfg=null;try{localStorage.removeItem(AI_CFG_KEY);}catch(e){}
+    ge('aiApiKey').value='';ge('aiProxyUrl').value='';ge('aiAccessCode').value='';updFab();
+    const st=ge('aiCfgStatus');st.className='gs-status-bar show info';st.textContent='ล้างการตั้งค่าแล้ว';
+  };
+
+  /* ── panel ── */
+  window.aiToggle=function(){
+    const p=ge('ai-panel'),f=ge('ai-fab');
+    const open=p.classList.toggle('open');f.classList.toggle('open',open);
+    if(open){renderHelloIfEmpty();setTimeout(()=>ge('ai-input')?.focus(),200);}
+  };
+  window.aiClearChat=function(){aiHistory=[];ge('ai-log').innerHTML='';renderHelloIfEmpty();};
+  function renderHelloIfEmpty(){
+    const log=ge('ai-log');
+    if(aiHistory.length||log.querySelector('.ai-msg'))return;
+    log.innerHTML=`<div class="ai-hello">👋 สวัสดีครับ! ผมช่วย<b>วิเคราะห์เงินเดือน</b> ตอบคำถามการเงิน แนะนำภาษี และ<b>กรอกข้อมูลจากรูปสลิป</b>ให้ได้<br><br>ลองกดปุ่มลัดด้านบน หรือพิมพ์ถามได้เลย ✨${aiReady()?'':'<br><br>⚠️ ยังไม่ได้ตั้งค่า — กด ⚙️ เพื่อใส่ API Key หรือ Proxy ก่อน'}</div>`;
+  }
+
+  /* ── image ── */
+  window.aiOnImg=function(inp){
+    const file=inp.files&&inp.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const dataUrl=e.target.result;const base64=dataUrl.split(',')[1];
+      aiImg={mimeType:file.type||'image/jpeg',data:base64,url:dataUrl};
+      ge('ai-imgprev').src=dataUrl;ge('ai-imgchip').classList.add('show');
+    };
+    reader.readAsDataURL(file);inp.value='';
+  };
+  window.aiClearImg=function(){aiImg=null;ge('ai-imgchip').classList.remove('show');};
+
+  /* ── context builder ── */
+  function buildContext(){
+    const monthIdx=(CT>=0&&CT<12)?CT:new Date().getMonth();
+    const alls=colA().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v))}));
+    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank'}));
+    const invs=colI().filter(x=>x.n).map(x=>({n:x.n,t:x.t,v:nf(x.v)}));
+    const ots=getOTs();const base=num('fBase');
+    const months=[];let yInc=0,yTake=0,yInv=0,ySpend=0,yDed=0,yOT=0,nFilled=0;
+    for(let i=0;i<12;i++){
+      const t=compM(ymk(i));if(!t)continue;nFilled++;
+      const otH=t.h15+t.h20+t.h30;
+      months.push({เดือน:MS[i],ฐาน:r(t.base),OTชม:+otH.toFixed(1),รายได้รวม:r(t.totInc),หัก:r(t.totDed),รับจริง:r(t.takeHome),ลงทุน:r(t.totInv),ใช้จริง:r(t.final)});
+      yInc+=t.totInc;yTake+=t.takeHome;yInv+=t.totInv;ySpend+=t.final;yDed+=t.totDed;yOT+=otH;
+    }
+    const ctx={
+      ปีปัจจุบัน:CY,
+      เดือนที่กำลังดู:(CT>=0&&CT<12)?(MF[monthIdx]+' '+CY):('สรุปทั้งปี '+CY),
+      ฟอร์มเดือนที่เลือกอยู่ตอนนี้:{
+        เงินเดือนฐาน:r(base),
+        OTชั่วโมง:{x1_5:+ots.h15.toFixed(2),x2_0:+ots.h20.toFixed(2),x3_0:+ots.h30.toFixed(2)},
+        ค่าเพิ่มเติม:alls,รายการหัก:deds,แผนลงทุน:invs,
+        ประกันสังคม:r(getSso()),กองทุนสำรองเลี้ยงชีพ:r(getPvd())
+      },
+      สรุปรายเดือนทั้งปี:months,
+      รวมทั้งปี:{เดือนที่มีข้อมูล:nFilled,รายได้รวม:r(yInc),รับจริง:r(yTake),ลงทุนรวม:r(yInv),ใช้จริงรวม:r(ySpend),หักรวม:r(yDed),OTชม:+yOT.toFixed(1)}
+    };
+    return JSON.stringify(ctx);
+  }
+
+  /* ── Gemini call (โหมด key = เรียกตรง / โหมด proxy = ผ่านเซิร์ฟเวอร์) ── */
+  async function callGemini(userText,imgPart){
+    const model=(aiCfg&&aiCfg.model)||'gemini-2.5-flash';
+    const contents=[];
+    aiHistory.slice(-12).forEach(h=>contents.push({role:h.role,parts:[{text:h.text}]}));
+    const curParts=[{text:'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n'+userText}];
+    if(imgPart)curParts.push({inlineData:{mimeType:imgPart.mimeType,data:imgPart.data}});
+    contents.push({role:'user',parts:curParts});
+    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:1600}};
+
+    let url,opts;
+    if(aiCfg&&aiCfg.mode==='proxy'){
+      /* ส่งให้ proxy — เบราว์เซอร์ไม่มี Gemini key เลย */
+      url=aiCfg.proxyUrl;
+      opts={method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(Object.assign({model,code:aiCfg.accessCode||''},payload))};
+      if(aiCfg.accessCode)opts.headers['Authorization']='Bearer '+aiCfg.accessCode;
+    }else{
+      /* เรียก Gemini ตรงด้วยคีย์ส่วนตัว */
+      url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey);
+      opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
+    }
+    let res,data;
+    try{res=await fetch(url,opts);}catch(e){throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));}
+    try{data=await res.json();}catch(e){data=null;}
+    if(!res.ok)throw new Error((data&&data.error&&data.error.message)||('HTTP '+res.status));
+    const cand=data&&data.candidates&&data.candidates[0];
+    if(!cand){throw new Error('ไม่ได้รับคำตอบจากโมเดล (อาจถูกกรองด้วยนโยบายความปลอดภัย)');}
+    return (cand.content&&cand.content.parts||[]).map(p=>p.text||'').join('').trim();
+  }
+
+  /* ── render helpers ── */
+  function addUser(text,imgUrl){
+    const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg u';
+    d.textContent=text||'(อ่านรูปสลิป)';
+    if(imgUrl){const im=document.createElement('img');im.src=imgUrl;im.className='ai-img-thumb';im.alt='';d.appendChild(im);}
+    log.appendChild(d);scrollLog();
+  }
+  function addTyping(){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-typing';d.id='ai-typing';d.innerHTML='<span></span><span></span><span></span>';log.appendChild(d);scrollLog();}
+  function rmTyping(){ge('ai-typing')?.remove();}
+  function addAssistant(raw){
+    const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg a';d.innerHTML=mdLite(raw);log.appendChild(d);scrollLog();
+  }
+  function addError(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg err';d.textContent='⚠️ '+msg;log.appendChild(d);scrollLog();}
+  function scrollLog(){const log=ge('ai-log');log.scrollTop=log.scrollHeight;}
+  function mdLite(raw){
+    const noAction=raw.replace(/```json[\s\S]*?```/g,'').replace(/```[\s\S]*?```/g,'').trim();
+    const lines=noAction.split(/\n/);let html='',inList=false;
+    const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+?)`/g,'<code>$1</code>');
+    for(const ln of lines){
+      if(/^\s*[-•*]\s+/.test(ln)){if(!inList){html+='<ul>';inList=true;}html+='<li>'+inline(ln.replace(/^\s*[-•*]\s+/,''))+'</li>';}
+      else if(/^\s*#{1,4}\s+/.test(ln)){if(inList){html+='</ul>';inList=false;}html+='<h4>'+inline(ln.replace(/^\s*#{1,4}\s+/,''))+'</h4>';}
+      else{if(inList){html+='</ul>';inList=false;}if(ln.trim()==='')continue;html+='<p>'+inline(ln)+'</p>';}
+    }
+    if(inList)html+='</ul>';
+    return html||'<p>'+esc(noAction)+'</p>';
+  }
+
+  /* ── action (fill form) ── */
+  function extractAction(raw){
+    const m=raw.match(/```json\s*([\s\S]*?)```/);if(!m)return null;
+    try{const o=JSON.parse(m[1].trim());if(o&&o.action==='fill'&&o.fields&&typeof o.fields==='object')return o.fields;}catch(e){}
+    return null;
+  }
+  function renderActionCard(f){
+    aiPendingFields=f;const log=ge('ai-log');
+    const rows=[];
+    if(f.base!=null)rows.push(['เงินเดือนฐาน',fmt(nf(f.base))]);
+    if(f.sso!=null)rows.push(['ประกันสังคม',fmt(nf(f.sso))]);
+    if(f.pvd!=null)rows.push(['กองทุนสำรองฯ',fmt(nf(f.pvd))]);
+    (f.allowances||[]).forEach(a=>a&&a.n&&rows.push(['➕ '+a.n,fmt(nf(a.v))]));
+    (f.deductions||[]).forEach(d=>d&&d.n&&rows.push(['➖ '+d.n,fmt(nf(d.v))]));
+    (f.investments||[]).forEach(iv=>iv&&iv.n&&rows.push(['📈 '+iv.n,iv.t==='%'?(nf(iv.v)+'%'):fmt(nf(iv.v))]));
+    (f.otDays||[]).forEach(o=>o&&o.d&&rows.push(['⏱️ OT วันที่ '+o.d,((nf(o.minutes)+nf(o.night3))||0)+' นาที']));
+    if(!rows.length)return;
+    const card=document.createElement('div');card.className='ai-action-card';
+    card.innerHTML='<div class="aac-title">📝 ข้อมูลที่จะกรอกลง "'+esc((CT>=0&&CT<12)?MF[CT]:'เดือนที่เลือก')+'"</div>'+
+      rows.map(([l,v])=>'<div class="aac-row"><span>'+esc(l)+'</span><b>'+esc(v)+'</b></div>').join('')+
+      '<div class="aac-btns"><button class="aac-apply" onclick="aiApplyPending()">✅ ใส่ลงฟอร์ม</button><button class="aac-skip" onclick="aiDismissPending(this)">ไม่ใส่</button></div>';
+    log.appendChild(card);scrollLog();
+  }
+  window.aiDismissPending=function(btn){aiPendingFields=null;const c=btn.closest('.ai-action-card');if(c)c.remove();};
+  window.aiApplyPending=function(){
+    const f=aiPendingFields;if(!f)return;
+    if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
+    try{
+      if(f.base!=null){sv('fBase',String(r(f.base)));}
+      if(f.sso!=null)sv('fSso',String(r(f.sso)));
+      if(f.pvd!=null)sv('fPvd',String(r(f.pvd)));
+      onBaseChg();
+      if(Array.isArray(f.allowances))f.allowances.forEach(a=>{if(!a||!a.n)return;const ex=A.find(x=>x.n===a.n&&x.id!=='bonus');if(ex){ex.ok=true;const el=ge('av_'+ex.id);if(el&&el.type!=='hidden')el.value=String(r(a.v));else ex.v=String(r(a.v));}else A.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
+      rA();
+      if(Array.isArray(f.deductions))f.deductions.forEach(d=>{if(!d||!d.n)return;const ex=D.find(x=>x.n===d.n);const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';if(ex){ex.ok=true;ex.pm=pm;const el=ge('dv_'+ex.id);if(el)el.value=String(r(d.v));else ex.v=String(r(d.v));const pe=ge('dp_'+ex.id);if(pe)pe.value=pm;}else D.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
+      rD();
+      if(Array.isArray(f.investments))f.investments.forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=I.find(x=>x.n===iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else I.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+      rI();
+      if(Array.isArray(f.otDays))f.otDays.forEach(o=>{if(!o||!o.d)return;const ea=ge('ota_'+o.d),e3=ge('ot3_'+o.d),en=ge('otn_'+o.d);if(ea&&o.minutes!=null)ea.value=String(r(o.minutes));if(e3&&o.night3!=null)e3.value=String(r(o.night3));if(en&&o.note)en.value=String(o.note);});
+      reOT();updInv();
+      toast('✅ ใส่ข้อมูลลงฟอร์มแล้ว — ตรวจสอบแล้วกด "คำนวณ"');
+      aiPendingFields=null;
+      const btns=ge('ai-log').querySelectorAll('.ai-action-card .aac-btns');
+      if(btns.length)btns[btns.length-1].innerHTML='<div style="color:#0f766e;font-weight:700;text-align:center;width:100%;padding:5px">✅ ใส่ลงฟอร์มแล้ว</div>';
+    }catch(e){addError('กรอกข้อมูลไม่สำเร็จ: '+e.message);}
+  };
+
+  /* ── send pipeline ── */
+  async function run(userText){
+    if(aiBusy)return;
+    if(!aiReady()){aiToggleEnsureOpen();aiOpenCfg();return;}
+    const img=aiImg;const imgUrl=img?img.url:null;
+    addUser(userText,imgUrl);
+    aiHistory.push({role:'user',text:userText||'(ผู้ใช้ส่งรูปสลิปเงินเดือน)'});
+    aiClearImg();ge('ai-input').value='';autoGrow();
+    aiBusy=true;ge('ai-send').disabled=true;addTyping();
+    try{
+      const reply=await callGemini(userText||'อ่านรูปสลิปเงินเดือนนี้ แล้วดึงตัวเลขมากรอกลงฟอร์มเดือนที่เลือกให้',img);
+      rmTyping();
+      aiHistory.push({role:'model',text:reply});
+      addAssistant(reply);
+      const fields=extractAction(reply);
+      if(fields)renderActionCard(fields);
+    }catch(e){rmTyping();addError(e.message||'เรียก Gemini ไม่สำเร็จ');}
+    finally{aiBusy=false;ge('ai-send').disabled=false;}
+  }
+  function aiToggleEnsureOpen(){if(!ge('ai-panel').classList.contains('open'))aiToggle();}
+
+  window.aiSend=function(){
+    const t=ge('ai-input').value.trim();
+    if(!t&&!aiImg){ge('ai-input').focus();return;}
+    run(t);
+  };
+  const QUICK={
+    month:'ช่วยวิเคราะห์การเงินของเดือนที่ฉันกำลังดูอยู่ให้หน่อย: รายได้/OT/การหัก/การออม จุดเด่น จุดที่ควรระวัง และเทียบกับเดือนอื่นในปีนี้',
+    year:'สรุปภาพรวมการเงินทั้งปีของฉัน: แนวโน้มรายได้ OT และอัตราการออม พร้อมคำแนะนำที่ทำได้จริง 3 ข้อ',
+    tax:'จากข้อมูลของฉัน ช่วยประเมินภาษีที่ต้องจ่ายทั้งปีคร่าวๆ และแนะนำว่าควรใช้สิทธิลดหย่อน (RMF/SSF/ประกันชีวิต/ประกันสุขภาพ ฯลฯ) เพิ่มอีกเท่าไหร่ถึงคุ้มที่สุด',
+    anomaly:'ช่วยตรวจหาความผิดปกติหรือจุดที่น่าจะกรอกผิดในข้อมูลของฉัน เช่น ประกันสังคม/กองทุนเกินเพดาน ชั่วโมง OT ที่ผิดปกติ หรือรายการหักที่ดูสูงเกินไป',
+    goal:'ฉันอยากวางแผนการออม/ลงทุน ช่วยดูอัตราการออมปัจจุบันของฉันและแนะนำแผนให้หน่อย ถ้ายังไม่รู้เป้าหมายของฉันให้ถามฉันก่อน'
+  };
+  window.aiQuick=function(k){
+    if(!aiReady()){aiToggleEnsureOpen();aiOpenCfg();return;}
+    aiToggleEnsureOpen();
+    if(aiBusy)return;
+    run(QUICK[k]||k);
+  };
+
+  /* ── input UX ── */
+  function autoGrow(){const t=ge('ai-input');if(!t)return;t.style.height='auto';t.style.height=Math.min(t.scrollHeight,96)+'px';}
+  document.addEventListener('DOMContentLoaded',function(){
+    loadCfg();
+    const t=ge('ai-input');
+    if(t){
+      t.addEventListener('input',autoGrow);
+      t.addEventListener('keydown',function(e){
+        if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();}
+      });
+    }
+  });
+  /* กรณี DOMContentLoaded ยิงไปแล้ว (สคริปต์อยู่ท้าย body) */
+  if(document.readyState!=='loading'){loadCfg();const t=ge('ai-input');if(t){t.addEventListener('input',autoGrow);t.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();}});}}
+})();
+</script>
 </body>
 </html>

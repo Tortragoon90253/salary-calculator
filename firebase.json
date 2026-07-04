@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "source": "functions",
+    "codebase": "ai-proxy",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "*.log"
+    ]
+  }
+}
