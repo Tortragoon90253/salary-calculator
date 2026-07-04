@@ -317,7 +317,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="cb">
       <div class="g2">
         <div><label>เดือน / ปี</label><input id="fPrd" type="month" class="input-ro"></div>
-        <div><label>เงินเดือนฐาน (บาท)</label><input id="fBase" type="number" placeholder="0.00" min="0" oninput="onBaseChg()"></div>
+        <div><label>เงินเดือนฐาน (บาท)</label><input id="fBase" type="number" placeholder="0.00" min="0" oninput="onBaseChg()" onchange="onBaseCommit()"></div>
       </div>
     </div>
   </div>
@@ -599,6 +599,20 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <button class="mbtn-save" onclick="saveGsCfg()">✅ บันทึก URL</button>
       <button class="mbtn-cancel" onclick="closeCfg()">ยกเลิก</button>
       <button class="mbtn-clear" onclick="clearGsUrl()">🗑️ ล้าง (ใช้ Local)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Base salary propagation confirm ── -->
+<div id="basePropModal" class="modal-overlay" onclick="if(event.target===this)basePropNo()">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-title">📈 อัปเดตเงินเดือนเดือนถัดไปด้วยไหม?</div>
+    <div id="bpText" class="modal-sub" style="font-size:.86rem;color:#4a5568;line-height:1.7"></div>
+    <div id="bpList" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin:12px 0;font-size:.82rem;font-weight:700;color:#2b6cb0;line-height:1.6"></div>
+    <div style="font-size:.73rem;color:#718096;margin-bottom:16px;line-height:1.6">ระบบจะอัปเดตเฉพาะเดือนที่ยังใช้ค่าเดิมติดต่อกัน และ<strong>หยุดเมื่อเจอเดือนที่คุณตั้งค่าไว้ต่าง</strong> (เช่น เดือนที่ขึ้นเงินเดือนอีกรอบ)</div>
+    <div class="modal-btns">
+      <button class="mbtn-save" style="background:linear-gradient(135deg,#276749,#48bb78)" onclick="basePropYes()">✅ ใช่ อัปเดตให้เลย</button>
+      <button class="mbtn-cancel" onclick="basePropNo()">ไม่ เฉพาะเดือนนี้</button>
     </div>
   </div>
 </div>
@@ -1488,6 +1502,52 @@ function saveM(fb=false){
     const el=ge('savSt');el.textContent=`✅ บันทึกแล้ว เวลา ${ts}`;el.style.color='#48bb78';el.style.opacity='1';
     setTimeout(()=>{el.style.opacity='0';},3000);
   }
+}
+
+/* ── Base salary propagation (ขึ้น/ปรับเงินเดือน → ไหลไปเดือนถัดๆ ไป) ── */
+let _baseProp=null;
+/* คืนเดือนถัดไปที่ยังใช้ฐานเดิม "ติดต่อกัน" หยุดเมื่อเจอเดือนที่ตั้งค่าต่าง */
+function baseFollowingSameBase(fromYm,oldBase){
+  const keys=Object.keys(DB).filter(k=>k>fromYm&&DB[k]&&nf(DB[k].base)>0).sort();
+  const out=[];
+  for(const k of keys){
+    if(nf(DB[k].base)===oldBase)out.push(k);else break;
+  }
+  return out;
+}
+function ymLabel(ym){const[y,m]=ym.split('-').map(Number);return (MS[m-1]||'?')+' '+y;}
+/* เรียกเมื่อช่องเงินเดือนฐาน "commit" (blur/enter) — ถามว่าจะไหลไปเดือนถัดไปไหม */
+function onBaseCommit(){
+  if(CT<0||CT>=12)return;
+  const ym=ymk(CT);const rec=DB[ym];
+  if(!rec)return;                                  /* เดือนนี้ยังไม่เคยบันทึก — ข้าม */
+  const oldBase=nf(rec.base),newBase=num('fBase');
+  if(!oldBase||!newBase||newBase===oldBase)return; /* ไม่เปลี่ยน หรือค่าว่าง — ข้าม */
+  const targets=baseFollowingSameBase(ym,oldBase);
+  if(!targets.length)return;                       /* ไม่มีเดือนถัดไปที่ใช้ค่าเดิม */
+  _baseProp={ym,newBase,oldBase,targets};
+  ge('bpText').innerHTML=`คุณเปลี่ยนเงินเดือนฐานเป็น <b>${fmt(newBase)}</b><br>มีอีก <b>${targets.length} เดือน</b>ถัดไปที่ยังใช้ค่าเดิม (<b>${fmt(oldBase)}</b>)`;
+  ge('bpList').textContent=targets.map(ymLabel).join('  ·  ');
+  ge('basePropModal').classList.add('open');
+}
+function basePropNo(){ge('basePropModal').classList.remove('open');_baseProp=null;}
+async function basePropYes(){
+  const d=_baseProp;ge('basePropModal').classList.remove('open');_baseProp=null;
+  if(!d)return;
+  saveM();                                         /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
+  d.targets.forEach(k=>{if(DB[k])DB[k].base=String(d.newBase);});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  updateDots();
+  let ok=0;
+  for(const ym of d.targets){
+    try{
+      if(fbDb)await fbSaveMonth(ym);
+      else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]});
+      ok++;
+    }catch(e){console.warn('propagate sync failed',ym,e);}
+  }
+  if(CT===12)renderSum();
+  toast(`✅ อัปเดตเงินเดือนฐาน ${d.targets.length} เดือนถัดไปแล้ว`);
 }
 
 /* ── LOAD ── */
