@@ -2589,6 +2589,19 @@ init();
 .ai-action-card button{flex:1;padding:7px;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer}
 .aac-apply{background:linear-gradient(135deg,#0d9488,#059669);color:#fff}
 .aac-skip{background:#fff;border:1px solid #cbd5e0!important;color:#64748b}
+/* interactive ask card */
+.ai-ask-card{align-self:flex-start;max-width:92%;background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.ai-ask-card.used{opacity:.55}
+.ai-ask-opts{display:flex;flex-direction:column;gap:6px}
+.ai-ask-opt{text-align:left;background:#fff;border:1.5px solid #a5b4fc;border-radius:10px;padding:8px 12px;font-size:.82rem;font-weight:600;color:#3730a3;cursor:pointer;transition:all .15s;line-height:1.4}
+.ai-ask-opt:hover:not(:disabled){background:#4f46e5;border-color:#4f46e5;color:#fff;transform:translateX(2px)}
+.ai-ask-opt:disabled{cursor:default}
+.ai-ask-row{display:flex;gap:6px;align-items:center;border-top:1px dashed #c7d2fe;padding-top:8px}
+.ai-ask-input{flex:1;border:1px solid #c7d2fe;border-radius:9px;padding:8px 10px;font-size:16px;background:#fff;font-family:inherit}
+.ai-ask-input:focus{outline:none;border-color:#4f46e5}
+.ai-ask-input:disabled{background:#f1f5f9;color:#94a3b8}
+.ai-ask-send{flex-shrink:0;width:36px;height:36px;border:none;border-radius:9px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:1rem;cursor:pointer}
+.ai-ask-send:disabled{opacity:.5;cursor:default}
 .ai-inbar{border-top:1px solid #e2e8f0;padding:9px 10px;background:#fff;flex-shrink:0}
 .ai-imgchip{display:none;align-items:center;gap:7px;background:#ebf8ff;border:1px solid #90cdf4;border-radius:8px;padding:5px 8px;margin-bottom:7px;font-size:.74rem;color:#2b6cb0;font-weight:600}
 .ai-imgchip.show{display:flex}
@@ -2722,7 +2735,14 @@ init();
 \`\`\`
 - ใส่เฉพาะฟิลด์ที่มั่นใจ ตัดฟิลด์ที่ไม่เกี่ยวออกทั้งหมด ถ้าเป็นแค่คำถาม/วิเคราะห์ "ห้าม" ใส่บล็อค json เด็ดขาด
 - otDays: d=วันที่ในเดือน, minutes=นาที OT ปกติของวันนั้น, night3=นาที OT ×3 (เฉพาะเสาร์/อาทิตย์หลัง 16:36); ระบบจะเลือกเรต ×1.5 (วันธรรมดา/เสาร์) หรือ ×2.0 (อาทิตย์) ให้เองตามวันในสัปดาห์
-- pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต`;
+- pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต
+- เมื่อคุณ "ต้องการถามผู้ใช้เพิ่มเติม" หรืออยากเสนอทางเลือกให้ตัดสินใจ (เช่น ข้อมูลไม่พอ, ต้องรู้เป้าหมาย, มีหลายแนวทาง) ให้เขียนคำถาม/คำแนะนำเป็นข้อความก่อน แล้ว "ต่อท้ายสุด" ด้วยบล็อคโค้ด json รูปแบบนี้:
+\`\`\`json
+{"action":"ask","options":["ตัวเลือกสั้นๆ 1","ตัวเลือกสั้นๆ 2","ตัวเลือกสั้นๆ 3"],"allowText":true}
+\`\`\`
+  • options = ปุ่มให้ผู้ใช้กดเลือก 2-5 ข้อ สั้น กระชับ เป็นคำตอบที่พร้อมส่งกลับ
+  • allowText=true ถ้าอยากให้ผู้ใช้พิมพ์คำตอบเองได้ด้วย (แนะนำให้ใส่ไว้เกือบทุกครั้ง)
+  • ใช้ "ask" เมื่ออยากให้บทสนทนาเดินต่อแบบโต้ตอบ แทนที่จะเดาเอง — และห้ามใช้พร้อมกับ "fill" ในคำตอบเดียว`;
 
   /* ── config ── */
   function aiReady(){return !!(aiCfg&&(aiCfg.mode==='proxy'?aiCfg.proxyUrl:aiCfg.apiKey));}
@@ -2919,10 +2939,10 @@ init();
     return html||'<p>'+esc(noAction)+'</p>';
   }
 
-  /* ── action (fill form) ── */
+  /* ── action parser (คืน object ของ action ที่พบ: fill / ask) ── */
   function extractAction(raw){
     const m=raw.match(/```json\s*([\s\S]*?)```/);if(!m)return null;
-    try{const o=JSON.parse(m[1].trim());if(o&&o.action==='fill'&&o.fields&&typeof o.fields==='object')return o.fields;}catch(e){}
+    try{const o=JSON.parse(m[1].trim());if(o&&typeof o==='object'&&o.action)return o;}catch(e){}
     return null;
   }
   function renderActionCard(f){
@@ -2943,6 +2963,35 @@ init();
     log.appendChild(card);scrollLog();
   }
   window.aiDismissPending=function(btn){aiPendingFields=null;const c=btn.closest('.ai-action-card');if(c)c.remove();};
+
+  /* ── การ์ดตัวเลือกโต้ตอบ (AI ถามกลับ + ปุ่มเลือก + ช่องพิมพ์เอง) ── */
+  function renderAskCard(o){
+    const opts=(Array.isArray(o.options)?o.options:[]).map(x=>String(x||'').trim()).filter(Boolean).slice(0,6);
+    const allowText=o.allowText!==false;
+    if(!opts.length&&!allowText)return;
+    const log=ge('ai-log');
+    const card=document.createElement('div');card.className='ai-ask-card';
+    const disable=()=>{card.classList.add('used');card.querySelectorAll('button,input').forEach(el=>el.disabled=true);};
+    if(opts.length){
+      const wrap=document.createElement('div');wrap.className='ai-ask-opts';
+      opts.forEach(opt=>{
+        const b=document.createElement('button');b.className='ai-ask-opt';b.textContent=opt;
+        b.onclick=()=>{if(aiBusy)return;disable();run(opt);};
+        wrap.appendChild(b);
+      });
+      card.appendChild(wrap);
+    }
+    if(allowText){
+      const row=document.createElement('div');row.className='ai-ask-row';
+      const inp=document.createElement('input');inp.type='text';inp.className='ai-ask-input';inp.placeholder='หรือพิมพ์คำตอบเอง…';
+      const snd=document.createElement('button');snd.className='ai-ask-send';snd.textContent='➤';
+      const go=()=>{const v=inp.value.trim();if(!v||aiBusy)return;disable();run(v);};
+      snd.onclick=go;
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go();}});
+      row.appendChild(inp);row.appendChild(snd);card.appendChild(row);
+    }
+    log.appendChild(card);scrollLog();
+  }
   window.aiApplyPending=function(){
     const f=aiPendingFields;if(!f)return;
     if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
@@ -2983,8 +3032,11 @@ init();
       aiHistory.push({role:'model',text:reply});
       addAssistant(reply);
       if(out.truncated)addContinueNote();
-      const fields=extractAction(reply);
-      if(fields)renderActionCard(fields);
+      const act=extractAction(reply);
+      if(act){
+        if(act.action==='fill'&&act.fields&&typeof act.fields==='object')renderActionCard(act.fields);
+        else if(act.action==='ask')renderAskCard(act);
+      }
     }catch(e){rmTyping();addError(e.message||'เรียก Gemini ไม่สำเร็จ');}
     finally{aiBusy=false;ge('ai-send').disabled=false;}
   }
