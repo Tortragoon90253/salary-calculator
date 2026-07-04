@@ -2571,6 +2571,11 @@ init();
 .ai-msg.a code{background:#e2e8f0;padding:1px 5px;border-radius:4px;font-size:.78rem}
 .ai-msg.a strong{color:#0f172a}
 .ai-msg.err{align-self:flex-start;background:#fff5f5;color:#c53030;border:1px solid #fc8181;font-size:.8rem}
+.ai-done{align-self:flex-start;max-width:92%;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:10px 12px;font-size:.8rem;color:#166534}
+.ai-done-h{font-weight:800;margin-bottom:3px}
+.ai-done-w{font-size:.72rem;color:#15803d;margin-bottom:6px;font-weight:600}
+.ai-done ul{margin:0;padding-left:18px}
+.ai-done li{margin:2px 0;line-height:1.5}
 .ai-note{align-self:center;background:#fffaf0;color:#c05621;border:1px dashed #f6ad55;border-radius:10px;padding:6px 12px;font-size:.74rem;font-weight:600;text-align:center;max-width:92%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
 .ai-note-btn{border:none;border-radius:14px;background:linear-gradient(135deg,#0ea5a4,#2563eb);color:#fff;font-size:.74rem;font-weight:700;padding:4px 12px;cursor:pointer}
 .ai-note-btn:hover{opacity:.9}
@@ -2721,7 +2726,7 @@ init();
   let aiCfg=null;                 /* {mode:'key'|'proxy', apiKey, model, proxyUrl, accessCode} */
   let aiHistory=[];               /* [{role:'user'|'model', text}] — clean, no context */
   let aiImg=null;                 /* {mimeType, data(base64), url} */
-  let aiPendingFields=null;
+  let aiPendingAction=null;
   let aiBusy=false;
   const r=n=>Math.round(Number(n)||0);
 
@@ -2731,9 +2736,13 @@ init();
 - ความรู้ภาษีอ้างอิงภาษีเงินได้บุคคลธรรมดาไทย: ขั้นบันได (0/5/10/15/20/25/30/35%), ค่าลดหย่อนส่วนตัว 60,000, หักค่าใช้จ่าย 50% สูงสุด 100,000, ประกันสังคมสูงสุด 9,000/ปี, RMF/SSF/ประกันเป็นสิทธิลดหย่อนเพิ่ม
 - เมื่อผู้ใช้ต้องการ "กรอก/บันทึก" ข้อมูลลงฟอร์ม (เช่น พิมพ์รายการ OT, ค่าเบี้ย, รายการหัก) หรือส่งรูปสลิปเงินเดือน ให้สรุปสิ่งที่อ่านได้เป็นข้อความสั้นๆ ก่อน แล้ว "ต่อท้ายสุด" ด้วยบล็อคโค้ด json รูปแบบนี้เท่านั้น:
 \`\`\`json
-{"action":"fill","fields":{"base":0,"sso":0,"pvd":0,"allowances":[{"n":"","v":0}],"deductions":[{"n":"","v":0,"pm":"bank"}],"investments":[{"n":"","t":"%","v":0}],"otDays":[{"d":1,"minutes":0,"night3":0,"note":""}]},"note":""}
+{"action":"fill","months":["YYYY-MM"],"fields":{"base":0,"sso":0,"pvd":0,"allowances":[{"n":"","v":0}],"deductions":[{"n":"","v":0,"pm":"bank"}],"investments":[{"n":"","t":"%","v":0}],"otDays":[{"d":1,"minutes":0,"night3":0,"note":""}],"removeAllowances":["ชื่อ"],"removeDeductions":["ชื่อ"],"removeInvestments":["ชื่อ"],"renameAllowances":[{"from":"","to":""}],"renameDeductions":[{"from":"","to":""}],"renameInvestments":[{"from":"","to":""}]},"note":""}
 \`\`\`
 - ใส่เฉพาะฟิลด์ที่มั่นใจ ตัดฟิลด์ที่ไม่เกี่ยวออกทั้งหมด ถ้าเป็นแค่คำถาม/วิเคราะห์ "ห้าม" ใส่บล็อค json เด็ดขาด
+- allowances/deductions/investments = เพิ่มใหม่ หรือแก้ค่าเดิม (จับคู่ด้วยชื่อ "n")
+- removeAllowances/removeDeductions/removeInvestments = ลบรายการตามชื่อ
+- renameAllowances/renameDeductions/renameInvestments = เปลี่ยนชื่อรายการ (from→to)
+- months = รายชื่อเดือนที่จะแก้ รูปแบบ "YYYY-MM" (ปีปัจจุบันดูจาก context); ถ้าเว้นว่าง = แก้เฉพาะเดือนที่ผู้ใช้เปิดอยู่ตอนนี้ ระบุได้หลายเดือนพร้อมกัน เช่น มี.ค.-พ.ค.
 - otDays: d=วันที่ในเดือน, minutes=นาที OT ปกติของวันนั้น, night3=นาที OT ×3 (เฉพาะเสาร์/อาทิตย์หลัง 16:36); ระบบจะเลือกเรต ×1.5 (วันธรรมดา/เสาร์) หรือ ×2.0 (อาทิตย์) ให้เองตามวันในสัปดาห์
 - pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต
 - เมื่อคุณ "ต้องการถามผู้ใช้เพิ่มเติม" หรืออยากเสนอทางเลือกให้ตัดสินใจ (เช่น ข้อมูลไม่พอ, ต้องรู้เป้าหมาย, มีหลายแนวทาง) ให้เขียนคำถาม/คำแนะนำเป็นข้อความก่อน แล้ว "ต่อท้ายสุด" ด้วยบล็อคโค้ด json รูปแบบนี้:
@@ -2945,24 +2954,34 @@ init();
     try{const o=JSON.parse(m[1].trim());if(o&&typeof o==='object'&&o.action)return o;}catch(e){}
     return null;
   }
-  function renderActionCard(f){
-    aiPendingFields=f;const log=ge('ai-log');
+  function actMonths(act){return (Array.isArray(act.months)?act.months:[]).map(x=>String(x||'').trim()).filter(x=>/^\d{4}-\d{2}$/.test(x));}
+  function monthLabelFull(ym){const[y,m]=ym.split('-').map(Number);return (MF[m-1]||'?')+' '+y;}
+  function actionRows(f){
     const rows=[];
     if(f.base!=null)rows.push(['เงินเดือนฐาน',fmt(nf(f.base))]);
     if(f.sso!=null)rows.push(['ประกันสังคม',fmt(nf(f.sso))]);
     if(f.pvd!=null)rows.push(['กองทุนสำรองฯ',fmt(nf(f.pvd))]);
-    (f.allowances||[]).forEach(a=>a&&a.n&&rows.push(['➕ '+a.n,fmt(nf(a.v))]));
-    (f.deductions||[]).forEach(d=>d&&d.n&&rows.push(['➖ '+d.n,fmt(nf(d.v))]));
+    (f.allowances||[]).forEach(a=>a&&a.n&&rows.push(['➕/✎ '+a.n,fmt(nf(a.v))]));
+    (f.deductions||[]).forEach(d=>d&&d.n&&rows.push(['➕/✎ '+d.n,fmt(nf(d.v))]));
     (f.investments||[]).forEach(iv=>iv&&iv.n&&rows.push(['📈 '+iv.n,iv.t==='%'?(nf(iv.v)+'%'):fmt(nf(iv.v))]));
     (f.otDays||[]).forEach(o=>o&&o.d&&rows.push(['⏱️ OT วันที่ '+o.d,((nf(o.minutes)+nf(o.night3))||0)+' นาที']));
-    if(!rows.length)return;
+    [].concat(f.removeAllowances||[],f.removeDeductions||[],f.removeInvestments||[]).filter(Boolean).forEach(n=>rows.push(['🗑️ ลบ',String(n)]));
+    [].concat(f.renameAllowances||[],f.renameDeductions||[],f.renameInvestments||[]).filter(x=>x&&x.from&&x.to).forEach(x=>rows.push(['✏️ เปลี่ยนชื่อ',x.from+' → '+x.to]));
+    return rows;
+  }
+  function renderActionCard(act){
+    aiPendingAction=act;const f=act.fields||{};const log=ge('ai-log');
+    const rows=actionRows(f);
+    if(!rows.length){aiPendingAction=null;return;}
+    const months=actMonths(act);
+    const where=months.length?months.map(monthLabelFull).join(', '):((CT>=0&&CT<12)?MF[CT]:'เดือนที่เลือก');
     const card=document.createElement('div');card.className='ai-action-card';
-    card.innerHTML='<div class="aac-title">📝 ข้อมูลที่จะกรอกลง "'+esc((CT>=0&&CT<12)?MF[CT]:'เดือนที่เลือก')+'"</div>'+
+    card.innerHTML='<div class="aac-title">📝 จะแก้ไข "'+esc(where)+'"</div>'+
       rows.map(([l,v])=>'<div class="aac-row"><span>'+esc(l)+'</span><b>'+esc(v)+'</b></div>').join('')+
-      '<div class="aac-btns"><button class="aac-apply" onclick="aiApplyPending()">✅ ใส่ลงฟอร์ม</button><button class="aac-skip" onclick="aiDismissPending(this)">ไม่ใส่</button></div>';
+      '<div class="aac-btns"><button class="aac-apply" onclick="aiApplyPending()">✅ ยืนยันแก้ไข</button><button class="aac-skip" onclick="aiDismissPending(this)">ไม่แก้</button></div>';
     log.appendChild(card);scrollLog();
   }
-  window.aiDismissPending=function(btn){aiPendingFields=null;const c=btn.closest('.ai-action-card');if(c)c.remove();};
+  window.aiDismissPending=function(btn){aiPendingAction=null;const c=btn.closest('.ai-action-card');if(c)c.remove();};
 
   /* ── การ์ดตัวเลือกโต้ตอบ (AI ถามกลับ + ปุ่มเลือก + ช่องพิมพ์เอง) ── */
   function renderAskCard(o){
@@ -2992,27 +3011,99 @@ init();
     }
     log.appendChild(card);scrollLog();
   }
+  const _names=v=>Array.isArray(v)?v.map(x=>String(x||'')).filter(Boolean):[];
+  /* แก้ "ฟอร์มเดือนที่เปิดอยู่" (เห็นผลสด) — sync DOM→array ก่อน แล้ว render ใหม่จาก array */
+  function applyToForm(f){
+    if(f.base!=null){sv('fBase',String(r(f.base)));}
+    if(f.sso!=null)sv('fSso',String(r(f.sso)));
+    if(f.pvd!=null)sv('fPvd',String(r(f.pvd)));
+    onBaseChg();
+    A=colA();D=colD();I=colI();               /* จับค่าที่ผู้ใช้พิมพ์ค้างไว้ก่อน */
+    /* rename */
+    (f.renameAllowances||[]).forEach(x=>{if(x&&x.from&&x.to){const it=A.find(a=>a.n===x.from&&a.id!=='bonus');if(it)it.n=x.to;}});
+    (f.renameDeductions||[]).forEach(x=>{if(x&&x.from&&x.to){const it=D.find(d=>d.n===x.from);if(it)it.n=x.to;}});
+    (f.renameInvestments||[]).forEach(x=>{if(x&&x.from&&x.to){const it=I.find(i=>i.n===x.from);if(it)it.n=x.to;}});
+    /* remove */
+    const rA_=_names(f.removeAllowances),rD_=_names(f.removeDeductions),rI_=_names(f.removeInvestments);
+    if(rA_.length)A=A.filter(a=>a.id==='bonus'||!rA_.includes(a.n));
+    if(rD_.length)D=D.filter(d=>!rD_.includes(d.n));
+    if(rI_.length)I=I.filter(i=>!rI_.includes(i.n));
+    /* add / update */
+    (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=A.find(x=>x.n===a.n&&x.id!=='bonus');if(ex){ex.v=String(r(a.v));ex.ok=true;}else A.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=D.find(x=>x.n===d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;}else D.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
+    (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=I.find(x=>x.n===iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else I.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    /* re-render จาก array ล้วน (เคลียร์ DOM กัน sync ทับ) */
+    ['aList','dList','iList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
+    rA();rD();rI();
+    (f.otDays||[]).forEach(o=>{if(!o||!o.d)return;const ea=ge('ota_'+o.d),e3=ge('ot3_'+o.d),en=ge('otn_'+o.d);if(ea&&o.minutes!=null)ea.value=String(r(o.minutes));if(e3&&o.night3!=null)e3.value=String(r(o.night3));if(en&&o.note!=null)en.value=String(o.note);});
+    reOT();updInv();
+  }
+  /* แก้ "เดือนอื่น" โดยตรงใน DB record (สร้างใหม่ถ้ายังไม่มี) */
+  function applyToRecord(ym,f){
+    let rec=DB[ym];
+    if(!rec){rec={base:'',sso:'',pvd:'',a:[],d:[],i:[],days:{}};DB[ym]=rec;}
+    rec.a=rec.a||[];rec.d=rec.d||[];rec.i=rec.i||[];rec.days=rec.days||{};
+    if(f.base!=null)rec.base=String(r(f.base));
+    if(f.sso!=null)rec.sso=String(r(f.sso));
+    if(f.pvd!=null)rec.pvd=String(r(f.pvd));
+    (f.renameAllowances||[]).forEach(x=>{if(x&&x.from&&x.to){const it=rec.a.find(a=>a.n===x.from&&a.id!=='bonus');if(it)it.n=x.to;}});
+    (f.renameDeductions||[]).forEach(x=>{if(x&&x.from&&x.to){const it=rec.d.find(d=>d.n===x.from);if(it)it.n=x.to;}});
+    (f.renameInvestments||[]).forEach(x=>{if(x&&x.from&&x.to){const it=rec.i.find(i=>i.n===x.from);if(it)it.n=x.to;}});
+    const rA_=_names(f.removeAllowances),rD_=_names(f.removeDeductions),rI_=_names(f.removeInvestments);
+    if(rA_.length)rec.a=rec.a.filter(a=>a.id==='bonus'||!rA_.includes(a.n));
+    if(rD_.length)rec.d=rec.d.filter(d=>!rD_.includes(d.n));
+    if(rI_.length)rec.i=rec.i.filter(i=>!rI_.includes(i.n));
+    (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=rec.a.find(x=>x.n===a.n&&x.id!=='bonus');if(ex)ex.v=String(r(a.v));else rec.a.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=rec.d.find(x=>x.n===d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;}else rec.d.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
+    (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=rec.i.find(x=>x.n===iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else rec.i.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    (f.otDays||[]).forEach(o=>{if(!o||!o.d)return;const k=String(o.d);const dv=rec.days[k]||{ac:'',o3:'',nt:''};if(o.minutes!=null)dv.ac=String(r(o.minutes));if(o.night3!=null)dv.o3=String(r(o.night3));if(o.note!=null)dv.nt=String(o.note);rec.days[k]=dv;});
+  }
+  /* สรุปสิ่งที่แก้ ไว้แสดงข้อความยืนยัน */
+  function describeChanges(f){
+    const p=[];
+    if(f.base!=null)p.push('ตั้งเงินเดือนฐาน = '+fmt(nf(f.base)));
+    if(f.sso!=null)p.push('ตั้งประกันสังคม = '+fmt(nf(f.sso)));
+    if(f.pvd!=null)p.push('ตั้งกองทุนฯ = '+fmt(nf(f.pvd)));
+    (f.allowances||[]).forEach(a=>a&&a.n&&p.push('ตั้ง “'+a.n+'” = '+fmt(nf(a.v))));
+    (f.deductions||[]).forEach(d=>d&&d.n&&p.push('ตั้งหัก “'+d.n+'” = '+fmt(nf(d.v))));
+    (f.investments||[]).forEach(iv=>iv&&iv.n&&p.push('ตั้งลงทุน “'+iv.n+'” = '+(iv.t==='%'?(nf(iv.v)+'%'):fmt(nf(iv.v)))));
+    (f.otDays||[]).forEach(o=>o&&o.d&&p.push('ตั้ง OT วันที่ '+o.d+' = '+((nf(o.minutes)+nf(o.night3))||0)+' นาที'));
+    [].concat(f.removeAllowances||[],f.removeDeductions||[],f.removeInvestments||[]).filter(Boolean).forEach(n=>p.push('ลบ “'+n+'”'));
+    [].concat(f.renameAllowances||[],f.renameDeductions||[],f.renameInvestments||[]).filter(x=>x&&x.from&&x.to).forEach(x=>p.push('เปลี่ยนชื่อ “'+x.from+'” → “'+x.to+'”'));
+    return p;
+  }
+  function addDoneNote(parts,where){
+    const log=ge('ai-log');const el=document.createElement('div');el.className='ai-done';
+    el.innerHTML='<div class="ai-done-h">✅ แก้ไขเรียบร้อยแล้ว</div><div class="ai-done-w">📅 '+esc(where)+'</div>'+
+      '<ul>'+parts.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>';
+    log.appendChild(el);scrollLog();
+  }
   window.aiApplyPending=function(){
-    const f=aiPendingFields;if(!f)return;
-    if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
+    const act=aiPendingAction;if(!act)return;
+    const f=act.fields||{};const months=actMonths(act);
     try{
-      if(f.base!=null){sv('fBase',String(r(f.base)));}
-      if(f.sso!=null)sv('fSso',String(r(f.sso)));
-      if(f.pvd!=null)sv('fPvd',String(r(f.pvd)));
-      onBaseChg();
-      if(Array.isArray(f.allowances))f.allowances.forEach(a=>{if(!a||!a.n)return;const ex=A.find(x=>x.n===a.n&&x.id!=='bonus');if(ex){ex.ok=true;const el=ge('av_'+ex.id);if(el&&el.type!=='hidden')el.value=String(r(a.v));else ex.v=String(r(a.v));}else A.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
-      rA();
-      if(Array.isArray(f.deductions))f.deductions.forEach(d=>{if(!d||!d.n)return;const ex=D.find(x=>x.n===d.n);const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';if(ex){ex.ok=true;ex.pm=pm;const el=ge('dv_'+ex.id);if(el)el.value=String(r(d.v));else ex.v=String(r(d.v));const pe=ge('dp_'+ex.id);if(pe)pe.value=pm;}else D.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
-      rD();
-      if(Array.isArray(f.investments))f.investments.forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=I.find(x=>x.n===iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else I.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
-      rI();
-      if(Array.isArray(f.otDays))f.otDays.forEach(o=>{if(!o||!o.d)return;const ea=ge('ota_'+o.d),e3=ge('ot3_'+o.d),en=ge('otn_'+o.d);if(ea&&o.minutes!=null)ea.value=String(r(o.minutes));if(e3&&o.night3!=null)e3.value=String(r(o.night3));if(en&&o.note)en.value=String(o.note);});
-      reOT();updInv();
-      toast('✅ ใส่ข้อมูลลงฟอร์มแล้ว — ตรวจสอบแล้วกด "คำนวณ"');
-      aiPendingFields=null;
+      const parts=describeChanges(f);
+      let where;
+      if(months.length){
+        const curYm=(CT>=0&&CT<12)?ymk(CT):null;
+        months.forEach(ym=>{ if(ym===curYm)applyToForm(f); else applyToRecord(ym,f); });
+        if(curYm&&months.includes(curYm))saveM();          /* บันทึกเดือนปัจจุบันที่แก้ผ่านฟอร์ม */
+        try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+        updateDots();if(CT===12)renderSum();
+        (async()=>{ for(const ym of months){ if(ym===curYm)continue; try{ if(fbDb)await fbSaveMonth(ym); else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]}); }catch(e){console.warn('sync',ym,e);} } })();
+        where=months.map(monthLabelFull).join(', ');
+        toast('✅ แก้ไข '+months.length+' เดือนเรียบร้อย');
+      }else{
+        if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
+        applyToForm(f);
+        where=MF[CT]+' '+CY+' (ตรวจแล้วกด “คำนวณ/บันทึก”)';
+        toast('✅ แก้ไขเรียบร้อย — ตรวจแล้วกด “คำนวณ”');
+      }
+      addDoneNote(parts,where);
+      aiPendingAction=null;
       const btns=ge('ai-log').querySelectorAll('.ai-action-card .aac-btns');
-      if(btns.length)btns[btns.length-1].innerHTML='<div style="color:#0f766e;font-weight:700;text-align:center;width:100%;padding:5px">✅ ใส่ลงฟอร์มแล้ว</div>';
-    }catch(e){addError('กรอกข้อมูลไม่สำเร็จ: '+e.message);}
+      if(btns.length)btns[btns.length-1].innerHTML='<div style="color:#0f766e;font-weight:700;text-align:center;width:100%;padding:5px">✅ แก้ไขแล้ว</div>';
+    }catch(e){addError('แก้ไขไม่สำเร็จ: '+e.message);}
   };
 
   /* ── send pipeline ── */
@@ -3034,7 +3125,7 @@ init();
       if(out.truncated)addContinueNote();
       const act=extractAction(reply);
       if(act){
-        if(act.action==='fill'&&act.fields&&typeof act.fields==='object')renderActionCard(act.fields);
+        if(act.action==='fill'&&act.fields&&typeof act.fields==='object')renderActionCard(act);
         else if(act.action==='ask')renderAskCard(act);
       }
     }catch(e){rmTyping();addError(e.message||'เรียก Gemini ไม่สำเร็จ');}
