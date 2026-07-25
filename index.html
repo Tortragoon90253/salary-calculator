@@ -628,6 +628,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 'use strict';
 /* ── Constants ── */
 const DTH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const DFULL=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const MS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const MF=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const SK='sol_v5';
@@ -1982,16 +1983,26 @@ function parseCSV(line){
 }
 
 /* ── Summary compute ── */
-function compM(ym){
-  const rec=DB[ym];if(!rec||!nf(rec.base))return null;
-  const base=nf(rec.base),hr=base/23/8;
+/* นับนาที OT แยกตามเรต + แยกตามวันในสัปดาห์ (เสาร์ = ×1.5, อาทิตย์ = ×2.0, ×3.0 = ช่วงดึกเสาร์/อาทิตย์)
+   คืน byDow ไว้ให้ AI ตอบคำถามแนว "ถ้าหยุดวันเสาร์รายได้จะเป็นยังไง" ได้จากข้อมูลจริง */
+function otMinutes(rec,ym){
   const[y,m]=ym.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
   let m15=0,m20=0,m30=0;
+  const byDow=[0,1,2,3,4,5,6].map(()=>({ac:0,o3:0,days:0}));
   for(let d=1;d<=cnt;d++){
     const dv=rec.days?.[String(d)];if(!dv)continue;
     const ac=nf(dv.ac),o3=nf(dv.o3);
-    const dow=new Date(y,m-1,d).getDay();if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
+    const dow=new Date(y,m-1,d).getDay();
+    if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
+    if(ac||o3){const g=byDow[dow];g.ac+=ac;g.o3+=o3;g.days++;}
   }
+  return{m15,m20,m30,byDow};
+}
+/* แกนกลางการคำนวณ 1 เดือน — ใช้ร่วมกันทั้งหน้าสรุปและ "ตัวจำลองสถานการณ์" ของ AI
+   แก้สูตรที่นี่ที่เดียว ตัวเลขของจริงกับตัวเลขที่ AI จำลองจะตรงกันเสมอ */
+function computeRec(rec,ym){
+  const base=nf(rec.base),hr=base/23/8;
+  const{m15,m20,m30}=otMinutes(rec,ym);
   const h15=m15/60,h20=m20/60,h30=m30/60;
   const ot15=hr*1.5*h15,ot20=hr*2.0*h20,ot30=hr*3.0*h30,totOT=ot15+ot20+ot30;
   const totA=(rec.a||[]).reduce((s,x)=>s+nf(x.v),0);
@@ -2007,7 +2018,12 @@ function compM(ym){
   const totInv=(rec.i||[]).reduce((s,x)=>{const v=nf(x.v);return s+(x.t==='%'?(invBase*v/100):v);},0);
   const otherDed=dArr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s:s+nf(x.v),0);
   const final=takeHome-totInv-otherDed;
-  return{base,totA,ot15,ot20,ot30,totOT,totInc,totDed,takeHome,totInv,final,h15,h20,h30};
+  return{base,hr,totA,ot15,ot20,ot30,totOT,totInc,totDed,takeHome,totInv,final,
+    h15,h20,h30,m15,m20,m30,sso,pvd,custDed,taxDed,otherDed,invBase};
+}
+function compM(ym){
+  const rec=DB[ym];if(!rec||!nf(rec.base))return null;
+  return computeRec(rec,ym);
 }
 
 /* ── Deduction category helpers ── */
@@ -2620,6 +2636,19 @@ init();
 .aac-apply{background:linear-gradient(135deg,#0d9488,#059669);color:#fff}
 .aac-skip{background:#fff;border:1px solid #cbd5e0!important;color:#64748b}
 /* interactive ask card */
+.ai-sim-card{align-self:flex-start;max-width:96%;background:#faf5ff;border:1.5px solid #d8b4fe;border-radius:12px;padding:11px 12px;font-size:.8rem}
+.aisim-title{font-weight:800;color:#6b21a8;font-size:.82rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.aisim-tag{font-size:.6rem;font-weight:700;background:#ede9fe;color:#7c3aed;border-radius:99px;padding:2px 7px}
+.aisim-when{font-size:.72rem;color:#7e22ce;font-weight:600;margin:3px 0 8px}
+.aisim-blk{background:#fff;border:1px solid #e9d5ff;border-radius:9px;padding:7px 9px;margin-bottom:7px}
+.aisim-blk.base{background:#f8fafc;border-color:#e2e8f0}
+.aisim-h{font-weight:700;color:#4c1d95;font-size:.76rem;margin-bottom:4px;padding-bottom:3px;border-bottom:1px dashed #e9d5ff}
+.aisim-blk.base .aisim-h{color:#475569;border-bottom-color:#e2e8f0}
+.aisim-row{display:flex;justify-content:space-between;gap:8px;padding:2px 0;color:#334155}
+.aisim-row b{font-weight:700;white-space:nowrap}
+.aisim-d{font-style:normal;font-size:.7rem;font-weight:700;margin-left:3px}
+.aisim-d.up{color:#059669}.aisim-d.down{color:#dc2626}.aisim-d.flat{color:#94a3b8}
+.aisim-note{font-size:.68rem;color:#7e22ce;opacity:.85;text-align:center;margin-top:2px}
 .ai-ask-card{align-self:flex-start;max-width:92%;background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .ai-ask-card.used{opacity:.55}
 .ai-ask-q{font-size:.82rem;font-weight:700;color:#3730a3;line-height:1.5}
@@ -2677,6 +2706,7 @@ init();
     <button class="ai-qbtn" onclick="aiQuick('month')">📊 วิเคราะห์เดือนนี้</button>
     <button class="ai-qbtn" onclick="aiQuick('year')">📈 สรุปทั้งปี</button>
     <button class="ai-qbtn" onclick="aiQuick('tax')">🧮 แนะนำภาษี</button>
+    <button class="ai-qbtn" onclick="aiQuick('whatif')">🔮 จำลองสถานการณ์</button>
     <button class="ai-qbtn" onclick="aiQuick('anomaly')">🔍 ตรวจความผิดปกติ</button>
     <button class="ai-qbtn" onclick="aiQuick('goal')">🎯 วางแผนออม</button>
   </div>
@@ -2771,13 +2801,33 @@ init();
   const SYS=`คุณคือผู้ช่วยการเงินส่วนตัวในเว็บแอป "คำนวณเงินเดือน + OT" (ภาษาไทย)
 - ตอบเป็นภาษาไทยที่กระชับ อ่านง่าย เป็นกันเอง ใช้สัญลักษณ์ ฿ และ bullet (-) เมื่อเหมาะสม
 - บริบทข้อมูลของผู้ใช้จะถูกแนบมาเป็น JSON (สกุลเงินบาท) — สำหรับ "ตัวเลข/ข้อมูลในโปรแกรม" (เงินเดือน รายรับ รายจ่าย OT การลงทุน ยอดต่างๆ ของผู้ใช้) ให้ใช้ตัวเลขจาก JSON นั้นเท่านั้น ห้ามแต่งตัวเลขของผู้ใช้เอง ถ้าข้อมูลในโปรแกรมไม่พอให้บอกตรงๆ และถามกลับ
+
+════ สูตรคำนวณจริงของแอป (ท่องให้แม่น ใช้ตรวจคำตอบตัวเองเสมอ) ════
+  ค่าแรงต่อชั่วโมง  hr = เงินเดือนฐาน ÷ 23 ÷ 8
+  ค่า OT           = hr×1.5×ชม.(×1.5) + hr×2.0×ชม.(×2.0) + hr×3.0×ชม.(×3.0)
+  เรต OT ขึ้นกับ "วันในสัปดาห์" อัตโนมัติ: อาทิตย์ = ×2.0 · จันทร์–เสาร์ = ×1.5 · ช่อง night3 = ×3.0 (ช่วงดึกเสาร์/อาทิตย์)
+    ★ วันเสาร์ใช้เรต ×1.5 เท่าวันธรรมดา — ไม่ใช่ ×2.0
+  รายได้รวม        = ฐาน + ค่าเพิ่มเติมทั้งหมด + ค่า OT
+  ประกันสังคม(ถ้าไม่กรอกเอง) = min(ฐาน×5%, 875)   กองทุนฯ(ถ้าไม่กรอกเอง) = ฐาน×7%
+  ภาษี = ผลรวมรายการหักที่ "ชื่อมีคำว่า ภาษี" · อื่นๆ = รายการหักที่เหลือ
+  รับจริง (takeHome) = รายได้รวม − ประกันสังคม − กองทุนฯ − ภาษี
+  ฐานคิดลงทุน  invBase = max(0, รับจริง)
+  ยอดลงทุน     = Σ(รายการ % → invBase×%/100) + Σ(รายการ ฿ → ค่านั้นตรงๆ)
+  ใช้จริง (final)  = รับจริง − ยอดลงทุน − รายการหักอื่นๆ(ที่ไม่ใช่ภาษี)
+  ⚠️ ผลกระทบลูกโซ่: OT/รายได้ที่เปลี่ยน → invBase เปลี่ยน → ยอดลงทุนแบบ % เปลี่ยนตาม → "ใช้จริง" ไม่ได้ขยับเท่ารายได้ที่ขยับ ห้ามสรุปแบบเชิงเส้นเด็ดขาด
+
+════ กฎเหล็กเรื่องการคำนวณ ════
+- คำถามแนว "ถ้า…จะเป็นยังไง" (what-if / จำลองสถานการณ์) เช่น ทำงานเสาร์เว้นเสาร์, หยุดวันเสาร์, เลิก OT, ขึ้นเงินเดือน 5%, ตัดค่าใช้จ่ายบางรายการ, เพิ่มเงินลงทุน — **ห้ามคิดเลขในหัวแล้วตอบ** ให้สั่ง action "simulate" เสมอ ระบบจะรันเครื่องคำนวณจริงของแอปแล้วส่งตัวเลขที่ถูกต้อง 100% กลับมาให้คุณอธิบาย
+- ถ้าคำถามเกี่ยวกับ "วันในสัปดาห์" (เสาร์/อาทิตย์/วันธรรมดา) ให้ดูปฏิทินจริงใน context (ฟิลด์ "ปฏิทินเดือนนี้" บอกว่าวันไหนตรงกับวันอะไร) ห้ามเดาว่าวันที่เท่าไหร่เป็นวันเสาร์
+- เลขที่คำนวณเองได้เพราะเป็นขั้นตอนเดียว (เช่น บวกลบ 2 ตัว, หา %) ทำได้ แต่ถ้าเกิน 2–3 ขั้นให้ใช้ simulate
+- ตอบเป็นจำนวนเต็มบาท (ปัดเศษ) และระบุเสมอว่าเทียบกับเดือน/ปีไหน
 - แต่คุณ "ตอบคำถามทั่วไปนอกเหนือข้อมูลในโปรแกรมได้" ด้วยความรู้ของคุณเอง เช่น ความรู้เรื่องภาษี/การเงินส่วนบุคคล วิธีวางแผนเก็บเงิน คิดดอกเบี้ย/เงินเฟ้อ เปรียบเทียบทางเลือก คำศัพท์การเงิน หรือคำถามทั่วไปอื่นๆ — ไม่ต้องจำกัดอยู่แค่ข้อมูลในโปรแกรม ตอบให้เป็นประโยชน์ได้เต็มที่
 - เมื่อความรู้ทั่วไปอาจล้าสมัยหรือไม่แน่ใจ (เช่น อัตราภาษี/ดอกเบี้ย/กฎหมายที่อาจเปลี่ยนรายปี ข่าวหรือราคาล่าสุด) ให้ตอบตามที่รู้แต่ "บอกตามตรงว่าเป็นข้อมูล ณ ช่วงที่คุณรู้ อาจมีการเปลี่ยนแปลง ควรตรวจสอบแหล่งทางการอีกครั้ง" อย่ามั่นใจเกินจริง และห้ามกุตัวเลข/ข้อเท็จจริงที่ไม่รู้จริง
 - เส้นแบ่งสำคัญ: ห้ามเอาความรู้ทั่วไปไปแทนที่หรือปั้นเป็นตัวเลขข้อมูลจริงของผู้ใช้ในโปรแกรม (สองอย่างนี้ต้องแยกกันเสมอ)
 - ความรู้ภาษีอ้างอิงภาษีเงินได้บุคคลธรรมดาไทย: ขั้นบันได (0/5/10/15/20/25/30/35%), ค่าลดหย่อนส่วนตัว 60,000, หักค่าใช้จ่าย 50% สูงสุด 100,000, ประกันสังคมสูงสุด 9,000/ปี, RMF/SSF/ประกันเป็นสิทธิลดหย่อนเพิ่ม
 - เมื่อผู้ใช้ต้องการ "กรอก/บันทึก" ข้อมูลลงฟอร์ม (เช่น พิมพ์รายการ OT, ค่าเบี้ย, รายการหัก) หรือส่งรูปสลิปเงินเดือน ให้สรุปสิ่งที่อ่านได้เป็นข้อความสั้นๆ ก่อน แล้ว "ต่อท้ายสุด" ด้วยบล็อคโค้ด json รูปแบบนี้เท่านั้น:
 \`\`\`json
-{"action":"fill","months":["YYYY-MM"],"fields":{"base":0,"sso":0,"pvd":0,"allowances":[{"n":"","v":0}],"deductions":[{"n":"","v":0,"pm":"bank"}],"investments":[{"n":"","t":"%","v":0}],"otDays":[{"d":1,"minutes":0,"night3":0,"note":""}],"removeAllowances":["ชื่อ"],"removeDeductions":["ชื่อ"],"removeInvestments":["ชื่อ"],"renameAllowances":[{"from":"","to":""}],"renameDeductions":[{"from":"","to":""}],"renameInvestments":[{"from":"","to":""}],"reorderAllowances":["ชื่อตามลำดับใหม่"],"reorderDeductions":["ชื่อตามลำดับใหม่"],"reorderInvestments":["ชื่อตามลำดับใหม่"]},"followup":{"question":"","options":["",""],"allowText":true},"note":""}
+{"action":"fill","months":["YYYY-MM"],"fields":{"base":0,"sso":0,"pvd":0,"allowances":[{"n":"","v":0}],"deductions":[{"n":"","v":0,"pm":"bank"}],"investments":[{"n":"","t":"%","v":0}],"otDays":[{"d":1,"minutes":0,"night3":0,"note":""}],"otWeekday":{"เสาร์":{"minutes":0,"night3":0}},"otWeekdayScale":{"เสาร์":0.5},"otAlternate":[{"weekday":"เสาร์","keep":"odd","minutes":480}],"otClearDays":[1,2],"otScaleAll":1,"scaleAllowances":{"ชื่อ":1.1},"scaleDeductions":1.05,"scaleInvestments":{"ชื่อ":2},"removeAllowances":["ชื่อ"],"removeDeductions":["ชื่อ"],"removeInvestments":["ชื่อ"],"renameAllowances":[{"from":"","to":""}],"renameDeductions":[{"from":"","to":""}],"renameInvestments":[{"from":"","to":""}],"reorderAllowances":["ชื่อตามลำดับใหม่"],"reorderDeductions":["ชื่อตามลำดับใหม่"],"reorderInvestments":["ชื่อตามลำดับใหม่"]},"followup":{"question":"","options":["",""],"allowText":true},"note":""}
 \`\`\`
 - ใส่เฉพาะฟิลด์ที่มั่นใจ ตัดฟิลด์ที่ไม่เกี่ยวออกทั้งหมด ถ้าเป็นแค่คำถาม/วิเคราะห์ "ห้าม" ใส่บล็อค json เด็ดขาด
 - allowances/deductions/investments = เพิ่มใหม่ หรือแก้ค่าเดิม (จับคู่ด้วยชื่อ "n")
@@ -2788,7 +2838,35 @@ init();
 - ★ ข้ามปีได้: ทำได้ทุกอย่าง (เพิ่ม/แก้/ลบ/เปลี่ยนชื่อ/จัดลำดับ) กับปีอื่นได้เลย แค่ใส่ปีใน months เช่น "2027-01"; ดูว่ามีข้อมูลปีไหนบ้างจาก "ภาพรวมทุกปีที่มีข้อมูล" ใน context (รายละเอียดรายเดือนมีเฉพาะปีที่ผู้ใช้เปิดอยู่ ถ้าต้องรู้รายละเอียดปีอื่นให้ถามผู้ใช้หรือให้เขาสลับไปเปิดปีนั้น)
 - followup (ใส่หรือไม่ก็ได้) = หลังผู้ใช้ยืนยันการแก้เดือนปัจจุบันแล้ว ระบบจะถามต่อด้วยปุ่มตัวเลือกนี้ให้อัตโนมัติ ใช้เมื่อการแก้ (เช่น จัดลำดับ/เปลี่ยนชื่อ/เพิ่มรายการประจำ) น่าจะอยากทำกับเดือน/ปีอื่นด้วย เช่น question="ให้ทำแบบเดียวกันที่อื่นด้วยไหม?" options=["ใช่ ทุกเดือนปีนี้","ใช่ รวมปีหน้าด้วย","เฉพาะเดือนนี้พอ","เลือกเดือน/ปีเอง"]; ถ้าผู้ใช้ตอบว่าใช่ ให้ตอบกลับด้วย fill เดิม + ใส่ months (รวมข้ามปีได้) ของเดือนที่ต้องการ
 - otDays: d=วันที่ในเดือน, minutes=นาที OT ปกติของวันนั้น, night3=นาที OT ×3 (เฉพาะเสาร์/อาทิตย์หลัง 16:36); ระบบจะเลือกเรต ×1.5 (วันธรรมดา/เสาร์) หรือ ×2.0 (อาทิตย์) ให้เองตามวันในสัปดาห์
+- ★ คำสั่ง OT แบบ "ทั้งเดือน" (ไม่ต้องไล่วันเอง — ระบบเปิดปฏิทินจริงให้):
+  • otWeekday = ตั้งค่า OT ของ "ทุกวัน<ชื่อวัน>" ในเดือนนั้น เช่น {"เสาร์":{"minutes":480}} = ทำ OT ทุกเสาร์ 8 ชม.; ใส่ {"เสาร์":{"minutes":0,"night3":0}} = หยุดทุกเสาร์
+  • otWeekdayScale = คูณ OT เดิมของวันนั้นๆ เช่น {"เสาร์":0.5} = เหลือครึ่งเดียว, {"อาทิตย์":0} = ตัดทิ้ง
+  • otAlternate = แบบ "เว้น" เช่น เสาร์เว้นเสาร์ → [{"weekday":"เสาร์","keep":"odd","minutes":480}] (keep:"odd"=เก็บเสาร์ที่ 1,3,5 / "even"=เก็บเสาร์ที่ 2,4) เสาร์ที่ไม่ถูกเก็บจะถูกตั้งเป็น 0 ให้อัตโนมัติ; ถ้าไม่ใส่ minutes = คงค่าเดิมของวันที่เก็บไว้
+  • otClearDays = [วันที่] ล้าง OT ของวันนั้นเป็น 0 · otScaleAll = คูณ OT ทุกวันทั้งเดือน
+  • ชื่อวันใช้ภาษาไทยเต็ม: อาทิตย์ จันทร์ อังคาร พุธ พฤหัสบดี ศุกร์ เสาร์
+- ★ scaleAllowances / scaleDeductions / scaleInvestments = คูณค่าเดิม ใส่เป็นตัวเลขเดียว (ใช้กับทุกรายการในกลุ่ม) หรือ {"ชื่อรายการ":ตัวคูณ} เช่น ลดค่าใช้จ่าย 10% ทุกรายการ = "scaleDeductions":0.9
+- การจับคู่ชื่อรายการยืดหยุ่น (ไม่สนตัวพิมพ์/ช่องว่าง/วงเล็บ) แต่ให้พยายามสะกดชื่อให้ตรงกับที่เห็นใน context เพื่อไม่ให้เกิดรายการซ้ำ
 - pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต
+
+════ 🔮 action "simulate" — จำลองสถานการณ์ (สำคัญที่สุดสำหรับคำถาม "ถ้า…จะเป็นยังไง") ════
+เมื่อผู้ใช้ถามว่าถ้าเปลี่ยนอะไรบางอย่างแล้วรายรับ/รายจ่ายจะเป็นยังไง ให้เขียนนำสั้นๆ 1 บรรทัดว่ากำลังจำลองอะไร แล้ว "ต่อท้ายสุด" ด้วย:
+\`\`\`json
+{"action":"simulate","months":["YYYY-MM"],"scenarios":[{"name":"ชื่อสถานการณ์สั้นๆ","changes":{"otWeekday":{"เสาร์":{"minutes":0,"night3":0}}}}]}
+\`\`\`
+- months = เดือนที่จะจำลอง (เว้นว่าง = เดือนที่ผู้ใช้เปิดอยู่; ถ้าอยู่หน้าสรุปปี = ทุกเดือนที่มีข้อมูลในปีนั้น) ใส่หลายเดือน/ข้ามปีได้
+- scenarios = 1–4 สถานการณ์ ระบบจะเทียบ "ตอนนี้" กับทุกสถานการณ์ให้ ควรตั้งชื่อให้ผู้ใช้อ่านรู้เรื่อง
+- changes ใช้คีย์เดียวกับ fields ของ fill ได้เกือบทั้งหมด: base, basePct (เช่น 5 = ขึ้นเงินเดือน 5%), sso, pvd, allowances, deductions, investments, removeAllowances/Deductions/Investments, scaleAllowances/Deductions/Investments, otDays, otWeekday, otWeekdayScale, otAlternate, otClearDays, otScaleAll
+- ตัวอย่างที่เจอบ่อย:
+  • "หยุดทำงานวันเสาร์"     → {"otWeekday":{"เสาร์":{"minutes":0,"night3":0}}}
+  • "ทำงานเสาร์เว้นเสาร์"    → {"otAlternate":[{"weekday":"เสาร์","keep":"odd"}]}
+  • "เลิก OT ทั้งหมด"        → {"otScaleAll":0}
+  • "ขึ้นเงินเดือน 5%"        → {"basePct":5}
+  • "ตัดค่าใช้จ่ายลง 10%"     → {"scaleDeductions":0.9}
+  • "ออมเพิ่มเป็น 20%"       → {"investments":[{"n":"ชื่อรายการเดิม","t":"%","v":20}]}
+- ★ simulate เป็นการ "ดูอย่างเดียว" ไม่แก้ข้อมูลจริงของผู้ใช้ — จึงเสนอได้เลยโดยไม่ต้องขออนุญาต
+- หลังส่ง simulate ระบบจะคำนวณด้วยเครื่องคำนวณจริงแล้วส่งผลกลับมาให้คุณ "รอบที่สอง" ตอนนั้นให้อธิบายด้วยตัวเลขที่ระบบส่งมาเท่านั้น ห้ามคำนวณใหม่เอง ห้ามปัดตัวเลขให้ต่างไป และให้ชี้ประเด็นที่ผู้ใช้มักคาดไม่ถึง (เช่น รายได้ลด 3,000 แต่ใช้จริงลดแค่ 2,400 เพราะเงินลงทุนแบบ % ลดตามไปด้วย)
+- ห้ามใส่ simulate พร้อมกับ fill หรือ ask ในคำตอบเดียว
+
 - เมื่อคุณ "ต้องการถามผู้ใช้เพิ่มเติม" หรืออยากเสนอทางเลือกให้ตัดสินใจ (เช่น ข้อมูลไม่พอ, ต้องรู้เป้าหมาย, มีหลายแนวทาง) ให้เขียนคำถาม/คำแนะนำเป็นข้อความก่อน แล้ว "ต่อท้ายสุด" ด้วยบล็อคโค้ด json รูปแบบนี้:
 \`\`\`json
 {"action":"ask","options":["ตัวเลือกสั้นๆ 1","ตัวเลือกสั้นๆ 2","ตัวเลือกสั้นๆ 3"],"allowText":true}
@@ -2952,27 +3030,81 @@ init();
   window.aiClearImg=function(){aiImg=null;ge('ai-imgchip').classList.remove('show');};
 
   /* ── context builder ── */
+  /* ปฏิทินของเดือน: บอกว่าวันที่ไหนตรงกับวันอะไร — AI จะได้ไม่ต้องเดาว่าวันไหนคือวันเสาร์ */
+  function monthCalendar(ym){
+    const[y,m]=ym.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
+    const byDow={};DFULL.forEach(n=>byDow[n]=[]);
+    for(let d=1;d<=cnt;d++)byDow[DFULL[new Date(y,m-1,d).getDay()]].push(d);
+    return{จำนวนวัน:cnt,วันที่ตรงกับแต่ละวันในสัปดาห์:byDow,
+      จำนวนวันเสาร์:byDow['เสาร์'].length,จำนวนวันอาทิตย์:byDow['อาทิตย์'].length};
+  }
+  /* สรุป OT ของเดือน แยกตามวันในสัปดาห์ (นาที) — หัวใจของคำถาม "ถ้าหยุดวันเสาร์…" */
+  function otDowSummary(rec,ym){
+    const{byDow}=otMinutes(rec,ym);const out={};
+    byDow.forEach((g,dw)=>{
+      if(!g.ac&&!g.o3)return;
+      out[DFULL[dw]]={จำนวนวันที่ทำ:g.days,นาทีปกติ:r(g.ac),นาทีx3:r(g.o3),
+        ชั่วโมงรวม:+((g.ac+g.o3)/60).toFixed(2),เรตวันนี้:dw===0?'x2.0':'x1.5'};
+    });
+    return out;
+  }
+  /* record ของเดือน — เดือนที่เปิดอยู่อ่านจากฟอร์มสด (รวมค่าที่ยังไม่กดบันทึก) */
+  function snapshotRec(ym){
+    const curYm=(CT>=0&&CT<12)?ymk(CT):null;
+    if(ym===curYm){
+      const cnt=new Date(CY,CT+1,0).getDate();const days={};
+      for(let d=1;d<=cnt;d++)days[String(d)]={ac:ge('ota_'+d)?.value||'',o3:ge('ot3_'+d)?.value||'',nt:ge('otn_'+d)?.value||''};
+      return{base:gv('fBase'),sso:gv('fSso'),pvd:gv('fPvd'),a:colA(),d:colD(),i:colI(),days};
+    }
+    const rec=DB[ym];return rec?JSON.parse(JSON.stringify(rec)):null;
+  }
   function buildContext(){
     const monthIdx=(CT>=0&&CT<12)?CT:new Date().getMonth();
+    const curYm=ymk(monthIdx);
     const alls=colA().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v))}));
     const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank'}));
     const invs=colI().filter(x=>x.n).map(x=>({n:x.n,t:x.t,v:nf(x.v)}));
     const ots=getOTs();const base=num('fBase');
+    const hr=base/23/8;
+    /* OT รายวันของเดือนที่เปิดอยู่ (เฉพาะวันที่มีค่า) */
+    const otRows=[];
+    const[cy2,cm2]=curYm.split('-').map(Number);const cnt2=new Date(cy2,cm2,0).getDate();
+    for(let d=1;d<=cnt2;d++){
+      const ac=nf(ge('ota_'+d)?.value),o3=nf(ge('ot3_'+d)?.value);
+      if(!ac&&!o3)continue;
+      const dw=new Date(cy2,cm2-1,d).getDay();
+      const row={วันที่:d,วัน:DFULL[dw],นาที:r(ac),เรต:dw===0?'x2.0':'x1.5'};
+      if(o3)row.นาทีx3=r(o3);
+      const nt=ge('otn_'+d)?.value||'';if(nt)row.โน้ต=nt;
+      otRows.push(row);
+    }
+    const curRec=snapshotRec(curYm);
     const months=[];let yInc=0,yTake=0,yInv=0,ySpend=0,yDed=0,yOT=0,nFilled=0;
     for(let i=0;i<12;i++){
-      const t=compM(ymk(i));if(!t)continue;nFilled++;
+      const ym=ymk(i);const t=compM(ym);if(!t)continue;nFilled++;
       const otH=t.h15+t.h20+t.h30;
-      months.push({เดือน:MS[i],ฐาน:r(t.base),OTชม:+otH.toFixed(1),รายได้รวม:r(t.totInc),หัก:r(t.totDed),รับจริง:r(t.takeHome),ลงทุน:r(t.totInv),ใช้จริง:r(t.final)});
+      const row={เดือน:MS[i],ฐาน:r(t.base),OTชม:+otH.toFixed(1),รายได้รวม:r(t.totInc),หัก:r(t.totDed),รับจริง:r(t.takeHome),ลงทุน:r(t.totInv),ใช้จริง:r(t.final)};
+      const dow=otDowSummary(DB[ym],ym);
+      if(Object.keys(dow).length)row.OTแยกตามวันในสัปดาห์=dow;
+      months.push(row);
       yInc+=t.totInc;yTake+=t.takeHome;yInv+=t.totInv;ySpend+=t.final;yDed+=t.totDed;yOT+=otH;
     }
     const ctx={
       ปีปัจจุบัน:CY,
+      วันนี้:new Date().toISOString().slice(0,10),
       เดือนที่กำลังดู:(CT>=0&&CT<12)?(MF[monthIdx]+' '+CY):('สรุปทั้งปี '+CY),
+      รหัสเดือนที่กำลังดู:(CT>=0&&CT<12)?curYm:null,
+      ปฏิทินเดือนนี้:monthCalendar(curYm),
       ฟอร์มเดือนที่เลือกอยู่ตอนนี้:{
         เงินเดือนฐาน:r(base),
+        ค่าแรงต่อชั่วโมง:+hr.toFixed(2),
+        ค่าOTต่อชั่วโมง:{x1_5:+(hr*1.5).toFixed(2),x2_0:+(hr*2).toFixed(2),x3_0:+(hr*3).toFixed(2)},
         OTชั่วโมง:{x1_5:+ots.h15.toFixed(2),x2_0:+ots.h20.toFixed(2),x3_0:+ots.h30.toFixed(2)},
+        OTรายวัน:otRows,
+        OTแยกตามวันในสัปดาห์:curRec?otDowSummary(curRec,curYm):{},
         ค่าเพิ่มเติม:alls,รายการหัก:deds,แผนลงทุน:invs,
-        ประกันสังคม:r(getSso()),กองทุนสำรองเลี้ยงชีพ:r(getPvd())
+        ประกันสังคม:r(getSso()),กองทุนสำรองเลี้ยงชีพ:r(getPvd()),
+        ยอดคำนวณปัจจุบัน:curRec?(()=>{const t=computeRec(curRec,curYm);return{รายได้รวม:r(t.totInc),ค่าOT:r(t.totOT),หักรวม:r(t.totDed),รับจริง:r(t.takeHome),ฐานคิดลงทุน:r(t.invBase),ยอดลงทุน:r(t.totInv),ใช้จริง:r(t.final)};})():null
       },
       สรุปรายเดือนทั้งปี:months,
       รวมทั้งปี:{เดือนที่มีข้อมูล:nFilled,รายได้รวม:r(yInc),รับจริง:r(yTake),ลงทุนรวม:r(yInv),ใช้จริงรวม:r(ySpend),หักรวม:r(yDed),OTชม:+yOT.toFixed(1)},
@@ -2992,6 +3124,222 @@ init();
     return Object.keys(y).sort().map(k=>{const g=y[k];return{ปี:g.ปี,เดือนที่มีข้อมูล:g.เดือน,รายได้รวม:r(g.รายได้),รับจริงรวม:r(g.รับจริง),ลงทุนรวม:r(g.ลงทุน),ใช้จริงรวม:r(g.ใช้จริง)};});
   }
 
+  /* ══════════ ตัวจำลองสถานการณ์ (what-if engine) ══════════
+     AI ไม่ต้องคิดเลขเอง — ส่ง "สถานการณ์" มา แล้วเรารันด้วย computeRec() ตัวเดียวกับหน้าสรุป
+     ตัวเลขที่ได้จึงตรงกับของจริงเป๊ะ รวมถึงผลลูกโซ่ (รายได้เปลี่ยน → ฐานคิดลงทุน → เงินลงทุนแบบ % ) */
+  const DOW_MAP={};
+  DFULL.forEach((n,i)=>{DOW_MAP[n]=i;});
+  Object.assign(DOW_MAP,{'พฤหัส':4,'อา':0,'จ':1,'อ':2,'พ':3,'พฤ':4,'ศ':5,'ส':6,
+    sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6,
+    sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6});
+  function parseDow(k){
+    if(k==null)return null;
+    let s=String(k).trim();
+    if(/^[0-6]$/.test(s))return +s;
+    s=s.toLowerCase().replace(/^วัน/,'').replace(/[.\s]/g,'');
+    return DOW_MAP[s]!=null?DOW_MAP[s]:null;
+  }
+  function daysWithDow(ym,dw){
+    const[y,m]=ym.split('-').map(Number);const cnt=new Date(y,m,0).getDate();const out=[];
+    for(let d=1;d<=cnt;d++)if(new Date(y,m-1,d).getDay()===dw)out.push(d);
+    return out;
+  }
+  /* จับคู่ชื่อรายการแบบยืดหยุ่น — กัน AI สะกดเพี้ยนแล้วไปสร้างรายการซ้ำแทนที่จะแก้ของเดิม */
+  const normName=s=>String(s||'').toLowerCase().replace(/[\s\-_.()（）[\]/]/g,'');
+  function findByName(arr,name){
+    if(!arr||!name)return null;
+    const exact=arr.find(x=>x.n===name);if(exact)return exact;
+    const k=normName(name);if(!k)return null;
+    return arr.find(x=>normName(x.n)===k)||null;
+  }
+  function nameMatches(list,name){
+    const k=normName(name);
+    return list.some(x=>x===name||(k&&normName(x)===k));
+  }
+  /* แปลงคำสั่ง OT ระดับ "ทั้งเดือน" (otWeekday / otAlternate / otWeekdayScale / otClearDays / otScaleAll)
+     ให้กลายเป็น otDays รายวันที่ชัดเจน โดยเปิดปฏิทินจริงของเดือนนั้นให้ — AI ไม่ต้องเดาว่าวันไหนเป็นวันเสาร์ */
+  function expandOtOps(f,ym,rec){
+    if(!f)return f;
+    const hasOps=f.otWeekday||f.otWeekdayScale||f.otAlternate||f.otClearDays||f.otScaleAll!=null;
+    if(!hasOps)return f;
+    const[y,m]=ym.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
+    const cur={};
+    for(let d=1;d<=cnt;d++){const dv=(rec&&rec.days&&rec.days[String(d)])||{};cur[d]={ac:nf(dv.ac),o3:nf(dv.o3)};}
+    const out={};
+    const setD=(d,mi,n3)=>{const o=out[d]||{};
+      if(mi!=null)o.minutes=Math.max(0,Math.round(mi));
+      if(n3!=null)o.night3=Math.max(0,Math.round(n3));
+      out[d]=o;};
+    const valOf=d=>({
+      ac:(out[d]&&out[d].minutes!=null)?out[d].minutes:(cur[d]?cur[d].ac:0),
+      o3:(out[d]&&out[d].night3!=null)?out[d].night3:(cur[d]?cur[d].o3:0)});
+    if(f.otScaleAll!=null){
+      const k=nf(f.otScaleAll);
+      for(let d=1;d<=cnt;d++){const v=valOf(d);if(v.ac||v.o3)setD(d,v.ac*k,v.o3*k);}
+    }
+    if(f.otWeekdayScale&&typeof f.otWeekdayScale==='object')
+      Object.keys(f.otWeekdayScale).forEach(kk=>{
+        const dw=parseDow(kk);if(dw==null)return;
+        const k=nf(f.otWeekdayScale[kk]);
+        daysWithDow(ym,dw).forEach(d=>{const v=valOf(d);setD(d,v.ac*k,v.o3*k);});
+      });
+    (Array.isArray(f.otAlternate)?f.otAlternate:(f.otAlternate?[f.otAlternate]:[])).forEach(o=>{
+      if(!o||typeof o!=='object')return;
+      const dw=parseDow(o.weekday);if(dw==null)return;
+      const keepEven=String(o.keep||'odd').toLowerCase()==='even';
+      daysWithDow(ym,dw).forEach((d,i)=>{
+        const keep=keepEven?((i+1)%2===0):((i+1)%2===1);
+        if(keep){
+          if(o.minutes!=null||o.night3!=null)
+            setD(d,o.minutes!=null?nf(o.minutes):null,o.night3!=null?nf(o.night3):null);
+        }else setD(d,0,0);
+      });
+    });
+    if(f.otWeekday&&typeof f.otWeekday==='object')
+      Object.keys(f.otWeekday).forEach(kk=>{
+        const dw=parseDow(kk);if(dw==null)return;
+        let v=f.otWeekday[kk];
+        if(typeof v==='number'||typeof v==='string')v={minutes:nf(v)};
+        if(!v||typeof v!=='object')return;
+        daysWithDow(ym,dw).forEach(d=>setD(d,v.minutes!=null?nf(v.minutes):null,v.night3!=null?nf(v.night3):null));
+      });
+    (Array.isArray(f.otClearDays)?f.otClearDays:[]).forEach(d=>{
+      const n=parseInt(d,10);if(n>=1&&n<=cnt)setD(n,0,0);});
+    const merged=Object.keys(out).map(d=>Object.assign({d:+d},out[d]));
+    /* otDays ที่ AI ระบุรายวันตรงๆ มีสิทธิ์สูงสุด — ทับผลของคำสั่งระดับเดือน */
+    const explicit=(f.otDays||[]).filter(o=>o&&o.d);
+    explicit.forEach(o=>{const i=merged.findIndex(x=>x.d===+o.d);if(i>=0)merged.splice(i,1);});
+    return Object.assign({},f,{otDays:merged.concat(explicit)});
+  }
+  /* คูณค่าเดิมของรายการ — sc เป็นตัวเลขเดียว (ทุกรายการ) หรือ {"ชื่อ":ตัวคูณ}
+     roundInt=true ใช้ตอนเขียนลงฟอร์มจริง (ช่องกรอกเก็บจำนวนเต็มบาท) */
+  function applyScale(arr,sc,roundInt){
+    if(sc==null||!arr)return;
+    const put=(it,k)=>{const v=nf(it.v)*k;it.v=String(roundInt?r(v):+v.toFixed(2));};
+    if(typeof sc==='object'&&!Array.isArray(sc)){
+      Object.keys(sc).forEach(k=>{const it=findByName(arr,k);if(it)put(it,nf(sc[k]));});
+      return;
+    }
+    const k=nf(sc);arr.forEach(x=>put(x,k));
+  }
+  /* ใส่ "สถานการณ์สมมุติ" ลง record จำลอง (record นี้เป็นสำเนา ไม่กระทบข้อมูลจริง) */
+  function simChanges(rec,ym,ch){
+    ch=ch||{};
+    rec.a=rec.a||[];rec.d=rec.d||[];rec.i=rec.i||[];rec.days=rec.days||{};
+    if(ch.base!=null)rec.base=String(nf(ch.base));
+    if(ch.basePct!=null)rec.base=String(nf(rec.base)*(1+nf(ch.basePct)/100));
+    if(ch.sso!=null)rec.sso=String(nf(ch.sso));
+    if(ch.pvd!=null)rec.pvd=String(nf(ch.pvd));
+    const rmA=_names(ch.removeAllowances),rmD=_names(ch.removeDeductions),rmI=_names(ch.removeInvestments);
+    if(rmA.length)rec.a=rec.a.filter(x=>!nameMatches(rmA,x.n));
+    if(rmD.length)rec.d=rec.d.filter(x=>!nameMatches(rmD,x.n));
+    if(rmI.length)rec.i=rec.i.filter(x=>!nameMatches(rmI,x.n));
+    (ch.allowances||[]).forEach(a=>{if(!a||!a.n)return;
+      const ex=findByName(rec.a,a.n);
+      if(ex)ex.v=String(nf(a.v));else rec.a.push({id:uid(),n:a.n,v:String(nf(a.v)),ok:true});});
+    (ch.deductions||[]).forEach(d=>{if(!d||!d.n)return;
+      const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';
+      const ex=findByName(rec.d,d.n);
+      if(ex){ex.v=String(nf(d.v));ex.pm=pm;}else rec.d.push({id:uid(),n:d.n,v:String(nf(d.v)),pm,ok:true});});
+    (ch.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;
+      const t=iv.t==='%'?'%':'฿';
+      const ex=findByName(rec.i,iv.n);
+      if(ex){ex.t=t;ex.v=String(nf(iv.v));}else rec.i.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    applyScale(rec.a,ch.scaleAllowances);
+    applyScale(rec.d,ch.scaleDeductions);
+    applyScale(rec.i,ch.scaleInvestments);
+    const f=expandOtOps(ch,ym,rec);
+    (f.otDays||[]).forEach(o=>{if(!o||!o.d)return;
+      const k=String(o.d);const dv=rec.days[k]||{ac:'',o3:'',nt:''};
+      if(o.minutes!=null)dv.ac=String(Math.max(0,Math.round(nf(o.minutes))));
+      if(o.night3!=null)dv.o3=String(Math.max(0,Math.round(nf(o.night3))));
+      rec.days[k]=dv;});
+    return rec;
+  }
+  function simMonthsList(act){
+    const ms=actMonths(act);
+    if(ms.length)return ms;
+    if(CT>=0&&CT<12)return[ymk(CT)];
+    const out=[];
+    for(let i=0;i<12;i++){const ym=ymk(i);if(DB[ym]&&nf(DB[ym].base))out.push(ym);}
+    return out;
+  }
+  const SIM_KEYS=['totInc','totOT','totDed','takeHome','totInv','final','h15','h20','h30'];
+  function simSum(list){
+    const s={};SIM_KEYS.forEach(k=>s[k]=0);
+    list.forEach(t=>SIM_KEYS.forEach(k=>s[k]+=t[k]));
+    return s;
+  }
+  function runSimulation(act){
+    const months=simMonthsList(act).filter(ym=>{const rec=snapshotRec(ym);return rec&&nf(rec.base);});
+    if(!months.length)return null;
+    const scen=(Array.isArray(act.scenarios)?act.scenarios:[]).filter(s=>s&&typeof s==='object').slice(0,4);
+    if(!scen.length)return null;
+    const baseRecs={};months.forEach(ym=>{baseRecs[ym]=snapshotRec(ym);});
+    const baseT=months.map(ym=>computeRec(baseRecs[ym],ym));
+    const rows=scen.map(s=>{
+      const per=months.map(ym=>{
+        const rec=simChanges(JSON.parse(JSON.stringify(baseRecs[ym])),ym,s.changes||{});
+        return{ym,t:computeRec(rec,ym)};
+      });
+      return{name:String(s.name||'สถานการณ์').trim().slice(0,60)||'สถานการณ์',per,sum:simSum(per.map(x=>x.t))};
+    });
+    return{months,baseT,baseSum:simSum(baseT),rows};
+  }
+  /* ผลลัพธ์ที่ส่งกลับให้ AI อธิบาย — ตัวเลขชุดนี้คือความจริง AI ห้ามคำนวณใหม่ */
+  const simMoney=t=>({รายได้รวม:r(t.totInc),ค่าOT:r(t.totOT),หักรวม:r(t.totDed),
+    รับจริง:r(t.takeHome),ยอดลงทุน:r(t.totInv),ใช้จริง:r(t.final),
+    OTชม:+(t.h15+t.h20+t.h30).toFixed(2)});
+  const simDiff=(a,b)=>({รายได้รวม:r(a.totInc-b.totInc),ค่าOT:r(a.totOT-b.totOT),
+    รับจริง:r(a.takeHome-b.takeHome),ยอดลงทุน:r(a.totInv-b.totInv),ใช้จริง:r(a.final-b.final),
+    OTชม:+((a.h15+a.h20+a.h30)-(b.h15+b.h20+b.h30)).toFixed(2)});
+  function simPayload(sim){
+    return{
+      เดือนที่จำลอง:sim.months.map(monthLabelFull),
+      ปัจจุบัน:{
+        รวมทุกเดือน:simMoney(sim.baseSum),
+        รายเดือน:sim.months.map((ym,i)=>Object.assign({เดือน:monthLabelFull(ym)},simMoney(sim.baseT[i])))
+      },
+      สถานการณ์:sim.rows.map(rw=>({
+        ชื่อ:rw.name,
+        รวมทุกเดือน:simMoney(rw.sum),
+        ส่วนต่างจากปัจจุบัน:simDiff(rw.sum,sim.baseSum),
+        รายเดือน:rw.per.map((p,i)=>Object.assign({เดือน:monthLabelFull(p.ym)},simMoney(p.t),
+          {ใช้จริงต่างจากเดิม:r(p.t.final-sim.baseT[i].final)}))
+      }))
+    };
+  }
+  /* สรุปสั้นๆ เก็บลงประวัติแชท (กันประวัติบวม แต่ AI ยังจำตัวเลขหลักได้) */
+  function simBrief(sim){
+    return{เดือน:sim.months.map(monthLabelFull).join(', '),
+      ปัจจุบัน_ใช้จริง:r(sim.baseSum.final),ปัจจุบัน_รายได้รวม:r(sim.baseSum.totInc),
+      ผล:sim.rows.map(rw=>({ชื่อ:rw.name,รายได้รวม:r(rw.sum.totInc),รับจริง:r(rw.sum.takeHome),
+        ใช้จริง:r(rw.sum.final),ต่างจากเดิม_ใช้จริง:r(rw.sum.final-sim.baseSum.final)}))};
+  }
+  function simRenderCard(sim){
+    const log=ge('ai-log');
+    const card=document.createElement('div');card.className='ai-sim-card';
+    const dv=n=>(n>0?'+':n<0?'−':'')+fmt(Math.abs(n)).slice(1);
+    const cls=n=>n>0?'up':n<0?'down':'flat';
+    const rowsOf=(t,b)=>[
+      ['รายได้รวม',t.totInc,b?t.totInc-b.totInc:null],
+      ['ค่า OT',t.totOT,b?t.totOT-b.totOT:null],
+      ['รับจริง',t.takeHome,b?t.takeHome-b.takeHome:null],
+      ['ยอดลงทุน',t.totInv,b?t.totInv-b.totInv:null],
+      ['ใช้จริง',t.final,b?t.final-b.final:null]
+    ].map(([l,v,d])=>'<div class="aisim-row"><span>'+esc(l)+'</span><b>'+esc(fmt(v))+
+      (d==null?'':' <i class="aisim-d '+cls(d)+'">'+esc(dv(d))+'</i>')+'</b></div>').join('');
+    let html='<div class="aisim-title">🔮 ผลจำลองสถานการณ์ <span class="aisim-tag">คำนวณด้วยเครื่องคำนวณจริง</span></div>'+
+      '<div class="aisim-when">📅 '+esc(sim.months.map(monthLabelFull).join(', '))+
+      (sim.months.length>1?' (รวม '+sim.months.length+' เดือน)':'')+'</div>'+
+      '<div class="aisim-blk base"><div class="aisim-h">ตอนนี้</div>'+rowsOf(sim.baseSum,null)+'</div>';
+    sim.rows.forEach(rw=>{
+      html+='<div class="aisim-blk"><div class="aisim-h">'+esc(rw.name)+'</div>'+rowsOf(rw.sum,sim.baseSum)+'</div>';
+    });
+    html+='<div class="aisim-note">ตัวเลขนี้เป็นการจำลองเท่านั้น — ข้อมูลจริงของคุณไม่ถูกแก้ไข</div>';
+    card.innerHTML=html;log.appendChild(card);scrollLog();
+  }
+
   /* ── Gemini call (โหมด key = เรียกตรง / โหมด proxy = ผ่านเซิร์ฟเวอร์) ── */
   async function callGemini(userText,imgPart){
     const model=(aiCfg&&aiCfg.model)||'gemini-2.5-flash';
@@ -3000,7 +3348,11 @@ init();
     const curParts=[{text:'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n'+userText}];
     if(imgPart)curParts.push({inlineData:{mimeType:imgPart.mimeType,data:imgPart.data}});
     contents.push({role:'user',parts:curParts});
-    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:{temperature:.45,maxOutputTokens:8192}};
+    /* อุณหภูมิต่ำ = ตัวเลข/เหตุผลนิ่งขึ้น (งานการเงินต้องการความแม่น ไม่ต้องการความสร้างสรรค์)
+       และเปิด "thinking" ให้โมเดล 2.5 ได้คิดเป็นขั้นก่อนตอบ — ช่วยเรื่องโจทย์หลายเงื่อนไขมาก */
+    const genCfg={temperature:.15,topP:.9,maxOutputTokens:8192};
+    if(/^gemini-2\.5/.test(model))genCfg.thinkingConfig={thinkingBudget:4096};
+    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:genCfg};
 
     let url,opts;
     if(aiCfg&&aiCfg.mode==='proxy'){
@@ -3092,6 +3444,40 @@ init();
   }
   function actMonths(act){return (Array.isArray(act.months)?act.months:[]).map(x=>String(x||'').trim()).filter(x=>/^\d{4}-\d{2}$/.test(x));}
   function monthLabelFull(ym){const[y,m]=ym.split('-').map(Number);return (MF[m-1]||'?')+' '+y;}
+  /* อธิบายคำสั่ง OT ระดับเดือน / การคูณสเกล ให้ผู้ใช้อ่านรู้เรื่องก่อนกดยืนยัน */
+  function otOpRows(f){
+    const rows=[];
+    const dowName=k=>{const d=parseDow(k);return d==null?String(k):DFULL[d];};
+    if(f.otWeekday&&typeof f.otWeekday==='object')
+      Object.keys(f.otWeekday).forEach(k=>{
+        let v=f.otWeekday[k];if(typeof v==='number'||typeof v==='string')v={minutes:nf(v)};
+        const mi=v&&v.minutes!=null?nf(v.minutes):null,n3=v&&v.night3!=null?nf(v.night3):null;
+        const txt=(mi===0&&(n3===0||n3===null))?'หยุด (0 นาที)':
+          [mi!=null?mi+' นาที':'',n3?('+ ×3 '+n3+' นาที'):''].filter(Boolean).join(' ');
+        rows.push(['⏱️ OT ทุกวัน'+dowName(k),txt||'—']);
+      });
+    if(f.otWeekdayScale&&typeof f.otWeekdayScale==='object')
+      Object.keys(f.otWeekdayScale).forEach(k=>{
+        const s=nf(f.otWeekdayScale[k]);
+        rows.push(['⏱️ OT ทุกวัน'+dowName(k),s===0?'ตัดออกทั้งหมด':'× '+s+' ของเดิม']);
+      });
+    (Array.isArray(f.otAlternate)?f.otAlternate:(f.otAlternate?[f.otAlternate]:[])).forEach(o=>{
+      if(!o||typeof o!=='object')return;
+      const keep=String(o.keep||'odd').toLowerCase()==='even'?'ครั้งที่ 2, 4, …':'ครั้งที่ 1, 3, 5, …';
+      rows.push(['🔁 '+dowName(o.weekday)+'เว้น'+dowName(o.weekday),
+        'ทำเฉพาะ'+keep+(o.minutes!=null?(' ('+nf(o.minutes)+' นาที)'):'')]);
+    });
+    const clr=(Array.isArray(f.otClearDays)?f.otClearDays:[]).filter(x=>parseInt(x,10)>0);
+    if(clr.length)rows.push(['🧹 ล้าง OT วันที่',clr.join(', ')]);
+    if(f.otScaleAll!=null)rows.push(['⏱️ OT ทั้งเดือน',nf(f.otScaleAll)===0?'ตัดออกทั้งหมด':'× '+nf(f.otScaleAll)+' ของเดิม']);
+    return rows;
+  }
+  function scaleRows(sc,label,rows){
+    if(sc==null)return;
+    if(typeof sc==='object'&&!Array.isArray(sc))
+      Object.keys(sc).forEach(k=>rows.push(['✖️ ปรับ “'+k+'”','× '+nf(sc[k])+' ของเดิม']));
+    else rows.push(['✖️ ปรับ'+label+'ทุกรายการ','× '+nf(sc)+' ของเดิม']);
+  }
   function actionRows(f){
     const rows=[];
     if(f.base!=null)rows.push(['เงินเดือนฐาน',fmt(nf(f.base))]);
@@ -3101,6 +3487,10 @@ init();
     (f.deductions||[]).forEach(d=>d&&d.n&&rows.push(['➕/✎ '+d.n,fmt(nf(d.v))]));
     (f.investments||[]).forEach(iv=>iv&&iv.n&&rows.push(['📈 '+iv.n,iv.t==='%'?(nf(iv.v)+'%'):fmt(nf(iv.v))]));
     (f.otDays||[]).forEach(o=>o&&o.d&&rows.push(['⏱️ OT วันที่ '+o.d,((nf(o.minutes)+nf(o.night3))||0)+' นาที']));
+    rows.push(...otOpRows(f));
+    scaleRows(f.scaleAllowances,'ค่าเพิ่มเติม',rows);
+    scaleRows(f.scaleDeductions,'รายการหัก',rows);
+    scaleRows(f.scaleInvestments,'แผนลงทุน',rows);
     [].concat(f.removeAllowances||[],f.removeDeductions||[],f.removeInvestments||[]).filter(Boolean).forEach(n=>rows.push(['🗑️ ลบ',String(n)]));
     [].concat(f.renameAllowances||[],f.renameDeductions||[],f.renameInvestments||[]).filter(x=>x&&x.from&&x.to).forEach(x=>rows.push(['✏️ เปลี่ยนชื่อ',x.from+' → '+x.to]));
     if(_names(f.reorderAllowances).length)rows.push(['🔀 จัดลำดับค่าเพิ่มเติม',_names(f.reorderAllowances).join(' › ')]);
@@ -3166,19 +3556,22 @@ init();
     if(f.pvd!=null)sv('fPvd',String(r(f.pvd)));
     onBaseChg();
     A=colA();D=colD();I=colI();               /* จับค่าที่ผู้ใช้พิมพ์ค้างไว้ก่อน */
-    /* rename */
-    (f.renameAllowances||[]).forEach(x=>{if(x&&x.from&&x.to){const it=A.find(a=>a.n===x.from&&a.id!=='bonus');if(it)it.n=x.to;}});
-    (f.renameDeductions||[]).forEach(x=>{if(x&&x.from&&x.to){const it=D.find(d=>d.n===x.from);if(it)it.n=x.to;}});
-    (f.renameInvestments||[]).forEach(x=>{if(x&&x.from&&x.to){const it=I.find(i=>i.n===x.from);if(it)it.n=x.to;}});
+    /* rename (จับคู่ชื่อแบบยืดหยุ่น — กันชื่อเพี้ยนเล็กน้อยแล้วหาไม่เจอ) */
+    (f.renameAllowances||[]).forEach(x=>{if(x&&x.from&&x.to){const it=findByName(A.filter(a=>a.id!=='bonus'),x.from);if(it)it.n=x.to;}});
+    (f.renameDeductions||[]).forEach(x=>{if(x&&x.from&&x.to){const it=findByName(D,x.from);if(it)it.n=x.to;}});
+    (f.renameInvestments||[]).forEach(x=>{if(x&&x.from&&x.to){const it=findByName(I,x.from);if(it)it.n=x.to;}});
     /* remove */
     const rA_=_names(f.removeAllowances),rD_=_names(f.removeDeductions),rI_=_names(f.removeInvestments);
-    if(rA_.length)A=A.filter(a=>a.id==='bonus'||!rA_.includes(a.n));
-    if(rD_.length)D=D.filter(d=>!rD_.includes(d.n));
-    if(rI_.length)I=I.filter(i=>!rI_.includes(i.n));
+    if(rA_.length)A=A.filter(a=>a.id==='bonus'||!nameMatches(rA_,a.n));
+    if(rD_.length)D=D.filter(d=>!nameMatches(rD_,d.n));
+    if(rI_.length)I=I.filter(i=>!nameMatches(rI_,i.n));
     /* add / update */
-    (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=A.find(x=>x.n===a.n&&x.id!=='bonus');if(ex){ex.v=String(r(a.v));ex.ok=true;}else A.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
-    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=D.find(x=>x.n===d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;}else D.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
-    (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=I.find(x=>x.n===iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else I.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=findByName(A.filter(x=>x.id!=='bonus'),a.n);if(ex){ex.v=String(r(a.v));ex.ok=true;}else A.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(D,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;}else D.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
+    (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=findByName(I,iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else I.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    /* คูณสเกล (เช่น ลดค่าใช้จ่ายทุกรายการ 10%) */
+    applyScale(A.filter(x=>x.id!=='bonus'),f.scaleAllowances,true);
+    applyScale(D,f.scaleDeductions,true);applyScale(I,f.scaleInvestments,false);
     /* reorder (จัดลำดับ/จัดกลุ่ม) */
     A=reorderByNames(A,f.reorderAllowances);D=reorderByNames(D,f.reorderDeductions);I=reorderByNames(I,f.reorderInvestments);
     /* re-render จาก array ล้วน (เคลียร์ DOM กัน sync ทับ) */
@@ -3195,16 +3588,18 @@ init();
     if(f.base!=null)rec.base=String(r(f.base));
     if(f.sso!=null)rec.sso=String(r(f.sso));
     if(f.pvd!=null)rec.pvd=String(r(f.pvd));
-    (f.renameAllowances||[]).forEach(x=>{if(x&&x.from&&x.to){const it=rec.a.find(a=>a.n===x.from&&a.id!=='bonus');if(it)it.n=x.to;}});
-    (f.renameDeductions||[]).forEach(x=>{if(x&&x.from&&x.to){const it=rec.d.find(d=>d.n===x.from);if(it)it.n=x.to;}});
-    (f.renameInvestments||[]).forEach(x=>{if(x&&x.from&&x.to){const it=rec.i.find(i=>i.n===x.from);if(it)it.n=x.to;}});
+    (f.renameAllowances||[]).forEach(x=>{if(x&&x.from&&x.to){const it=findByName(rec.a.filter(a=>a.id!=='bonus'),x.from);if(it)it.n=x.to;}});
+    (f.renameDeductions||[]).forEach(x=>{if(x&&x.from&&x.to){const it=findByName(rec.d,x.from);if(it)it.n=x.to;}});
+    (f.renameInvestments||[]).forEach(x=>{if(x&&x.from&&x.to){const it=findByName(rec.i,x.from);if(it)it.n=x.to;}});
     const rA_=_names(f.removeAllowances),rD_=_names(f.removeDeductions),rI_=_names(f.removeInvestments);
-    if(rA_.length)rec.a=rec.a.filter(a=>a.id==='bonus'||!rA_.includes(a.n));
-    if(rD_.length)rec.d=rec.d.filter(d=>!rD_.includes(d.n));
-    if(rI_.length)rec.i=rec.i.filter(i=>!rI_.includes(i.n));
-    (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=rec.a.find(x=>x.n===a.n&&x.id!=='bonus');if(ex)ex.v=String(r(a.v));else rec.a.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
-    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=rec.d.find(x=>x.n===d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;}else rec.d.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
-    (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=rec.i.find(x=>x.n===iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else rec.i.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    if(rA_.length)rec.a=rec.a.filter(a=>a.id==='bonus'||!nameMatches(rA_,a.n));
+    if(rD_.length)rec.d=rec.d.filter(d=>!nameMatches(rD_,d.n));
+    if(rI_.length)rec.i=rec.i.filter(i=>!nameMatches(rI_,i.n));
+    (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=findByName(rec.a.filter(x=>x.id!=='bonus'),a.n);if(ex)ex.v=String(r(a.v));else rec.a.push({id:uid(),n:a.n,v:String(r(a.v)),ok:true});});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(rec.d,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;}else rec.d.push({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true});});
+    (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=findByName(rec.i,iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));}else rec.i.push({id:uid(),n:iv.n,t,v:String(nf(iv.v))});});
+    applyScale(rec.a.filter(x=>x.id!=='bonus'),f.scaleAllowances,true);
+    applyScale(rec.d,f.scaleDeductions,true);applyScale(rec.i,f.scaleInvestments,false);
     rec.a=reorderByNames(rec.a,f.reorderAllowances);rec.d=reorderByNames(rec.d,f.reorderDeductions);rec.i=reorderByNames(rec.i,f.reorderInvestments);
     (f.otDays||[]).forEach(o=>{if(!o||!o.d)return;const k=String(o.d);const dv=rec.days[k]||{ac:'',o3:'',nt:''};if(o.minutes!=null)dv.ac=String(r(o.minutes));if(o.night3!=null)dv.o3=String(r(o.night3));if(o.note!=null)dv.nt=String(o.note);rec.days[k]=dv;});
   }
@@ -3218,6 +3613,11 @@ init();
     (f.deductions||[]).forEach(d=>d&&d.n&&p.push('ตั้งหัก “'+d.n+'” = '+fmt(nf(d.v))));
     (f.investments||[]).forEach(iv=>iv&&iv.n&&p.push('ตั้งลงทุน “'+iv.n+'” = '+(iv.t==='%'?(nf(iv.v)+'%'):fmt(nf(iv.v)))));
     (f.otDays||[]).forEach(o=>o&&o.d&&p.push('ตั้ง OT วันที่ '+o.d+' = '+((nf(o.minutes)+nf(o.night3))||0)+' นาที'));
+    const scP=[];
+    scaleRows(f.scaleAllowances,'ค่าเพิ่มเติม',scP);
+    scaleRows(f.scaleDeductions,'รายการหัก',scP);
+    scaleRows(f.scaleInvestments,'แผนลงทุน',scP);
+    scP.forEach(([l,v])=>p.push(l.replace(/^✖️ /,'')+' '+v));
     [].concat(f.removeAllowances||[],f.removeDeductions||[],f.removeInvestments||[]).filter(Boolean).forEach(n=>p.push('ลบ “'+n+'”'));
     [].concat(f.renameAllowances||[],f.renameDeductions||[],f.renameInvestments||[]).filter(x=>x&&x.from&&x.to).forEach(x=>p.push('เปลี่ยนชื่อ “'+x.from+'” → “'+x.to+'”'));
     if(_names(f.reorderAllowances).length)p.push('จัดลำดับค่าเพิ่มเติมใหม่');
@@ -3235,11 +3635,15 @@ init();
     const act=aiPendingAction;if(!act)return;
     const f=act.fields||{};const months=actMonths(act);
     try{
-      const parts=describeChanges(f);
+      /* คำสั่ง OT ระดับเดือน (ทุกวันเสาร์ / เสาร์เว้นเสาร์ / คูณสเกล) ต้องกางเป็นรายวัน
+         "ต่อเดือน" เพราะปฏิทินและค่า OT เดิมของแต่ละเดือนไม่เหมือนกัน */
+      const fFor=ym=>expandOtOps(f,ym,snapshotRec(ym));
+      const previewYm=months.length?months[0]:((CT>=0&&CT<12)?ymk(CT):null);
+      const parts=describeChanges(previewYm?fFor(previewYm):f);
       let where;
       if(months.length){
         const curYm=(CT>=0&&CT<12)?ymk(CT):null;
-        months.forEach(ym=>{ if(ym===curYm)applyToForm(f); else applyToRecord(ym,f); });
+        months.forEach(ym=>{ const fm=fFor(ym); if(ym===curYm)applyToForm(fm); else applyToRecord(ym,fm); });
         if(curYm&&months.includes(curYm))saveM();          /* บันทึกเดือนปัจจุบันที่แก้ผ่านฟอร์ม */
         try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
         updateDots();if(CT===12)renderSum();
@@ -3286,9 +3690,38 @@ init();
       if(act){
         if(act.action==='fill'&&act.fields&&typeof act.fields==='object')renderActionCard(act);
         else if(act.action==='ask')renderAskCard(act);
+        else if(act.action==='simulate')await handleSimulate(act);
       }
     }catch(e){rmTyping();addError(e.message||'เรียก Gemini ไม่สำเร็จ');}
     finally{aiBusy=false;ge('ai-send').disabled=false;}
+  }
+
+  /* รัน what-if ด้วยเครื่องคำนวณจริง แล้วส่งตัวเลขกลับให้ AI อธิบาย (รอบที่สอง)
+     — วิธีนี้ทำให้คำอธิบายกับตัวเลขตรงกันเสมอ แทนที่จะให้โมเดลคิดเลขในหัวเอง */
+  async function handleSimulate(act){
+    let sim;
+    try{sim=runSimulation(act);}
+    catch(e){addError('จำลองสถานการณ์ไม่สำเร็จ: '+(e.message||e));return;}
+    if(!sim){addError('จำลองไม่ได้ — ยังไม่มีข้อมูลเงินเดือนของเดือนที่จะจำลอง ลองกรอกเงินเดือนฐานก่อนนะครับ');return;}
+    simRenderCard(sim);
+    addTyping();
+    try{
+      const feed='[ผลการจำลองจากเครื่องคำนวณจริงของแอป — ตัวเลขชุดนี้ถูกต้อง 100%]\n'+
+        JSON.stringify(simPayload(sim))+
+        '\n\n[คำสั่ง] อธิบายผลการจำลองนี้ให้ผู้ใช้เข้าใจง่ายเป็นภาษาไทย: สรุปว่าเปลี่ยนไปเท่าไหร่ (รายได้/รับจริง/ใช้จริง), '+
+        'ชี้จุดที่ผู้ใช้มักคาดไม่ถึง (เช่น ผลลูกโซ่ของเงินลงทุนแบบ %), แล้วให้คำแนะนำสั้นๆ ที่ทำได้จริง. '+
+        'ใช้ตัวเลขจากผลจำลองนี้เท่านั้น ห้ามคำนวณใหม่เอง ห้ามใส่บล็อค json action=simulate หรือ fill อีก '+
+        '(ระบบแสดงตารางเปรียบเทียบให้ผู้ใช้แล้ว ไม่ต้องไล่ตัวเลขซ้ำทุกบรรทัด เน้นสรุปและตีความ)';
+      const out=await callGemini(feed,null);
+      rmTyping();
+      aiHistory.push({role:'user',text:'(ระบบ) ผลจำลองสถานการณ์: '+JSON.stringify(simBrief(sim))});
+      aiHistory.push({role:'model',text:out.text});
+      persistCurrentChat();
+      addAssistant(out.text);
+      if(out.truncated)addContinueNote();
+      const a2=extractAction(out.text);
+      if(a2&&a2.action==='ask')renderAskCard(a2);   /* รอบสองรับได้เฉพาะ ask — กันวนซ้ำ */
+    }catch(e){rmTyping();addError('อธิบายผลจำลองไม่สำเร็จ: '+(e.message||e));}
   }
   function aiToggleEnsureOpen(){if(!ge('ai-panel').classList.contains('open'))aiToggle();}
 
@@ -3301,6 +3734,7 @@ init();
     month:'ช่วยวิเคราะห์การเงินของเดือนที่ฉันกำลังดูอยู่ให้หน่อย: รายได้/OT/การหัก/การออม จุดเด่น จุดที่ควรระวัง และเทียบกับเดือนอื่นในปีนี้',
     year:'สรุปภาพรวมการเงินทั้งปีของฉัน: แนวโน้มรายได้ OT และอัตราการออม พร้อมคำแนะนำที่ทำได้จริง 3 ข้อ',
     tax:'จากข้อมูลของฉัน ช่วยประเมินภาษีที่ต้องจ่ายทั้งปีคร่าวๆ และแนะนำว่าควรใช้สิทธิลดหย่อน (RMF/SSF/ประกันชีวิต/ประกันสุขภาพ ฯลฯ) เพิ่มอีกเท่าไหร่ถึงคุ้มที่สุด',
+    whatif:'ฉันอยากลองจำลองสถานการณ์ดู ช่วยเสนอสถานการณ์ที่น่าสนใจสำหรับข้อมูลของฉัน (เช่น หยุดทำงานวันเสาร์, ทำเสาร์เว้นเสาร์, เลิก OT ทั้งหมด, ขึ้นเงินเดือน 5%) แล้วถามฉันก่อนว่าอยากลองอันไหน',
     anomaly:'ช่วยตรวจหาความผิดปกติหรือจุดที่น่าจะกรอกผิดในข้อมูลของฉัน เช่น ประกันสังคม/กองทุนเกินเพดาน ชั่วโมง OT ที่ผิดปกติ หรือรายการหักที่ดูสูงเกินไป',
     goal:'ฉันอยากวางแผนการออม/ลงทุน ช่วยดูอัตราการออมปัจจุบันของฉันและแนะนำแผนให้หน่อย ถ้ายังไม่รู้เป้าหมายของฉันให้ถามฉันก่อน'
   };
