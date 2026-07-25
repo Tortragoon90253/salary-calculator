@@ -2636,6 +2636,7 @@ init();
 .aac-apply{background:linear-gradient(135deg,#0d9488,#059669);color:#fff}
 .aac-skip{background:#fff;border:1px solid #cbd5e0!important;color:#64748b}
 /* interactive ask card */
+.ai-pre{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:.72rem;line-height:1.55;white-space:pre;overflow-x:auto;color:#334155}
 .ai-sim-card{align-self:flex-start;max-width:96%;background:#faf5ff;border:1.5px solid #d8b4fe;border-radius:12px;padding:11px 12px;font-size:.8rem}
 .aisim-title{font-weight:800;color:#6b21a8;font-size:.82rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .aisim-tag{font-size:.6rem;font-weight:700;background:#ede9fe;color:#7c3aed;border-radius:99px;padding:2px 7px}
@@ -3341,60 +3342,78 @@ init();
   }
 
   /* ── Gemini call (โหมด key = เรียกตรง / โหมด proxy = ผ่านเซิร์ฟเวอร์) ── */
-  async function callGemini(userText,imgPart){
+  async function callGemini(userText,imgPart,opts){
+    opts=opts||{};
     const model=(aiCfg&&aiCfg.model)||'gemini-2.5-flash';
     const contents=[];
-    aiHistory.slice(-12).forEach(h=>contents.push({role:h.role,parts:[{text:h.text}]}));
-    const curParts=[{text:'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n'+userText}];
+    aiHistory.slice(-14).forEach(h=>contents.push({role:h.role,parts:[{text:h.text}]}));
+    /* รอบ "อธิบายผลจำลอง" ไม่ต้องแนบ context ก้อนใหญ่ซ้ำอีก — ตัวเลขที่ต้องใช้อยู่ในผลจำลองแล้ว */
+    const head=opts.noContext?''
+      :'[ข้อมูลปัจจุบันของผู้ใช้ (JSON)]\n'+buildContext()+'\n\n[คำถาม/คำสั่งของผู้ใช้]\n';
+    const curParts=[{text:head+userText}];
     if(imgPart)curParts.push({inlineData:{mimeType:imgPart.mimeType,data:imgPart.data}});
     contents.push({role:'user',parts:curParts});
-    /* อุณหภูมิต่ำ = ตัวเลข/เหตุผลนิ่งขึ้น (งานการเงินต้องการความแม่น ไม่ต้องการความสร้างสรรค์)
-       และเปิด "thinking" ให้โมเดล 2.5 ได้คิดเป็นขั้นก่อนตอบ — ช่วยเรื่องโจทย์หลายเงื่อนไขมาก */
-    const genCfg={temperature:.15,topP:.9,maxOutputTokens:8192};
-    if(/^gemini-2\.5/.test(model))genCfg.thinkingConfig={thinkingBudget:4096};
-    const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:genCfg};
 
-    let url,opts;
-    if(aiCfg&&aiCfg.mode==='proxy'){
-      /* ส่งให้ proxy — เบราว์เซอร์ไม่มี Gemini key เลย */
-      url=aiCfg.proxyUrl;
-      opts={method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(Object.assign({model,code:aiCfg.accessCode||''},payload))};
-      if(aiCfg.accessCode)opts.headers['Authorization']='Bearer '+aiCfg.accessCode;
-    }else{
+    /* อุณหภูมิต่ำ = ตัวเลข/เหตุผลนิ่งขึ้น (งานการเงินต้องการความแม่น ไม่ต้องการความสร้างสรรค์)
+       ⚠️ maxOutputTokens ของ Gemini 2.5 "นับรวมโทเคนที่ใช้คิด (thinking)" ด้วย
+          ถ้าตั้งเพดานเตี้ยเทียบกับ thinkingBudget โมเดลจะคิดจนโควตาหมดแล้วไม่เหลือที่เขียนคำตอบ
+          → ได้ finishReason=MAX_TOKENS พร้อมข้อความว่าง ซึ่งผู้ใช้เห็นเป็น "AI หยุดตอบ"
+          จึงต้องเผื่อเพดานให้มากกว่า budget หลายเท่า */
+    const baseCfg={temperature:.15,topP:.9,maxOutputTokens:16384};
+    if(/^gemini-2\.5/.test(model))baseCfg.thinkingConfig={thinkingBudget:2048};
+
+    const mkReq=genCfg=>{
+      const payload={contents,systemInstruction:{parts:[{text:SYS}]},generationConfig:genCfg};
+      if(aiCfg&&aiCfg.mode==='proxy'){
+        /* ส่งให้ proxy — เบราว์เซอร์ไม่มี Gemini key เลย */
+        const o={method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(Object.assign({model,code:aiCfg.accessCode||''},payload))};
+        if(aiCfg.accessCode)o.headers['Authorization']='Bearer '+aiCfg.accessCode;
+        return{url:aiCfg.proxyUrl,opts:o};
+      }
       /* เรียก Gemini ตรงด้วยคีย์ส่วนตัว */
-      url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey);
-      opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)};
-    }
+      return{url:`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`+encodeURIComponent(aiCfg.apiKey),
+        opts:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}};
+    };
     /* ── เรียกจริง + ลองใหม่อัตโนมัติเมื่อเจอ overload/ชั่วคราว (429/5xx) ── */
     const sleep=ms=>new Promise(rs=>setTimeout(rs,ms));
     const TRANSIENT=new Set([429,500,502,503,504]);
     const MAX_TRY=3;
-    let res,data;
-    for(let attempt=1;;attempt++){
-      try{res=await fetch(url,opts);}
-      catch(e){
-        if(attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
-        throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));
+    async function send(genCfg){
+      const{url,opts:o}=mkReq(genCfg);
+      let res,data;
+      for(let attempt=1;;attempt++){
+        try{res=await fetch(url,o);}
+        catch(e){
+          if(attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
+          throw new Error('เชื่อมต่อไม่ได้: '+e.message+(aiCfg.mode==='proxy'?' (ตรวจ Proxy URL)':''));
+        }
+        try{data=await res.json();}catch(e){data=null;}
+        if(res.ok)break;
+        const msg=(data&&data.error&&data.error.message)||('HTTP '+res.status);
+        const overloaded=res.status===503||res.status===429||/overload|high demand|unavailable|try again later/i.test(msg);
+        if(TRANSIENT.has(res.status)&&attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
+        if(overloaded)throw new Error('โมเดลกำลังมีคนใช้งานเยอะ (โหลดหนักฝั่ง Google) — ลองใหม่อีกครั้งสักครู่ หรือสลับไปโมเดล gemini-2.0-flash ใน ⚙️ ซึ่งมักว่างกว่า');
+        throw new Error(msg);
       }
-      try{data=await res.json();}catch(e){data=null;}
-      if(res.ok)break;
-      const msg=(data&&data.error&&data.error.message)||('HTTP '+res.status);
-      const overloaded=res.status===503||res.status===429||/overload|high demand|unavailable|try again later/i.test(msg);
-      if(TRANSIENT.has(res.status)&&attempt<MAX_TRY){await sleep(900*attempt+Math.random()*400);continue;}
-      if(overloaded)throw new Error('โมเดลกำลังมีคนใช้งานเยอะ (โหลดหนักฝั่ง Google) — ลองใหม่อีกครั้งสักครู่ หรือสลับไปโมเดล gemini-2.0-flash ใน ⚙️ ซึ่งมักว่างกว่า');
-      throw new Error(msg);
+      const cand=data&&data.candidates&&data.candidates[0];
+      const pf=data&&data.promptFeedback;
+      if(!cand){
+        if(pf&&pf.blockReason)throw new Error('คำถาม/รูปถูกกรองด้วยนโยบายความปลอดภัยของ Gemini ('+pf.blockReason+')');
+        throw new Error('ไม่ได้รับคำตอบจากโมเดล');
+      }
+      return{text:(cand.content&&cand.content.parts||[]).map(p=>p.text||'').join('').trim(),
+        fr:cand.finishReason||''};
     }
-    const cand=data&&data.candidates&&data.candidates[0];
-    const pf=data&&data.promptFeedback;
-    if(!cand){
-      if(pf&&pf.blockReason)throw new Error('คำถาม/รูปถูกกรองด้วยนโยบายความปลอดภัยของ Gemini ('+pf.blockReason+')');
-      throw new Error('ไม่ได้รับคำตอบจากโมเดล');
+
+    let{text,fr}=await send(baseCfg);
+    /* กันเคส "คิดจนโควตาหมด ไม่เหลือที่เขียนคำตอบ" — ลองใหม่ให้อัตโนมัติโดยปิดโหมดคิด */
+    if(!text&&fr==='MAX_TOKENS'&&baseCfg.thinkingConfig){
+      ({text,fr}=await send(Object.assign({},baseCfg,{thinkingConfig:{thinkingBudget:0}})));
     }
-    const text=(cand.content&&cand.content.parts||[]).map(p=>p.text||'').join('').trim();
-    const fr=cand.finishReason||'';
     if(!text){
       if(fr==='SAFETY'||fr==='RECITATION')throw new Error('คำตอบถูกกรองด้วยนโยบายความปลอดภัยของ Gemini — ลองปรับคำถามดูครับ');
+      if(fr==='MAX_TOKENS')throw new Error('คำถามนี้ซับซ้อนเกินโควตาคำตอบ — ลองแบ่งถามทีละประเด็น หรือถามให้เจาะจงขึ้นครับ');
       throw new Error('ไม่ได้รับคำตอบจากโมเดล'+(fr?' ('+fr+')':''));
     }
     return {text,truncated:fr==='MAX_TOKENS'};
@@ -3410,7 +3429,17 @@ init();
   function addTyping(){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-typing';d.id='ai-typing';d.innerHTML='<span></span><span></span><span></span>';log.appendChild(d);scrollLog();}
   function rmTyping(){ge('ai-typing')?.remove();}
   function addAssistant(raw){
-    const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg a';d.innerHTML=mdLite(raw);log.appendChild(d);scrollLog();
+    const html=mdLite(raw);
+    const log=ge('ai-log');
+    if(!html){
+      /* คำตอบมีแต่บล็อคคำสั่ง ไม่มีข้อความ — ถ้ามีการ์ดตามมาอยู่แล้วก็ไม่ต้องขึ้นฟองเปล่า
+         แต่ถ้าไม่มีอะไรตามมาเลย ต้องแสดงบางอย่าง ไม่งั้นผู้ใช้เห็นเหมือน AI เงียบไปเฉยๆ */
+      if(extractAction(raw))return;
+      const d0=document.createElement('div');d0.className='ai-msg a';
+      d0.textContent=raw.trim()||'(โมเดลตอบกลับมาว่างเปล่า — ลองถามใหม่อีกครั้งครับ)';
+      log.appendChild(d0);scrollLog();return;
+    }
+    const d=document.createElement('div');d.className='ai-msg a';d.innerHTML=html;log.appendChild(d);scrollLog();
   }
   function addError(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-msg err';d.textContent='⚠️ '+msg;log.appendChild(d);scrollLog();}
   function addNote(msg){const log=ge('ai-log');const d=document.createElement('div');d.className='ai-note';d.textContent='✂️ '+msg;log.appendChild(d);scrollLog();}
@@ -3422,18 +3451,31 @@ init();
     d.appendChild(b);log.appendChild(d);scrollLog();
   }
   function scrollLog(){const log=ge('ai-log');log.scrollTop=log.scrollHeight;}
+  /* แปลง markdown แบบย่อ — คืน '' ถ้าไม่เหลือเนื้อความเลย (ให้ addAssistant ตัดสินใจต่อ)
+     สำคัญ: ตัดออกเฉพาะบล็อค json ที่เป็น "คำสั่ง" ของระบบเท่านั้น
+     บล็อคโค้ดอื่น (เช่น ตารางเทียบตัวเลขที่ AI จัดให้) ต้องแสดง ไม่ใช่หายไปเงียบๆ */
   function mdLite(raw){
-    /* ตัดบล็อค json/โค้ดออกจากการแสดงผล + กัน fence ที่ถูกตัดกลางคัน (unclosed) โผล่ดิบ */
-    const noAction=raw.replace(/```json[\s\S]*?```/g,'').replace(/```[\s\S]*?```/g,'').replace(/```[\s\S]*$/,'').trim();
-    const lines=noAction.split(/\n/);let html='',inList=false;
-    const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+?)`/g,'<code>$1</code>');
+    const blocks=[];
+    let s=raw.replace(/```[a-zA-Z]*\r?\n?([\s\S]*?)```/g,(m,code)=>{
+      const t=code.trim();
+      if(!t)return '';
+      try{const o=JSON.parse(t);if(o&&typeof o==='object'&&o.action)return '';}catch(e){}
+      blocks.push(t);
+      return '\n\uE000B'+(blocks.length-1)+'\uE000\n';
+    });
+    s=s.replace(/```[\s\S]*$/,'').trim();      /* fence ที่ยังไม่ปิดเพราะคำตอบถูกตัดกลางคัน */
+    const lines=s.split(/\n/);let html='',inList=false;
+    const inline=x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+?)`/g,'<code>$1</code>');
+    const closeList=()=>{if(inList){html+='</ul>';inList=false;}};
     for(const ln of lines){
+      const bm=ln.match(/^\uE000B(\d+)\uE000$/);
+      if(bm){closeList();html+='<pre class="ai-pre">'+esc(blocks[+bm[1]])+'</pre>';continue;}
       if(/^\s*[-•*]\s+/.test(ln)){if(!inList){html+='<ul>';inList=true;}html+='<li>'+inline(ln.replace(/^\s*[-•*]\s+/,''))+'</li>';}
-      else if(/^\s*#{1,4}\s+/.test(ln)){if(inList){html+='</ul>';inList=false;}html+='<h4>'+inline(ln.replace(/^\s*#{1,4}\s+/,''))+'</h4>';}
-      else{if(inList){html+='</ul>';inList=false;}if(ln.trim()==='')continue;html+='<p>'+inline(ln)+'</p>';}
+      else if(/^\s*#{1,4}\s+/.test(ln)){closeList();html+='<h4>'+inline(ln.replace(/^\s*#{1,4}\s+/,''))+'</h4>';}
+      else{closeList();if(ln.trim()==='')continue;html+='<p>'+inline(ln)+'</p>';}
     }
-    if(inList)html+='</ul>';
-    return html||'<p>'+esc(noAction)+'</p>';
+    closeList();
+    return html;
   }
 
   /* ── action parser (คืน object ของ action ที่พบ: fill / ask) ── */
@@ -3712,7 +3754,7 @@ init();
         'ชี้จุดที่ผู้ใช้มักคาดไม่ถึง (เช่น ผลลูกโซ่ของเงินลงทุนแบบ %), แล้วให้คำแนะนำสั้นๆ ที่ทำได้จริง. '+
         'ใช้ตัวเลขจากผลจำลองนี้เท่านั้น ห้ามคำนวณใหม่เอง ห้ามใส่บล็อค json action=simulate หรือ fill อีก '+
         '(ระบบแสดงตารางเปรียบเทียบให้ผู้ใช้แล้ว ไม่ต้องไล่ตัวเลขซ้ำทุกบรรทัด เน้นสรุปและตีความ)';
-      const out=await callGemini(feed,null);
+      const out=await callGemini(feed,null,{noContext:true});
       rmTyping();
       aiHistory.push({role:'user',text:'(ระบบ) ผลจำลองสถานการณ์: '+JSON.stringify(simBrief(sim))});
       aiHistory.push({role:'model',text:out.text});
