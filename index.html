@@ -114,6 +114,14 @@ td input.mi.m3{border-color:#f6ad55;background:#fffaf0}
 .li:last-child{border:none}
 .vai{color:#276749;font-weight:600}.vad{color:#c53030;font-weight:600}.vat{color:#234e52;font-weight:600}
 .tline{display:flex;justify-content:space-between;padding:6px 0 0;font-size:.88rem;font-weight:700;border-top:2px solid #e2e8f0;margin-top:2px}
+.tline.tl2{font-size:.82rem;border-top:1px dashed #c6f6d5;padding-top:4px;margin-top:4px}
+.tl-sub{font-size:.68rem;font-weight:600;color:#a0aec0}
+.inc-note{font-size:.65rem;color:#a0aec0;margin-top:6px;padding-top:5px;border-top:1px dashed #edf2f7;line-height:1.5}
+/* หัวข้อกลุ่มย่อยในกล่อง "รายได้ทั้งหมด" */
+.grp-h{display:flex;align-items:center;gap:5px;font-size:.73rem;font-weight:700;color:#4a5568;background:#f7fafc;border-radius:5px;padding:4px 7px;margin:9px 0 4px}
+.grp-h:first-child{margin-top:0}
+.grp-tag{background:#feebc8;color:#c05621;padding:2px 7px;border-radius:8px;font-size:.63rem;font-weight:700;white-space:nowrap}
+.li.sub{border-top:1px dashed #cbd5e0;border-bottom:none;margin-top:2px;padding-top:4px;font-weight:700}
 .netbox{background:linear-gradient(135deg,#f0fff4,#c6f6d5);border:2px solid #68d391;border-radius:9px;padding:12px 16px;margin-bottom:12px}
 .netbox .ntitle{font-size:.88rem;font-weight:700;color:#276749;margin-bottom:8px}
 .netrow{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -480,7 +488,11 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div class="thval" id="rTH">฿0</div>
     </div>
     <div class="bkd">
-      <div class="bb inc"><h3>✅ รายได้ทั้งหมด</h3><div id="rIncL"></div><div class="tline"><span>รวมรายได้</span><span class="vai" id="rTInc">฿0</span></div></div>
+      <div class="bb inc"><h3>✅ รายได้ทั้งหมด</h3><div id="rIncL"></div>
+        <div class="tline"><span>รวมรายได้ <span class="tl-sub">ก่อนหักภาษี</span></span><span class="vai" id="rTInc">฿0</span></div>
+        <div class="tline tl2"><span>รวมรายได้ <span class="tl-sub">หลังหักภาษี</span></span><span class="vai" id="rTIncNet">฿0</span></div>
+        <div class="inc-note">* “หลังหักภาษี” = หักภาษีหัก ณ ที่จ่ายแล้ว แต่ยังไม่ได้หักประกันสังคม/กองทุนฯ — ยอดที่หักครบแล้วคือ “ยอดรายได้รับจริง” ด้านบน</div>
+      </div>
       <div class="bb inv"><h3>📈 แบ่งลงทุน</h3><div id="rInvL"></div><div class="tline"><span>รวมลงทุน</span><span class="vat" id="rTInv">฿0</span></div></div>
       <div class="bb ded"><h3>❌ รายการหัก</h3><div id="rDedL"></div><div class="tline"><span>รวมหัก</span><span class="vad" id="rTDed">฿0</span></div></div>
     </div>
@@ -1725,13 +1737,28 @@ function doCalc(){
   ge('rTInv').textContent=fmt(totInv);
   ge('rInvS').textContent=fmt(totInv);
   ge('rFinal').textContent=fmt(finalCash);
-  const incRows=[['เงินเดือนฐาน',base]];
-  aArr.forEach(x=>{if(x.n&&nf(x.v))incRows.push([x.n,nf(x.v)]);});
-  if(h15>0)incRows.push([`OT ×1.5 (${h15.toFixed(2)} ชม.)`,ot15]);
-  if(h20>0)incRows.push([`OT ×2.0 (${h20.toFixed(2)} ชม.)`,ot20]);
-  if(h30>0)incRows.push([`OT ×3.0 (${h30.toFixed(2)} ชม.)`,ot30]);
-  oArr.forEach(x=>{if(x.n&&nf(x.v))incRows.push([`${esc(x.n)} <span class="no-tax-tag">ไม่คิดภาษี</span>`,nf(x.v)]);});
-  ge('rIncL').innerHTML=incRows.map(([l,a])=>`<div class="li"><span>${l}</span><span class="vai">${fmt(a)}</span></div>`).join('');
+  /* กล่อง "รายได้ทั้งหมด" แยก 2 กลุ่ม: รายได้จากการทำงาน (เข้าฐานภาษี — โชว์ทั้งก่อน/หลังหักภาษี)
+     กับ รายได้อื่นๆ (ไม่เข้าฐานภาษี จึงไม่มีก่อน/หลัง) */
+  const workRows=[['เงินเดือนฐาน',base]];
+  aArr.forEach(x=>{if(x.n&&nf(x.v))workRows.push([esc(x.n),nf(x.v)]);});
+  if(h15>0)workRows.push([`OT ×1.5 (${h15.toFixed(2)} ชม.)`,ot15]);
+  if(h20>0)workRows.push([`OT ×2.0 (${h20.toFixed(2)} ชม.)`,ot20]);
+  if(h30>0)workRows.push([`OT ×3.0 (${h30.toFixed(2)} ชม.)`,ot30]);
+  const totWork=base+totA+totOT;
+  const liRow=([l,a])=>`<div class="li"><span>${l}</span><span class="vai">${fmt(a)}</span></div>`;
+  let incHtml=`<div class="grp-h">💼 รายได้จากการทำงาน + เบี้ยต่างๆ <span class="grp-tag">คิดภาษี</span></div>`
+    +workRows.map(liRow).join('')
+    +`<div class="li sub"><span>รวมก่อนหักภาษี</span><span class="vai">${fmt(totWork)}</span></div>`
+    +`<div class="li"><span>− ภาษีหัก ณ ที่จ่าย</span><span class="vad">−${fmt(taxAmt)}</span></div>`
+    +`<div class="li sub"><span>= หลังหักภาษี</span><span class="vai">${fmt(totWork-taxAmt)}</span></div>`;
+  const othRows=oArr.filter(x=>x.n&&nf(x.v)).map(x=>[esc(x.n),nf(x.v)]);
+  if(othRows.length){
+    incHtml+=`<div class="grp-h">💰 รายได้อื่นๆ <span class="no-tax-tag">ไม่คิดภาษี</span></div>`
+      +othRows.map(liRow).join('')
+      +`<div class="li sub"><span>รวมรายได้อื่นๆ</span><span class="vai">${fmt(totO)}</span></div>`;
+  }
+  ge('rIncL').innerHTML=incHtml;
+  ge('rTIncNet').textContent=fmt(totInc-taxAmt);
   const invD=iArr.map(x=>{const v=nf(x.v);const a=x.t==='%'?(invBase*v/100):v;return x.n?[`${x.n}${x.t==='%'?` (${v}%)`:''}`,a]:null;}).filter(Boolean);
   ge('rInvL').innerHTML=invD.length
     ?invD.map(([l,a])=>`<div class="li"><span>${l}</span><span class="vat">${fmt(a)}</span></div>`).join('')
@@ -2867,6 +2894,7 @@ init();
     ★ วันเสาร์ใช้เรต ×1.5 เท่าวันธรรมดา — ไม่ใช่ ×2.0
   รายได้รวม        = ฐาน + ค่าเพิ่มเติมทั้งหมด + ค่า OT + รายได้อื่นๆ(ไม่คิดภาษี)
   ★ "รายได้อื่นๆ (ไม่คิดภาษี)" = รายได้ที่นับเป็นเงินเข้าจริง (อยู่ในรายได้รวม/รับจริง/ฐานคิดลงทุน) แต่ "ไม่" ถูกนำไปคำนวณภาษีเลย เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ รายได้เสริม — ต่างจาก "ค่าเพิ่มเติม/เบี้ย" ที่ถูกคิดภาษี
+  รายได้จากการทำงาน (กลุ่มที่คิดภาษี) = ฐาน + ค่าเพิ่มเติม/เบี้ย + ค่า OT   →  หลังหักภาษี = กลุ่มนี้ − ภาษี (ยังไม่หักประกันสังคม/กองทุนฯ)
   ประกันสังคม(ถ้าไม่กรอกเอง) = min(ฐาน×5%, 875)   กองทุนฯ(ถ้าไม่กรอกเอง) = ฐาน×7%
   ภาษี = ผลรวมรายการหักที่ "ชื่อมีคำว่า ภาษี" · อื่นๆ = รายการหักที่เหลือ
   รับจริง (takeHome) = รายได้รวม − ประกันสังคม − กองทุนฯ − ภาษี
@@ -3166,7 +3194,9 @@ init();
         OTแยกตามวันในสัปดาห์:curRec?otDowSummary(curRec,curYm):{},
         ค่าเพิ่มเติม:alls,รายการหัก:deds,แผนลงทุน:invs,รายได้อื่นๆไม่คิดภาษี:oths,
         ประกันสังคม:r(getSso()),กองทุนสำรองเลี้ยงชีพ:r(getPvd()),
-        ยอดคำนวณปัจจุบัน:curRec?(()=>{const t=computeRec(curRec,curYm);return{รายได้รวม:r(t.totInc),ค่าOT:r(t.totOT),รายได้อื่นๆไม่คิดภาษี:r(t.totO),หักรวม:r(t.totDed),รับจริง:r(t.takeHome),ฐานคิดลงทุน:r(t.invBase),ยอดลงทุน:r(t.totInv),ใช้จริง:r(t.final)};})():null
+        ยอดคำนวณปัจจุบัน:curRec?(()=>{const t=computeRec(curRec,curYm);return{รายได้รวม:r(t.totInc),ค่าOT:r(t.totOT),
+          รายได้จากการทำงานก่อนหักภาษี:r(t.totInc-t.totO),รายได้จากการทำงานหลังหักภาษี:r(t.totInc-t.totO-t.taxDed),
+          รายได้อื่นๆไม่คิดภาษี:r(t.totO),หักรวม:r(t.totDed),รับจริง:r(t.takeHome),ฐานคิดลงทุน:r(t.invBase),ยอดลงทุน:r(t.totInv),ใช้จริง:r(t.final)};})():null
       },
       สรุปรายเดือนทั้งปี:months,
       รวมทั้งปี:{เดือนที่มีข้อมูล:nFilled,รายได้รวม:r(yInc),รับจริง:r(yTake),ลงทุนรวม:r(yInv),ใช้จริงรวม:r(ySpend),หักรวม:r(yDed),OTชม:+yOT.toFixed(1)},
