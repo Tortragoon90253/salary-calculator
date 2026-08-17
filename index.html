@@ -40,7 +40,7 @@ header h1{font-size:1.1rem;font-weight:700;flex:1}
 label{display:block;font-size:.82rem;font-weight:600;color:#4a5568;margin-bottom:3px}
 input[type=text],input[type=number],input[type=month],select{width:100%;padding:7px 9px;border:1px solid #cbd5e0;border-radius:6px;font-size:.85rem;background:#f7fafc}
 input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
-.dr{display:grid;grid-template-columns:18px 1fr 148px 28px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
+.dr{display:grid;grid-template-columns:20px 18px 1fr 148px 28px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
 .dr.ck{background:#f0fff4;border-color:#9ae6b4}
 .dr input[type=text]{font-size:.83rem}.dr input[type=number]{font-size:.83rem;text-align:right}
 .drag-handle{cursor:grab;color:#cbd5e0;font-size:1rem;line-height:1;user-select:none;display:flex;align-items:center;justify-content:center;padding:2px}
@@ -50,7 +50,36 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .cfbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e9d8fd;color:#553c9a;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cfbtn.ck{background:#c6f6d5;color:#276749}
 .delbtn{width:26px;height:26px;border:none;border-radius:50%;background:#fed7d7;color:#c53030;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ir{display:grid;grid-template-columns:1fr 72px 100px auto 28px;gap:6px;align-items:center;margin-bottom:8px;background:#f0fff4;border-radius:8px;padding:8px 10px;border:1px solid #9ae6b4}
+/* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" (แยกจากปุ่ม ✓ ยืนยันข้อมูล) ── */
+.ckpt{width:17px;height:17px;cursor:pointer;accent-color:#38a169;margin:0;justify-self:center;flex-shrink:0}
+.dr.done,.ir.done{opacity:.72}
+.dr.done input[type=text],.ir.done input[type=text]{text-decoration:line-through;color:#718096}
+.ckbar{background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;margin-bottom:10px}
+.ckbar:empty{display:none}
+.ckb-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.ckb-lbl{font-size:.75rem;color:#4a5568;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ckb-lbl b{color:#276749}
+.ckb-amt{font-size:.7rem;color:#a0aec0}
+.ckb-act{display:flex;gap:5px;flex-shrink:0}
+.ckb-act button{padding:3px 8px;border:1px solid #cbd5e0;border-radius:6px;background:white;color:#4a5568;font-size:.68rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.ckb-act button:hover{background:#edf2f7}
+.ckb-track{height:6px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+.ckb-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#48bb78,#38a169);transition:width .25s}
+.ckb-fill.full{background:#2f855a}
+.cksum{background:#f7fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px 14px;margin-top:10px}
+.cksum-title{font-size:.82rem;font-weight:700;color:#4a5568;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.cks-all{font-size:.74rem;font-weight:700;color:#718096;background:#edf2f7;padding:2px 9px;border-radius:9px}
+.cks-all.full{background:#c6f6d5;color:#276749}
+.cks-row{margin-bottom:9px}
+.cks-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.76rem;margin-bottom:4px}
+.cks-name{color:#4a5568;font-weight:600}
+.cks-cnt{color:#a0aec0;font-size:.7rem;white-space:nowrap}
+.cks-cnt.full{color:#38a169;font-weight:700}
+.cks-pend{margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0}
+.cks-pend-t{font-size:.74rem;font-weight:700;color:#c05621;margin-bottom:5px}
+.cks-pd{display:flex;justify-content:space-between;gap:10px;font-size:.73rem;color:#718096;padding:2px 0}
+.cks-done{margin-top:9px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:.78rem;font-weight:700;color:#276749;text-align:center}
+.ir{display:grid;grid-template-columns:20px 1fr 72px 100px auto 28px;gap:6px;align-items:center;margin-bottom:8px;background:#f0fff4;border-radius:8px;padding:8px 10px;border:1px solid #9ae6b4}
 .ir input{font-size:.8rem;background:white}
 .itg{display:flex;border:1px solid #9ae6b4;border-radius:6px;overflow:hidden;flex-shrink:0}
 .itg button{padding:4px 9px;border:none;cursor:pointer;font-size:.8rem;font-weight:700;background:white;color:#718096}
@@ -217,8 +246,24 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   body.print-monthly #sv{display:none!important}
 }
 /* Payment Method */
-.drd{grid-template-columns:18px 1fr 88px 95px 28px 28px!important}
-@media(max-width:500px){.drd{grid-template-columns:18px 1fr 80px 78px 28px 28px!important}}
+.drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important}
+/* แถวโบนัส — เป็นคลาสแทน inline style เพื่อให้ media query ปรับคอลัมน์บนจอแคบได้ */
+.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto}
+@media(max-width:500px){
+  /* จอแคบ: บีบคอลัมน์ตัวเลข/ปุ่ม เพื่อให้ช่องชื่อยังกว้างพอพิมพ์ได้หลังเพิ่มคอลัมน์ checkpoint */
+  .dr{grid-template-columns:18px 18px 1fr 100px 26px 26px;gap:4px}
+  .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px 26px!important;gap:4px}
+  .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px 26px}
+  .cfbtn,.delbtn{width:24px;height:24px}
+  /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
+  .ir{grid-template-columns:18px 72px 1fr auto 26px;row-gap:6px;gap:5px}
+  .ir>.ckpt{grid-column:1;grid-row:1}
+  .ir>input[type=text]{grid-column:2/-1;grid-row:1}
+  .ir>.itg{grid-column:2;grid-row:2}
+  .ir>input[type=number]{grid-column:3;grid-row:2}
+  .ir>.icomp{grid-column:4;grid-row:2}
+  .ir>.delbtn{grid-column:5;grid-row:2}
+}
 .pmsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
 .pm-bank{background:#ebf8ff;color:#2b6cb0;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;display:inline-block;white-space:nowrap}
 .pm-cash{background:#f0fff4;color:#276749;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;display:inline-block;white-space:nowrap}
@@ -337,8 +382,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">✓ ยืนยัน | ✕ ลบ</span></div>
-    <div class="cb"><div id="aList"></div><button class="addbtn" onclick="addA()">＋ เพิ่มรายการ</button></div>
+    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">☑ จัดการแล้ว | ✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="cb"><div class="ckbar" id="ckbar_A"></div><div id="aList"></div><button class="addbtn" onclick="addA()">＋ เพิ่มรายการ</button></div>
   </div>
 
   <div class="card">
@@ -371,32 +416,34 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cpu">💰 รายได้อื่นๆ <span class="ch-sub"><span class="no-tax-tag">ไม่คิดภาษี</span> ✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="ch cpu">💰 รายได้อื่นๆ <span class="ch-sub"><span class="no-tax-tag">ไม่คิดภาษี</span> ☑ จัดการแล้ว | ✓ ยืนยัน | ✕ ลบ</span></div>
     <div class="cb">
       <div class="oth-info">
         รายได้กลุ่มนี้ <strong>ไม่ถูกนำไปคำนวณภาษี</strong> (เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ รายได้เสริม)<br>
         แต่ยังนับรวมใน “รายได้รวม” และ “ยอดรายได้รับจริง” ตามปกติ
         &nbsp;|&nbsp; รวม = <strong id="oTotal" class="oth-total-val">฿0.00</strong>
       </div>
+      <div class="ckbar" id="ckbar_O"></div>
       <div id="oList"></div>
       <button class="addbtn pu" onclick="addO()">＋ เพิ่มรายได้อื่นๆ</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
+    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">☑ จัดการแล้ว &nbsp;|&nbsp; ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
     <div class="cb">
       <div class="inv-info">
         ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" class="inv-total-val">฿0.00</strong>
       </div>
       <div class="inv-type-note">฿ = จำนวนคงที่ &nbsp;|&nbsp; % = คำนวณจากฐาน</div>
+      <div class="ckbar" id="ckbar_I"></div>
       <div id="iList"></div>
       <button class="addbtn gn" onclick="addI()">＋ เพิ่มแผนลงทุน</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="ch cre">➖ รายการหัก <span class="ch-sub">✓ ยืนยัน | ✕ ลบ</span></div>
+    <div class="ch cre">➖ รายการหัก <span class="ch-sub">☑ จัดการแล้ว | ✓ ยืนยัน | ✕ ลบ</span></div>
     <div class="cb">
       <div class="fr">
         <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">บัญชี</span></span>
@@ -465,6 +512,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         </div>
       </div>
       <hr class="sep">
+      <div class="ckbar" id="ckbar_D"></div>
       <div id="dList"></div>
       <button class="addbtn" onclick="addD()">＋ เพิ่มรายการหัก</button>
       <div id="pmSumLive"></div>
@@ -497,6 +545,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div class="bb ded"><h3>❌ รายการหัก</h3><div id="rDedL"></div><div class="tline"><span>รวมหัก</span><span class="vad" id="rTDed">฿0</span></div></div>
     </div>
     <div id="rPaySum"></div>
+    <div id="ckSum"></div>
     <div class="netbox">
       <div class="ntitle">💰 สรุปเงิน</div>
       <div class="netrow">
@@ -720,11 +769,11 @@ let pendingRemote=null;  /* { ym } — มี remote update ค้างให�
 
 /* ── Defaults ── */
 const defA=()=>[
-  {id:'a1',n:'เบี้ยขยัน',v:'',ok:false},{id:'a2',n:'ค่าตำแหน่ง',v:'',ok:false},
-  {id:'a3',n:'ค่าบ้าน',v:'',ok:false},{id:'a4',n:'ค่าภาษาญี่ปุ่น',v:'',ok:false},
-  {id:'a5',n:'ค่าภาษาอังกฤษ',v:'',ok:false},{id:'a6',n:'ค่า Skill',v:'',ok:false}
+  {id:'a1',n:'เบี้ยขยัน',v:'',ok:false,dn:false},{id:'a2',n:'ค่าตำแหน่ง',v:'',ok:false,dn:false},
+  {id:'a3',n:'ค่าบ้าน',v:'',ok:false,dn:false},{id:'a4',n:'ค่าภาษาญี่ปุ่น',v:'',ok:false,dn:false},
+  {id:'a5',n:'ค่าภาษาอังกฤษ',v:'',ok:false,dn:false},{id:'a6',n:'ค่า Skill',v:'',ok:false,dn:false}
 ];
-const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ok:false}];
+const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ok:false,dn:false}];
 const defI=()=>[];
 const defO=()=>[];
 
@@ -1225,27 +1274,28 @@ function setBadge(ts,source){
 /* ── Render rows ── */
 function rA(){
   A.forEach(a=>{const nEl=ge(`an_${a.id}`);const vEl=ge(`av_${a.id}`);if(nEl)a.n=nEl.value;if(vEl&&vEl.type!=='hidden')a.v=vEl.value;});
-  if(!A.length){ge('aList').innerHTML='<div class="empty-hint">ยังไม่มีค่าเพิ่มเติม<br>กด ＋ เพิ่มรายการ ด้านล่าง</div>';return;}
+  if(!A.length){ge('aList').innerHTML='<div class="empty-hint">ยังไม่มีค่าเพิ่มเติม<br>กด ＋ เพิ่มรายการ ด้านล่าง</div>';updCkBars();return;}
   ge('aList').innerHTML=A.map(a=>{
     const isBonus=a.id===BONUS_ID;
-    const bStyle=isBonus?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
     if(isBonus){
       const bm=a.bm||'';
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
       const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
-      return`<div class="dr${a.ok?' ck':''}" style="border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      return`<div class="dr drb${a.ok?' ck':''}${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+        ${ckBox('A',a)}
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
         <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อ" oninput="dirtA('${a.id}')">
         <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" oninput="onBonusMthChg();dirtA('${a.id}')">
         <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap;align-self:center">เดือน</span>
         <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
-        <span id="abm_disp_${a.id}" style="grid-column:2/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem">${amtDisp}</span>
+        <span id="abm_disp_${a.id}" style="grid-column:3/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem">${amtDisp}</span>
         <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
       </div>`;
     }
-    return`<div class="dr${a.ok?' ck':''}"${bStyle} id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+    return`<div class="dr${a.ok?' ck':''}${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      ${ckBox('A',a)}
       <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')">
       <input type="number" id="av_${a.id}" value="${esc(a.v)}" placeholder="0.00" min="0" oninput="dirtA('${a.id}');updInv()">
@@ -1254,14 +1304,16 @@ function rA(){
     </div>`;
   }).join('');
   bindDrag('aList',A,rA);
+  updCkBars();
 }
 function rD(){
   D.forEach(d=>{const nEl=ge(`dn_${d.id}`);const vEl=ge(`dv_${d.id}`);const pEl=ge(`dp_${d.id}`);if(nEl)d.n=nEl.value;if(vEl)d.v=vEl.value;if(pEl)d.pm=pEl.value;});
-  if(!D.length){ge('dList').innerHTML='<div class="empty-hint">ยังไม่มีรายการหัก<br>กด ＋ เพิ่มรายการหัก ด้านล่าง</div>';updPaySummary();return;}
+  if(!D.length){ge('dList').innerHTML='<div class="empty-hint">ยังไม่มีรายการหัก<br>กด ＋ เพิ่มรายการหัก ด้านล่าง</div>';updPaySummary();updCkBars();return;}
   ge('dList').innerHTML=D.map(d=>{
     const isBTax=d.id===BONUS_TAX_ID;
     const bStyle=isBTax?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
-    return`<div class="dr drd${d.ok?' ck':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
+    return`<div class="dr drd${d.ok?' ck':''}${d.dn?' done':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
+      ${ckBox('D',d)}
       <span class="drag-handle" title="${isBTax?'ภาษีโบนัส — คำนวณอัตโนมัติ':'ลากเพื่อจัดเรียง'}">⠿</span>
       <input type="text"   id="dn_${d.id}" value="${esc(d.n)}" placeholder="ชื่อรายการหัก" oninput="dirtD('${d.id}')">
       <select id="dp_${d.id}" class="pmsel" onchange="dirtD('${d.id}');updPaySummary()">
@@ -1276,12 +1328,14 @@ function rD(){
   }).join('');
   bindDrag('dList',D,rD);
   updPaySummary();
+  updCkBars();
 }
 /* รายได้อื่นๆ (ไม่คิดภาษี) — โครงเดียวกับค่าเพิ่มเติม แต่ไม่เข้าฐานคำนวณภาษี */
 function rO(){
   O.forEach(o=>{const nEl=ge(`on_${o.id}`);const vEl=ge(`ov_${o.id}`);if(nEl)o.n=nEl.value;if(vEl)o.v=vEl.value;});
-  if(!O.length){ge('oList').innerHTML='<div class="empty-hint">ยังไม่มีรายได้อื่นๆ<br>กด ＋ เพิ่มรายได้อื่นๆ ด้านล่าง</div>';updOth();return;}
-  ge('oList').innerHTML=O.map(o=>`<div class="dr dro${o.ok?' ck':''}" id="ro_${o.id}" draggable="true" data-id="${o.id}" data-list="O">
+  if(!O.length){ge('oList').innerHTML='<div class="empty-hint">ยังไม่มีรายได้อื่นๆ<br>กด ＋ เพิ่มรายได้อื่นๆ ด้านล่าง</div>';updOth();updCkBars();return;}
+  ge('oList').innerHTML=O.map(o=>`<div class="dr dro${o.ok?' ck':''}${o.dn?' done':''}" id="ro_${o.id}" draggable="true" data-id="${o.id}" data-list="O">
+      ${ckBox('O',o)}
       <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="on_${o.id}" value="${esc(o.n)}" placeholder="ชื่อรายได้อื่นๆ (ไม่คิดภาษี)" oninput="dirtO('${o.id}')">
       <input type="number" id="ov_${o.id}" value="${esc(o.v)}" placeholder="0.00" min="0" oninput="dirtO('${o.id}');updInv()">
@@ -1290,15 +1344,18 @@ function rO(){
     </div>`).join('');
   bindDrag('oList',O,rO);
   updOth();
+  updCkBars();
 }
 function rI(){
+  I.forEach(inv=>{const nEl=ge(`in_${inv.id}`);const vEl=ge(`iv_${inv.id}`);if(nEl)inv.n=nEl.value;if(vEl)inv.v=vEl.value;});
   const base=calcBase();
   if(!I.length){ge('iList').innerHTML='<div class="empty-hint">ยังไม่มีแผนลงทุน<br>กด ＋ เพิ่มแผนลงทุน ด้านล่าง</div>';updInv();return;}
   ge('iList').innerHTML=I.map(inv=>{
     const isP=inv.t==='%';
     const cv=isP?(base*nf(inv.v)/100):nf(inv.v);
-    return `<div class="ir" id="ri_${inv.id}">
-      <input type="text"   id="in_${inv.id}" value="${esc(inv.n)}" placeholder="เช่น หุ้น / กองทุน / คริปโต">
+    return `<div class="ir${inv.dn?' done':''}" id="ri_${inv.id}">
+      ${ckBox('I',inv)}
+      <input type="text"   id="in_${inv.id}" value="${esc(inv.n)}" placeholder="เช่น หุ้น / กองทุน / คริปโต" oninput="updCkBars()">
       <div class="itg">
         <button class="${!isP?'on':''}" onclick="setIT('${inv.id}','฿')">฿</button>
         <button class="${isP?'on':''}" onclick="setIT('${inv.id}','%')">%</button>
@@ -1358,27 +1415,106 @@ function cfA(id){
 }
 function cfD(id){const it=D.find(x=>x.id===id);if(!it)return;it.n=gv(`dn_${id}`);it.v=gv(`dv_${id}`);it.pm=gv(`dp_${id}`)||'bank';it.ok=true;rD();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
 function cfO(id){const it=O.find(x=>x.id===id);if(!it)return;it.n=gv(`on_${id}`);it.v=gv(`ov_${id}`);it.ok=true;rO();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
-function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
-function dirtD(id){const it=D.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
-function dirtO(id){const it=O.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ro_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}}
+/* dirt* เคลียร์เฉพาะ ok (= "กรอกข้อมูลเสร็จ") — ห้ามแตะ dn (= "จัดการจริงแล้ว") ซึ่งต้องคงอยู่แม้แก้ตัวเลข */
+function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
+function dirtD(id){const it=D.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
+function dirtO(id){const it=O.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ro_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
+
+/* ════════════════════════════════════════════════════
+   Checkpoint — ติดตามว่าแต่ละรายการ "ถูกจัดการตามแผนแล้วหรือยัง"
+   ฟิลด์ dn (done) แยกขาดจาก ok และไม่มีผลต่อการคำนวณใดๆ
+   ════════════════════════════════════════════════════ */
+const _CKL={A:()=>A,D:()=>D,I:()=>I,O:()=>O};
+const _CKR={A:()=>rA(),D:()=>rD(),I:()=>rI(),O:()=>rO()};
+const _CKROW={A:'ra_',D:'rd_',I:'ri_',O:'ro_'};
+const _CKN={A:'an_',D:'dn_',I:'in_',O:'on_'};
+const _CKV={A:'av_',D:'dv_',I:'iv_',O:'ov_'};
+const _CKGRP=[['O','💰 รายได้อื่นๆ'],['I','📈 แบ่งเงินลงทุน'],['D','➖ รายการหัก'],['A','➕ ค่าเพิ่มเติม']];
+
+function ckBox(k,it){
+  return`<input type="checkbox" class="ckpt" id="ck_${k}_${it.id}" ${it.dn?'checked':''}`
+    +` onchange="tgCk('${k}','${it.id}',this.checked)" title="ติ๊กเมื่อจัดการรายการนี้แล้ว">`;
+}
+function tgCk(k,id,on){
+  const it=_CKL[k]().find(x=>x.id===id);if(!it)return;
+  it.dn=!!on;
+  /* toggle คลาสบนแถวแทน re-render เต็ม — กันช่องที่กำลังพิมพ์อยู่เสียโฟกัส */
+  const row=ge(_CKROW[k]+id);if(row)row.classList.toggle('done',it.dn);
+  updCkBars();ckAutoSave();
+}
+function ckAll(k,on){_CKL[k]().forEach(x=>x.dn=!!on);_CKR[k]();ckAutoSave();}
+let _ckSt;
+function ckAutoSave(){clearTimeout(_ckSt);_ckSt=setTimeout(()=>saveM(),800);}
+
+/* นับเฉพาะแถวที่มียอดจริง (>0) — แถวเปล่าหรือแถวที่มีแต่ชื่อยังไม่ต้องไปจัดการอะไร
+   เกณฑ์เดียวกับที่ผลคำนวณและ context ของ AI ใช้กรอง */
+function ckStat(k){
+  const arr=_CKL[k]()||[],base=k==='I'?calcBase():0;
+  const rows=[];let done=0,tot=0,dtot=0;
+  arr.forEach(x=>{
+    const raw=nf(gv(_CKV[k]+x.id)||x.v);
+    const amt=(k==='I'&&x.t==='%')?base*raw/100:raw;
+    if(!(amt>0))return;
+    const nm=(gv(_CKN[k]+x.id)||x.n||'').trim();
+    rows.push({n:nm||'(ไม่มีชื่อ)',amt,dn:!!x.dn});
+    tot+=amt;if(x.dn){done++;dtot+=amt;}
+  });
+  return{n:rows.length,done,tot,dtot,rows};
+}
+function updCkBars(){
+  _CKGRP.forEach(([k])=>{
+    const el=ge('ckbar_'+k);if(!el)return;
+    const s=ckStat(k);
+    if(!s.n){el.innerHTML='';return;}
+    const pct=Math.round(s.done/s.n*100);
+    el.innerHTML=`<div class="ckb-top"><span class="ckb-lbl">✅ จัดการแล้ว <b>${s.done}/${s.n}</b> รายการ`
+      +`<span class="ckb-amt">${fmt(s.dtot)} / ${fmt(s.tot)}</span></span>`
+      +`<span class="ckb-act"><button type="button" onclick="ckAll('${k}',1)">ติ๊กทั้งหมด</button>`
+      +`<button type="button" onclick="ckAll('${k}',0)">ล้างทั้งหมด</button></span></div>`
+      +`<div class="ckb-track"><div class="ckb-fill${pct===100?' full':''}" style="width:${pct}%"></div></div>`;
+  });
+  /* กล่องสรุปในผลลัพธ์ตามไปด้วย ถ้าเปิดค้างอยู่ */
+  if(ge('res')?.style.display==='block')renderCkSum();
+}
+
+/* กล่องสรุป checkpoint ในหน้าผลลัพธ์ */
+function renderCkSum(){
+  const el=ge('ckSum');if(!el)return;
+  const stats=_CKGRP.map(([k,label])=>[k,label,ckStat(k)]).filter(([,,s])=>s.n>0);
+  if(!stats.length){el.innerHTML='';return;}
+  const tN=stats.reduce((s,[,,x])=>s+x.n,0),tDone=stats.reduce((s,[,,x])=>s+x.done,0);
+  const rows=stats.map(([,label,s])=>{
+    const pct=Math.round(s.done/s.n*100);
+    return`<div class="cks-row"><div class="cks-head"><span class="cks-name">${label}</span>`
+      +`<span class="cks-cnt${s.done===s.n?' full':''}">${s.done}/${s.n} · ${fmt(s.dtot)} / ${fmt(s.tot)}</span></div>`
+      +`<div class="ckb-track"><div class="ckb-fill${pct===100?' full':''}" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+  const pending=[];
+  stats.forEach(([,label,s])=>s.rows.forEach(r=>{if(!r.dn)pending.push(`<div class="cks-pd"><span>${esc(label)} · ${esc(r.n)}</span><span>${fmt(r.amt)}</span></div>`);}));
+  const tail=pending.length
+    ?`<div class="cks-pend"><div class="cks-pend-t">⏳ ยังไม่ได้จัดการ (${pending.length} รายการ)</div>${pending.join('')}</div>`
+    :`<div class="cks-done">🎉 จัดการครบทุกรายการแล้ว</div>`;
+  el.innerHTML=`<div class="cksum"><div class="cksum-title">✅ Checkpoint ประจำเดือน `
+    +`<span class="cks-all${tDone===tN?' full':''}">${tDone}/${tN} รายการ</span></div>${rows}${tail}</div>`;
+}
 
 /* ── Add / Del ── */
-function addA(){A.push({id:uid(),n:'',v:'',ok:false});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
+function addA(){A.push({id:uid(),n:'',v:'',ok:false,dn:false});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
 function delA(id){A=A.filter(x=>x.id!==id);rA();}
-function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ok:false});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
+function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ok:false,dn:false});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
 function delD(id){D=D.filter(x=>x.id!==id);rD();}
-function addO(){O.push({id:uid(),n:'',v:'',ok:false});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
+function addO(){O.push({id:uid(),n:'',v:'',ok:false,dn:false});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
 function delO(id){O=O.filter(x=>x.id!==id);rO();updInv();}
-function addI(){I.push({id:uid(),n:'',t:'%',v:''});rI();setTimeout(()=>ge(`in_${I[I.length-1].id}`)?.focus(),50);}
+function addI(){I.push({id:uid(),n:'',t:'%',v:'',dn:false});rI();setTimeout(()=>ge(`in_${I[I.length-1].id}`)?.focus(),50);}
 function delI(id){I=I.filter(x=>x.id!==id);rI();}
 function setIT(id,t){const it=I.find(x=>x.id===id);if(!it)return;it.t=t==='%'?'%':'฿';it.v='';rI();setTimeout(()=>ge(`iv_${id}`)?.focus(),40);}
 function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv();}
 
 /* ── Collect DOM ── */
-function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,ok:a.ok};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
-function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ok:d.ok}));}
-function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v}));}
-function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.id}`)||o.v,ok:o.ok}));}
+function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
+function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ok:d.ok,dn:!!d.dn}));}
+function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v,dn:!!i.dn}));}
+function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.id}`)||o.v,ok:o.ok,dn:!!o.dn}));}
 
 /* ── Derived ── */
 function getSso(){const v=gv('fSso');return v!==''?nf(v):Math.min(num('fBase')*.05,875);}
@@ -1422,6 +1558,7 @@ function updInv(){
   ge('iBase').textContent=fmt(base);
   ge('iTotal').textContent=fmt(tot);
   updPaySummary();
+  updCkBars();
 }
 
 /* ── Payment Method Summary ── */
@@ -1645,10 +1782,10 @@ function loadM(mi){
     const prev=getPrev(mi);
     if(prev){
       sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
-      A=dedupeIds((prev.a||defA()).filter(x=>x.id!==BONUS_ID).map(x=>({...x,v:'',ok:false})));
-      D=dedupeIds((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID).map(x=>({...x,v:'',ok:false})));
-      I=dedupeIds((prev.i||defI()).map(x=>({...x,v:''})));
-      O=dedupeIds((prev.o||defO()).map(x=>({...x,v:'',ok:false})));
+      A=dedupeIds((prev.a||defA()).filter(x=>x.id!==BONUS_ID).map(x=>({...x,v:'',ok:false,dn:false})));
+      D=dedupeIds((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID).map(x=>({...x,v:'',ok:false,dn:false})));
+      I=dedupeIds((prev.i||defI()).map(x=>({...x,v:'',dn:false})));
+      O=dedupeIds((prev.o||defO()).map(x=>({...x,v:'',ok:false,dn:false})));
       onBaseChg();
     }else{
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
@@ -1657,8 +1794,8 @@ function loadM(mi){
     reOT();
   }
   if(BONUS_MONTHS.includes(mi)){
-    if(!A.find(x=>x.id===BONUS_ID))A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false});
-    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false});
+    if(!A.find(x=>x.id===BONUS_ID))A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false});
+    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false});
   }else{
     A=A.filter(x=>x.id!==BONUS_ID);
     D=D.filter(x=>x.id!==BONUS_TAX_ID);
@@ -1772,6 +1909,7 @@ function doCalc(){
   dArr.forEach(x=>{const v=nf(x.v);if(x.pm==='cash')rCash+=v;else if(x.pm==='credit')rCredit+=v;else rBank+=v;});
   const rps={bank:rBank,cash:rCash,credit:rCredit,sso,pvd};
   const rpsEl=ge('rPaySum');if(rpsEl)rpsEl.innerHTML=renderPmSum(rps);
+  renderCkSum();
   ge('res').style.display='block';
   ge('res').scrollIntoView({behavior:'smooth'});
   saveM();
@@ -1941,7 +2079,7 @@ function applyTax(){
   if(lastTax===undefined){alert('กรุณากดคำนวณก่อนครับ');return;}
   const it=D.find(x=>(x.n||gv(`dn_${x.id}`)||'').includes('ภาษี'));
   if(it){it.v=lastTax.toFixed(2);it.ok=true;rD();setTimeout(()=>{const e=ge(`dv_${it.id}`);if(e)e.value=lastTax.toFixed(2);},50);}
-  else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),ok:true});rD();}
+  else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),ok:true,dn:false});rD();}
   updInv();toast(`✓ บันทึกภาษี ฿${lastTax.toFixed(2)}/เดือน`);
 }
 function applyBonusTax(){
@@ -1949,7 +2087,7 @@ function applyBonusTax(){
   const existing=D.find(x=>x.id===BONUS_TAX_ID);
   if(bt>0){
     if(existing){existing.v=bt.toFixed(2);existing.ok=true;}
-    else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ok:true});
+    else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ok:true,dn:false});
     rD();setTimeout(()=>{const e=ge(`dv_${BONUS_TAX_ID}`);if(e)e.value=bt.toFixed(2);},50);
     toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
   }else if(existing){D=D.filter(x=>x.id!==BONUS_TAX_ID);rD();}
@@ -1978,7 +2116,7 @@ function doExport(){
   saveM();
   const now=new Date();
   const ds=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
-  let rows=[cr('#SOL_v5',`EXPORTED:${ds}`,'','','','',''),cr('TYPE','YEAR','MONTH','KEY','NAME','VAL','EXTRA')];
+  let rows=[cr('#SOL_v5',`EXPORTED:${ds}`,'','','','',''),cr('TYPE','YEAR','MONTH','KEY','NAME','VAL','EXTRA','EXTRA2')];
   const yrs=[...new Set(Object.keys(DB).map(k=>k.split('-')[0]))].sort();
   yrs.forEach(yr=>{
     for(let mi=0;mi<12;mi++){
@@ -1986,10 +2124,11 @@ function doExport(){
       rows.push(cr('BASE',yr,m,'','',rec.base||'',''));
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',''));
-      (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'')));
-      (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'')));
-      (rec.i||[]).forEach(x=>rows.push(cr('I',yr,m,x.id,x.n,x.v,x.t)));
-      (rec.o||[]).forEach(x=>rows.push(cr('O',yr,m,x.id,x.n,x.v,x.ok?'1':'')));
+      /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
+      (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'')));
+      (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'')));
+      (rec.i||[]).forEach(x=>rows.push(cr('I',yr,m,x.id,x.n,x.v,x.t,x.dn?'1':'')));
+      (rec.o||[]).forEach(x=>rows.push(cr('O',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'')));
       Object.entries(rec.days||{}).forEach(([d,v])=>{
         if(v.ac||v.o3||v.nt)rows.push(cr('OT',yr,m,d,v.nt||'',v.ac||'',v.o3||''));
       });
@@ -2014,7 +2153,7 @@ function doImport(input){
       const tmp={};
       for(let li=si;li<lines.length;li++){
         const c=parseCSV(lines[li]);if(c.length<6)continue;
-        const[type,yr,m,key,name,val,extra]=c;
+        const[type,yr,m,key,name,val,extra,extra2]=c;
         if(!yr||isNaN(parseInt(m)))continue;
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};
@@ -2022,10 +2161,10 @@ function doImport(input){
         if(T==='BASE'||T==='SALARY')r.base=val;
         else if(T==='SSO')r.sso=val;
         else if(T==='PVD')r.pvd=val;
-        else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1'});
-        else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,ok:extra==='1'});
-        else if(T==='I'||T==='INV'||T==='INVEST')r.i.push({id:key||uid(),n:name,v:val,t:extra||'฿'});
-        else if(T==='O'||T==='OTHER'||T==='OTHINC')r.o.push({id:key||uid(),n:name,v:val,ok:extra==='1'});
+        else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1'});
+        else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1'});
+        else if(T==='I'||T==='INV'||T==='INVEST')r.i.push({id:key||uid(),n:name,v:val,t:extra||'฿',dn:extra2==='1'});
+        else if(T==='O'||T==='OTHER'||T==='OTHINC')r.o.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1'});
         else if(T==='OT')r.days[String(key)]={ac:val,o3:extra||'',nt:name};
       }
       const cnt=Object.keys(tmp).length;if(!cnt)throw new Error('ไม่พบข้อมูลในไฟล์');
@@ -2935,6 +3074,7 @@ init();
 - ★ scaleAllowances / scaleDeductions / scaleInvestments / scaleOtherIncomes = คูณค่าเดิม ใส่เป็นตัวเลขเดียว (ใช้กับทุกรายการในกลุ่ม) หรือ {"ชื่อรายการ":ตัวคูณ} เช่น ลดค่าใช้จ่าย 10% ทุกรายการ = "scaleDeductions":0.9
 - การจับคู่ชื่อรายการยืดหยุ่น (ไม่สนตัวพิมพ์/ช่องว่าง/วงเล็บ) แต่ให้พยายามสะกดชื่อให้ตรงกับที่เห็นใน context เพื่อไม่ให้เกิดรายการซ้ำ
 - pm ของรายการหัก: "bank"=หักบัญชี, "cash"=เงินสด, "credit"=บัตรเครดิต
+- ★ "จัดการแล้ว" (true/false) ที่ติดมากับแต่ละรายการใน ค่าเพิ่มเติม/รายการหัก/แผนลงทุน/รายได้อื่นๆ = checkpoint ที่ผู้ใช้ติ๊กเองว่า "ลงมือทำจริงแล้ว" (โอนเงินแล้ว/จ่ายแล้ว/เงินเข้าแล้ว) — ใช้ตอบคำถามแนว "เดือนนี้ยังไม่ได้ทำอะไรบ้าง" ได้ แต่ "ไม่มีผล" ต่อการคำนวณใดๆ ทั้งสิ้น และคุณแก้ค่านี้ไม่ได้ (ไม่มีใน action) — ถ้าผู้ใช้อยากติ๊ก ให้บอกให้ติ๊กเองในตาราง
 
 ════ 🔮 action "simulate" — จำลองสถานการณ์ (สำคัญที่สุดสำหรับคำถาม "ถ้า…จะเป็นยังไง") ════
 เมื่อผู้ใช้ถามว่าถ้าเปลี่ยนอะไรบางอย่างแล้วรายรับ/รายจ่ายจะเป็นยังไง ให้เขียนนำสั้นๆ 1 บรรทัดว่ากำลังจำลองอะไร แล้ว "ต่อท้ายสุด" ด้วย:
@@ -3149,10 +3289,11 @@ init();
   function buildContext(){
     const monthIdx=(CT>=0&&CT<12)?CT:new Date().getMonth();
     const curYm=ymk(monthIdx);
-    const alls=colA().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v))}));
-    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank'}));
-    const invs=colI().filter(x=>x.n).map(x=>({n:x.n,t:x.t,v:nf(x.v)}));
-    const oths=colO().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v))}));
+    /* จัดการแล้ว = checkpoint ที่ผู้ใช้ติ๊กว่าลงมือทำจริงแล้ว (ไม่มีผลต่อการคำนวณ) */
+    const alls=colA().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),จัดการแล้ว:!!x.dn}));
+    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank',จัดการแล้ว:!!x.dn}));
+    const invs=colI().filter(x=>x.n).map(x=>({n:x.n,t:x.t,v:nf(x.v),จัดการแล้ว:!!x.dn}));
+    const oths=colO().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),จัดการแล้ว:!!x.dn}));
     const ots=getOTs();const base=num('fBase');
     const hr=base/23/8;
     /* OT รายวันของเดือนที่เปิดอยู่ (เฉพาะวันที่มีค่า) */
