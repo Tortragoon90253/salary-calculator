@@ -19,6 +19,8 @@ header h1{font-size:1.1rem;font-weight:700;flex:1}
 .ynav{background:#2d3748;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ynav label{color:#a0aec0;font-size:.82rem;font-weight:600}
 #ySel{padding:5px 10px;border-radius:6px;border:none;font-size:.85rem;font-weight:700;color:#2d3748;width:110px}
+.cpybtn{padding:5px 12px;border-radius:7px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#553c9a,#805ad5);color:white}
+.cpybtn:disabled{opacity:.5;cursor:not-allowed}
 #bdg{font-size:.78rem;color:#68d391;margin-left:auto}
 #syncSt{font-size:.76rem;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.1);white-space:nowrap}
 .tabs{background:#1a202c;display:flex;overflow-x:auto;gap:2px;padding:0 8px;scrollbar-width:none}
@@ -198,6 +200,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .gs-hint{font-size:.7rem;color:#a0aec0;margin-bottom:14px}
 .modal-btns{display:flex;gap:8px;flex-wrap:wrap}
 .mbtn-save{flex:1;padding:10px;background:linear-gradient(135deg,#553c9a,#805ad5);color:white;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;min-width:120px}
+.mbtn-save:disabled{opacity:.45;cursor:not-allowed}
 .mbtn-cancel{padding:10px 16px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.82rem;color:#718096;cursor:pointer;font-weight:600}
 .mbtn-clear{padding:10px 12px;background:#fff5f5;border:1.5px solid #fc8181;border-radius:8px;font-size:.78rem;color:#c53030;cursor:pointer;font-weight:600}
 .mbtn-fb{flex:1;padding:10px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;min-width:120px}
@@ -361,6 +364,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 <div class="ynav">
   <label>ปี (ค.ศ.):</label>
   <select id="ySel" onchange="onYrChange()"></select>
+  <button class="cpybtn" onclick="openCopyYear()">📋 ลอกจากปีก่อน</button>
   <span id="bdg">⏳ กำลังโหลด...</span>
   <span id="syncSt"></span>
 </div>
@@ -685,6 +689,35 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 </div>
 
 <!-- ── Base salary propagation confirm ── -->
+<!-- ── Modal: ลอกรายการจากปีก่อน ── -->
+<div id="copyYearModal" class="modal-overlay" onclick="if(event.target===this)closeCopyYear()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-title">📋 ลอกรายการจากปีก่อน</div>
+    <div class="modal-sub">ลอก<strong>โครงสร้างรายการ</strong>ทั้งปี (ชื่อรายการ · ประเภท %/฿ · วิธีจ่าย · ลำดับ · เงินเดือนฐาน) มาลงปีปัจจุบันแบบเดือนตรงเดือน</div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <label style="font-size:.83rem;font-weight:700;color:#4a5568">ลอกจากปี</label>
+      <select id="cpySrcYr" style="width:auto;min-width:150px" onchange="renderCopyPreview()"></select>
+      <span style="font-size:.9rem;color:#a0aec0">➜</span>
+      <span style="font-size:.83rem;font-weight:700;color:#553c9a" id="cpyDstYr"></span>
+    </div>
+
+    <div id="cpyPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+    <div style="font-size:.73rem;color:#718096;margin-bottom:16px;line-height:1.7">
+      • ลอกเฉพาะ<strong>โครงสร้าง</strong> — จำนวนเงิน, ประกันสังคม, PVD และตาราง OT รายวัน <strong>ปล่อยว่าง</strong>ให้กรอกเอง<br>
+      • เดือนที่<strong>กรอกจำนวนเงินไว้แล้วจะถูกข้าม</strong> ไม่ถูกเขียนทับ<br>
+      • เดือนต้นทางที่ว่าง จะใช้เดือนที่มีข้อมูลใกล้ที่สุดในปีนั้นแทน<br>
+      • เงินเดือนฐานที่คุณตั้งไว้เองในปีนี้ จะไม่ถูกทับด้วยของปีก่อน
+    </div>
+
+    <div class="modal-btns">
+      <button id="cpyGo" class="mbtn-save" onclick="doCopyYear()">✅ ลอกเลย</button>
+      <button class="mbtn-cancel" onclick="closeCopyYear()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div id="basePropModal" class="modal-overlay" onclick="if(event.target===this)basePropNo()">
   <div class="modal-box" style="max-width:440px">
     <div class="modal-title">📈 อัปเดตเงินเดือนเดือนถัดไปด้วยไหม?</div>
@@ -1782,10 +1815,10 @@ function loadM(mi){
     const prev=getPrev(mi);
     if(prev){
       sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
-      A=dedupeIds((prev.a||defA()).filter(x=>x.id!==BONUS_ID).map(x=>({...x,v:'',ok:false,dn:false})));
-      D=dedupeIds((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID).map(x=>({...x,v:'',ok:false,dn:false})));
-      I=dedupeIds((prev.i||defI()).map(x=>({...x,v:'',dn:false})));
-      O=dedupeIds((prev.o||defO()).map(x=>({...x,v:'',ok:false,dn:false})));
+      A=blankItems((prev.a||defA()).filter(x=>x.id!==BONUS_ID));
+      D=blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID));
+      I=blankItems(prev.i||defI());
+      O=blankItems(prev.o||defO());
       onBaseChg();
     }else{
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
@@ -1804,7 +1837,168 @@ function loadM(mi){
   ['aList','dList','iList','oList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();
 }
-function getPrev(mi){for(let i=mi-1;i>=0;i--){const r=DB[ymk(i)];if(r)return r;}return null;}
+/* หาเดือนก่อนหน้าเพื่อใช้เป็นต้นแบบ — ในปีเดียวกันก่อน ถ้าไม่เจอค่อยถอยข้ามปี */
+function getPrev(mi){
+  for(let i=mi-1;i>=0;i--){const r=DB[ymk(i)];if(r)return r;}
+  const cur=ymk(mi);
+  const keys=Object.keys(DB).filter(k=>k<cur&&recHasData(DB[k])).sort();
+  return keys.length?DB[keys[keys.length-1]]:null;
+}
+
+/* ════════════════════════════════════════════════════
+   ลอกรายการทั้งปีจากปีก่อน
+   ════════════════════════════════════════════════════ */
+
+/* มีจำนวนเงินรายการใดๆ หรือ OT รายวันที่กรอกไว้ไหม */
+function recHasEntries(rec){
+  if(['a','d','i','o'].some(k=>(rec[k]||[]).some(x=>x&&nf(x.v)>0)))return true;
+  const days=rec.days||{};
+  return Object.keys(days).some(dk=>{
+    const d=days[dk];
+    return !!(d&&((d.ac||'').trim()||(d.o3||'').trim()||(d.nt||'').trim()));
+  });
+}
+
+/* ใช้เดือนนี้เป็นต้นแบบได้ไหม — มีแค่เงินเดือนฐานก็พอแล้ว */
+function recHasData(rec){
+  if(!rec||typeof rec!=='object')return false;
+  return nf(rec.base)>0||recHasEntries(rec);
+}
+
+/* ผู้ใช้ลงมือกรอกเดือนนี้จริงหรือยัง — ใช้ตัดสิน "ข้ามไม่เขียนทับ"
+   ไม่นับ base เพราะเงินเดือนฐานไหลมาเองตั้งแต่แค่เปิดดูเดือนนั้น (loadM → getPrev) */
+function recHasUserData(rec){
+  if(!rec||typeof rec!=='object')return false;
+  return nf(rec.sso)>0||nf(rec.pvd)>0||recHasEntries(rec);
+}
+
+/* clone รายการโดยล้างจำนวนเงิน + สถานะยืนยัน/checkpoint ออก */
+function blankItems(arr){return dedupeIds((arr||[]).map(x=>({...x,v:'',ok:false,dn:false})));}
+
+/* ปีที่มีข้อมูลใน DB เรียงจากใหม่ไปเก่า */
+function yearsWithData(){
+  const s=new Set();
+  Object.keys(DB).forEach(k=>{if(recHasData(DB[k])){const y=parseInt(k.split('-')[0],10);if(!isNaN(y))s.add(y);}});
+  return [...s].sort((a,b)=>b-a);
+}
+
+/* ต้นแบบของเดือน mi ในปีต้นทาง — เดือนตรงกันก่อน, ว่างก็ถอยหลัง, ยังไม่เจอค่อยมองไปข้างหน้า */
+function copySrcRec(srcYr,mi){
+  for(let i=mi;i>=0;i--){
+    const r=DB[`${srcYr}-${p2(i+1)}`];
+    if(recHasData(r))return r;
+  }
+  /* ปีต้นทางมีข้อมูลเฉพาะเดือนหลังๆ — ใช้เดือนแรกสุดที่มีข้อมูลแทน ดีกว่าปล่อยว่าง */
+  for(let i=mi+1;i<12;i++){
+    const r=DB[`${srcYr}-${p2(i+1)}`];
+    if(recHasData(r))return r;
+  }
+  return null;
+}
+
+/* วางแผนว่าเดือนไหนจะลอก / ข้าม / ไม่มีต้นแบบ */
+function copyYearPlan(srcYr){
+  const copy=[],skip=[],none=[];
+  for(let mi=0;mi<12;mi++){
+    if(recHasUserData(DB[ymk(mi)])){skip.push(mi);continue;}
+    const src=copySrcRec(srcYr,mi);
+    if(!src){none.push(mi);continue;}
+    copy.push({mi,rec:src});
+  }
+  return {copy,skip,none};
+}
+
+/* สร้าง record ใหม่จากต้นแบบ — โครงสร้างล้วน ไม่เอาจำนวนเงิน/OT */
+function buildCopyRec(src,mi){
+  const dst=DB[ymk(mi)];
+  const rec={
+    /* เดือนปลายทางเคยตั้งเงินเดือนฐานไว้แล้ว — เก็บของเดิม อย่าทับด้วยของปีก่อน */
+    base:(dst&&nf(dst.base)>0)?dst.base:(src.base||''),sso:'',pvd:'',
+    a:blankItems((src.a||defA()).filter(x=>x.id!==BONUS_ID)),
+    d:blankItems((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),
+    i:blankItems(src.i||defI()),
+    o:blankItems(src.o||defO()),
+    days:{}
+  };
+  /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
+  if(BONUS_MONTHS.includes(mi)){
+    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false});
+    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false});
+  }
+  return rec;
+}
+
+function openCopyYear(){
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  /* บันทึกสิ่งที่ค้างในฟอร์มก่อน — preview จะได้ตรงกับผลจริง */
+  if(CT!==12&&formDirty)saveM();
+  const sel=ge('cpySrcYr');sel.innerHTML='';
+  const yrs=yearsWithData().filter(y=>y!==CY);
+  yrs.forEach(y=>{
+    const o=document.createElement('option');o.value=y;o.textContent=`${y} (พ.ศ. ${y+543})`;sel.appendChild(o);
+  });
+  if(yrs.length){
+    /* default = ปีที่ใกล้ปีปัจจุบันที่สุด */
+    let best=yrs[0];yrs.forEach(y=>{if(Math.abs(y-CY)<Math.abs(best-CY))best=y;});
+    sel.value=String(best);
+  }
+  ge('cpyDstYr').textContent=`${CY} (พ.ศ. ${CY+543})`;
+  renderCopyPreview();
+  ge('copyYearModal').classList.add('open');
+}
+function closeCopyYear(){ge('copyYearModal').classList.remove('open');}
+
+function renderCopyPreview(){
+  const el=ge('cpyPreview'),sel=ge('cpySrcYr'),go=ge('cpyGo');
+  if(!sel.options.length){
+    el.innerHTML='<div style="color:#c53030;font-weight:700">ยังไม่มีข้อมูลปีอื่นให้ลอก</div>';
+    go.disabled=true;return;
+  }
+  const p=copyYearPlan(parseInt(sel.value,10));
+  const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
+  let h=`<div style="font-weight:700;color:#276749">✅ จะลอก ${p.copy.length} เดือน</div>`;
+  if(p.copy.length)h+=mlist(p.copy.map(c=>c.mi));
+  if(p.skip.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ข้าม ${p.skip.length} เดือน (มีข้อมูลอยู่แล้ว)</div>`+mlist(p.skip);
+  if(p.none.length)h+=`<div style="font-weight:700;color:#718096;margin-top:10px">— ไม่มีต้นแบบ ${p.none.length} เดือน</div>`+mlist(p.none);
+  el.innerHTML=h;
+  go.disabled=!p.copy.length;
+}
+
+async function doCopyYear(){
+  /* กัน race แบบเดียวกับ saveM() — cloud ยังโหลดไม่เสร็จ ห้ามเขียนทับ */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  const sel=ge('cpySrcYr');if(!sel.options.length)return;
+  const srcYr=parseInt(sel.value,10);if(!srcYr)return;
+  const go=ge('cpyGo');go.disabled=true;
+
+  const p=copyYearPlan(srcYr);              /* ฟอร์มถูก save ไปแล้วตอน openCopyYear() */
+  if(!p.copy.length){go.disabled=false;renderCopyPreview();toast('ไม่มีเดือนที่ต้องลอก');return;}
+
+  p.copy.forEach(c=>{DB[ymk(c.mi)]=buildCopyRec(c.rec,c.mi);});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  updateDots();
+  closeCopyYear();
+  if(CT===12)renderSum();else switchTab(CT,true);
+  toast(`✅ ลอก ${p.copy.length} เดือนจากปี ${srcYr} แล้ว`+(p.skip.length?` (ข้าม ${p.skip.length} เดือนที่มีข้อมูลอยู่)`:''));
+
+  /* sync ขึ้น cloud ทีละเดือน — แบบเดียวกับ basePropYes() */
+  if(fbDb||gsUrl){
+    setSyncSt(fbDb?'fb_saving':'saving');
+    let fail=0;
+    for(const c of p.copy){
+      const ym=ymk(c.mi);
+      try{
+        if(fbDb)await fbSaveMonth(ym);
+        else await gsPost({action:'saveMonth',ym,record:DB[ym]});
+      }catch(e){fail++;console.warn('copyYear sync failed',ym,e);}
+    }
+    if(fail)setSyncSt(fbDb?'fb_error':'error',`sync ไม่สำเร็จ ${fail} เดือน`);
+    else setSyncSt(fbDb?'fb_ok':'ok');
+  }
+  go.disabled=false;
+}
 
 /* ── OT Table ── */
 function buildOT(){
