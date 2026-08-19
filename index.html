@@ -321,6 +321,9 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-pmrow{color:#cbd5e0}
 .ftip-pmrow>span:last-child{font-weight:600}
 .ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
+.ftip-safe{font-weight:700;color:#f6e05e}
+.ftip-safe.wk{background:rgba(246,224,94,.14);border-radius:5px;padding:1px 4px;margin:1px -4px 0}
+.ftip-wk{background:#f6e05e;color:#744210;border-radius:7px;padding:0 5px;font-size:.6rem;font-weight:700;margin-left:4px}
 #flowSvg g.fe{cursor:default}
 #flowSvg g.fe:hover rect{opacity:.72}
 .fl-lg{font-weight:700;margin-left:6px}
@@ -2297,7 +2300,7 @@ function doCalc(){
    ไทม์ไลน์กระแสเงิน — SVG วาดเอง (ไม่ใช่ Chart.js จึงไม่แตะ CH)
    เงินเข้า = เขียว อยู่เหนือแกน | เงินออก = แดง อยู่ใต้แกน
    ════════════════════════════════════════════════════ */
-const TL={DAY:38,PADL:52,PADR:30,PADT:14,LANE:15,STEM_MIN:14,STEM_MAX:56,AXIS_H:34,BAL_H:86};
+const TL={DAY:38,PADL:52,PADR:30,PADT:14,LANE:15,STEM_MIN:14,STEM_MAX:56,AXIS_H:34,BAL_H:108};
 /* วิธีจ่าย — ใช้คำและไอคอนชุดเดียวกันทั้งแอป (renderPmSum, dropdown ในรายการหัก)
    'inv' ไม่ใช่ pm จริง: แบ่งเงินลงทุนไม่มีฟิลด์วิธีจ่ายในข้อมูล จึงแยกเป็นหมวดของตัวเอง
    เพื่อให้ผลรวมทุกหมวด = ยอดเงินออกของวันนั้นพอดี ไม่มีเงินหล่นหาย */
@@ -2459,6 +2462,20 @@ function renderFlowTimeline(c){
     if(gd){run+=gd.in.reduce((a,e)=>a+e.v,0)-gd.out.reduce((a,e)=>a+e.v,0);}
     bal.push(run);lo=Math.min(lo,run);hi=Math.max(hi,run);
   }
+  /* เส้น "ใช้ได้จริง" = เงินที่มีอยู่ในมือวันนั้น − ภาระที่ยังไม่ถูกตัด
+     bal[i] รวมรายการของวันที่ i แล้ว "ภาระที่เหลือ" จึงเป็นเงินออกของวันหลัง i เป็นต้นไป
+     + รายการที่ยังไม่ระบุวันที่ (หักด้วย — ปลอดภัยไว้ก่อน)
+     ไม่บวกรายได้ในอนาคตเข้ามา เพราะยังไม่อยู่ในมือ */
+  const uOutAll=undated.filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0);
+  const safe=[];
+  let owed=dated.filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0)+uOutAll;
+  for(let i=0;i<nD;i++){
+    const gd=byDay[s0+i];
+    if(gd)owed-=gd.out.reduce((a,e)=>a+e.v,0);
+    safe.push(bal[i]-owed);
+  }
+  safe.forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);});   /* สเกลแกน y ต้องครอบทั้งสองเส้น */
+
   const span=(hi-lo)||1;
   const YB=v=>balTop+TL.BAL_H-((v-lo)/span)*TL.BAL_H;
   let path='',area='';
@@ -2467,10 +2484,24 @@ function renderFlowTimeline(c){
     path+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
   }
   area=path+`L${(X(s1)+TL.DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}L${(TL.PADL-TL.DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}Z`;
-  g+=`<text x="${TL.PADL-TL.DAY/2}" y="${balTop-5}" font-size="10" font-weight="700" fill="#2b6cb0">💧 ยอดเงินคงเหลือสะสม</text>`;
+  /* เส้นที่ 2 — ใช้สเกลเดียวกับเส้นยอดคงเหลือ จะได้เทียบกันได้ตรงๆ */
+  let sPath='';
+  for(let i=0;i<nD;i++){
+    const x1=X(s0+i)-TL.DAY/2,x2=X(s0+i)+TL.DAY/2,y=YB(safe[i]);
+    sPath+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
+  }
+  g+=`<text x="${TL.PADL-TL.DAY/2}" y="${balTop-5}" font-size="10" font-weight="700" fill="#2b6cb0">💧 ยอดคงเหลือสะสม</text>`;
+  g+=`<text x="${TL.PADL-TL.DAY/2+118}" y="${balTop-5}" font-size="10" font-weight="700" fill="#b7791f">🛡️ ใช้ได้จริง</text>`;
   g+=`<path d="${area}" fill="rgba(43,108,176,.12)"/>`;
   g+=`<line x1="${TL.PADL-TL.DAY/2}" y1="${YB(0)}" x2="${X(s1)+TL.DAY/2}" y2="${YB(0)}" stroke="#a0aec0" stroke-width="1" stroke-dasharray="4,3"/>`;
+  g+=`<path d="${sPath}" fill="none" stroke="#b7791f" stroke-width="2" stroke-dasharray="5,3"/>`;
   g+=`<path d="${path}" fill="none" stroke="#2b6cb0" stroke-width="2"/>`;
+  /* จุดเน้นเฉพาะเสาร์/อาทิตย์ — วันที่ผู้ใช้ต้องอ่านค่า "ใช้ได้จริง" จริงๆ */
+  for(let i=0;i<nD;i++){
+    const[wy,wm,wd]=serDt(s0+i).split('-').map(Number);
+    const dw=new Date(wy,wm-1,wd).getDay();
+    if(dw===0||dw===6)g+=`<circle cx="${X(s0+i)}" cy="${YB(safe[i])}" r="3" fill="#b7791f" stroke="#fff" stroke-width="1"><title>${DFULL[dw]} ${tlThDate(serDt(s0+i))} — ใช้ได้จริง ${fmt(safe[i])}</title></circle>`;
+  }
   /* จุดต่ำสุด + ยอดปลายงวด */
   const iMin=bal.indexOf(Math.min(...bal));
   if(bal[iMin]<hi){
@@ -2479,11 +2510,14 @@ function renderFlowTimeline(c){
   }
   g+=`<circle cx="${X(s1)}" cy="${YB(bal[nD-1])}" r="3.4" fill="#2b6cb0"/>`;
   g+=`<text x="${X(s1)}" y="${YB(bal[nD-1])-8}" text-anchor="end" font-size="9.5" font-weight="700" fill="#2b6cb0">คงเหลือ ${tlAmt(bal[nD-1])}</text>`;
+  g+=`<circle cx="${X(s1)}" cy="${YB(safe[nD-1])}" r="3.4" fill="#b7791f"/>`;
+  g+=`<text x="${X(s1)}" y="${YB(safe[nD-1])+(safe[nD-1]<=bal[nD-1]?14:-8)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#b7791f">ใช้ได้จริง ${tlAmt(safe[nD-1])}</text>`;
 
   /* ── ชั้นรับเมาส์ + crosshair (วาดท้ายสุดจะได้อยู่บนสุด) ── */
   g+=`<g id="flowCross" style="display:none;pointer-events:none">`
     +`<line id="flowCrossL" x1="0" y1="${TL.PADT}" x2="0" y2="${balTop+TL.BAL_H}" stroke="#2b6cb0" stroke-width="1" stroke-dasharray="3,3" opacity=".65"/>`
-    +`<circle id="flowCrossC" cx="0" cy="0" r="4.5" fill="#fff" stroke="#2b6cb0" stroke-width="2.5"/></g>`;
+    +`<circle id="flowCrossC" cx="0" cy="0" r="4.5" fill="#fff" stroke="#2b6cb0" stroke-width="2.5"/>`
+    +`<circle id="flowCrossS" cx="0" cy="0" r="4.5" fill="#fff" stroke="#b7791f" stroke-width="2.5"/></g>`;
   g+=`<rect id="flowHit" x="0" y="0" width="${W}" height="${H}" fill="transparent" style="cursor:crosshair"/>`;
 
   /* ── กล่องรายการที่ยังไม่ระบุวันที่ + กระทบยอดกับกล่องสรุปเงิน ── */
@@ -2523,13 +2557,17 @@ function renderFlowTimeline(c){
     <div class="cb">
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
       <div class="flow-scroll"><div class="flow-inner"><svg id="flowSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip" id="flowTip"></div></div></div>
-      <div class="flow-note">เส้นยอดคงเหลือเริ่มนับที่ 0 ของงวดนี้ — รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(pay)}) จึงติดลบชั่วคราวได้ตามปกติ</div>
+      <div class="flow-note">
+        <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(pay)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
+        <strong style="color:#b7791f">🛡️ ใช้ได้จริง</strong> — เงินที่มีอยู่ในมือวันนั้น หัก<strong>ภาระที่ยังไม่ถูกตัด</strong>ออกแล้ว = ใช้ได้เท่านี้โดยบิลที่เหลือยังจ่ายครบ (เหมาะกับตัดสินใจช่วงวันหยุด — จุดกลมบนเส้นคือเสาร์/อาทิตย์)<br>
+        <span style="color:#a0aec0">คิดแบบปลอดภัยไว้ก่อน: หักรายการที่ยังไม่ระบุวันที่ด้วย และไม่นับรายได้ในอนาคตเข้ามา · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
+      </div>
       ${unHtml}
     </div></div>`;
   ge('flowSvg').innerHTML=g;
 
   /* state สำหรับ crosshair — เก็บเป็นตัวเลขล้วน แล้วคำนวณ X()/YB() ใหม่ตอน hover */
-  _flow={s0,nD,bal,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
+  _flow={s0,nD,bal,safe,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
   _flowPin=false;
   const svg=ge('flowSvg');
   /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
@@ -2551,10 +2589,12 @@ function flowHover(evt){
   const i=Math.max(0,Math.min(_flow.nD-1,Math.round((xs-_flow.PADL)/_flow.DAY)));
   const s=_flow.s0+i,dt=serDt(s);
   const x=_flow.PADL+i*_flow.DAY;
-  const yb=_flow.balTop+_flow.BAL_H-((_flow.bal[i]-_flow.lo)/_flow.span)*_flow.BAL_H;
+  const YBh=v=>_flow.balTop+_flow.BAL_H-((v-_flow.lo)/_flow.span)*_flow.BAL_H;
+  const yb=YBh(_flow.bal[i]),ys=YBh(_flow.safe[i]);
 
   ge('flowCrossL').setAttribute('x1',x);ge('flowCrossL').setAttribute('x2',x);
   ge('flowCrossC').setAttribute('cx',x);ge('flowCrossC').setAttribute('cy',yb);
+  ge('flowCrossS').setAttribute('cx',x);ge('flowCrossS').setAttribute('cy',ys);
   cross.style.display='';
 
   const[yy,mm,dd]=dt.split('-').map(Number);
@@ -2585,6 +2625,8 @@ function flowHover(evt){
     h+=`<div class="ftip-r ftip-none"><span>— ไม่มีรายการวันนี้ —</span></div>`;
   }
   h+=`<div class="ftip-r ftip-bal"><span>💧 ยอดคงเหลือสะสม</span><span>${fmt(_flow.bal[i])}</span></div>`;
+  const wk=dow===0||dow===6;
+  h+=`<div class="ftip-r ftip-safe${wk?' wk':''}"><span>🛡️ ใช้ได้จริง${wk?' <span class="ftip-wk">วันหยุด</span>':''}</span><span>${fmt(_flow.safe[i])}</span></div>`;
   tip.innerHTML=h;
   tip.style.display='block';
   /* วางกล่องโดยไม่ให้ล้นขอบกราฟ */
