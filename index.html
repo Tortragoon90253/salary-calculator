@@ -92,7 +92,14 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .itg button{padding:4px 9px;border:none;cursor:pointer;font-size:.8rem;font-weight:700;background:white;color:#718096}
 .itg button.on{background:#276749;color:white}
 .icomp{font-size:.83rem;font-weight:700;color:#276749;white-space:nowrap;min-width:80px;text-align:right}
-.fr{display:grid;grid-template-columns:1fr 148px 60px;gap:8px;align-items:center;margin-bottom:6px}
+.fr{display:grid;grid-template-columns:1fr 134px 148px 60px;gap:8px;align-items:center;margin-bottom:6px}
+@media(max-width:640px){
+  .fr{grid-template-columns:1fr 96px 56px;grid-template-rows:auto auto;row-gap:5px}
+  .fr>.fl{grid-column:1/-1;grid-row:1}
+  .fr>.dtin{grid-column:1;grid-row:2}
+  .fr>input[type=number]{grid-column:2;grid-row:2}
+  .fr>.atg{grid-column:3;grid-row:2}
+}
 .fr .fl{font-size:.84rem;color:#4a5568;font-weight:500}
 .fr input[type=number]{font-size:.83rem;text-align:right}
 .atg{font-size:.72rem;background:#e9d8fd;color:#553c9a;border-radius:10px;padding:2px 6px;text-align:center;font-weight:600;white-space:nowrap}
@@ -255,6 +262,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   /* ไทม์ไลน์: ปล่อยให้ viewBox ย่อลงพอดีหน้ากระดาษ แทนการตัดขอบ */
   .flow-scroll{overflow:visible!important}
   .flow-hint{display:none!important}
+  .flow-tip,#flowCross{display:none!important}
   #flowSvg{width:100%!important;height:auto!important}
   .flow-card{page-break-inside:avoid}
 }
@@ -296,7 +304,19 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .flow-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:4px}
 .flow-hint{display:none;text-align:center;font-size:.75rem;color:#a0aec0;padding:5px 0 2px;letter-spacing:.02em}
 @media(max-width:800px){.flow-hint{display:block}}
-#flowSvg{display:block;font-family:'Segoe UI',Tahoma,sans-serif}
+#flowSvg{display:block;font-family:'Segoe UI',Tahoma,sans-serif;touch-action:pan-x}
+.flow-inner{position:relative;display:inline-block}
+.flow-tip{display:none;position:absolute;z-index:5;pointer-events:none;background:rgba(26,54,93,.96);color:#fff;border-radius:8px;padding:8px 11px;font-size:.72rem;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25);min-width:170px;max-width:280px}
+.ftip-d{font-weight:700;font-size:.76rem;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.22)}
+.ftip-pay{background:#bee3f8;color:#2b6cb0;border-radius:7px;padding:1px 6px;font-size:.62rem;font-weight:700;white-space:nowrap}
+.ftip-r{display:flex;justify-content:space-between;gap:12px}
+.ftip-r>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ftip-r>span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ftip-in{color:#9ae6b4;font-weight:600}
+.ftip-out{color:#feb2b2;font-weight:600}
+.ftip-none{color:#a0aec0;font-style:italic}
+.ftip-net{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700}
+.ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
 #flowSvg g.fe{cursor:default}
 #flowSvg g.fe:hover rect{opacity:.72}
 .fl-lg{font-weight:700;margin-left:6px}
@@ -308,6 +328,9 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .flow-un-h{font-size:.8rem;font-weight:700;color:#4a5568;margin-bottom:6px}
 .flow-un-tag{background:#fed7d7;color:#c53030;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;margin-left:5px;white-space:nowrap}
 .flow-un-sum{border-top:1px solid #e2e8f0;font-weight:600;color:#4a5568}
+.flow-rec-h{font-size:.8rem;font-weight:700;color:#4a5568;margin:12px 0 4px;padding-top:9px;border-top:1px dashed #cbd5e0}
+.flow-rec-ref{font-size:.68rem;color:#a0aec0;font-weight:500}
+.flow-rec-warn{color:#c53030}
 .flow-un-tot{border-top:2px solid #cbd5e0;font-weight:700;color:#2b6cb0;font-size:.88rem}
 .flow-fill{margin-top:9px;width:100%;padding:8px;border:none;border-radius:7px;background:#bee3f8;color:#2b6cb0;font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit}
 .flow-fill:hover{background:#90cdf4}
@@ -496,11 +519,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="cb">
       <div class="fr">
         <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">บัญชี</span></span>
+        <input type="date" class="dtin" id="fSsoDt" title="วันที่ตัดเงิน — ค่าเริ่มต้นคือวันเงินเดือนออก">
         <input id="fSso" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
       <div class="fr">
         <span class="fl">กองทุนสำรองเลี้ยงชีพ (7%) <span class="pm-bank">บัญชี</span></span>
+        <input type="date" class="dtin" id="fPvdDt" title="วันที่ตัดเงิน — ค่าเริ่มต้นคือวันเงินเดือนออก">
         <input id="fPvd" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
@@ -901,7 +926,7 @@ const defA=()=>[
   {id:'a3',n:'ค่าบ้าน',v:'',ok:false,dn:false},{id:'a4',n:'ค่าภาษาญี่ปุ่น',v:'',ok:false,dn:false},
   {id:'a5',n:'ค่าภาษาอังกฤษ',v:'',ok:false,dn:false},{id:'a6',n:'ค่า Skill',v:'',ok:false,dn:false}
 ];
-const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ok:false,dn:false,dt:''}];
+const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ok:false,dn:false}];
 const defI=()=>[];
 const defO=()=>[];
 
@@ -1653,6 +1678,8 @@ function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.i
 /* ── Derived ── */
 function getSso(){const v=gv('fSso');return v!==''?nf(v):Math.min(num('fBase')*.05,875);}
 function getPvd(){const v=gv('fPvd');return v!==''?nf(v):num('fBase')*.07;}
+/* แถวที่ผูกกับวันเงินเดือนออกโดยธรรมชาติ — ใช้กติกาชื่อเดียวกับ getTaxFromD() */
+const isTaxRow=x=>!!x&&(x.id===BONUS_TAX_ID||(x.n||'').includes('ภาษี'));
 function getTaxFromD(arr){return arr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s+nf(x.v):s,0);}
 function getOTs(){
   const pv=gv('fPrd');if(!pv)return{h15:0,h20:0,h30:0};
@@ -1822,6 +1849,7 @@ function saveM(fb=false){
     };
   }
   DB[ym]={base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
+    ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
     a:JSON.parse(JSON.stringify(A)),
     d:JSON.parse(JSON.stringify(D)),
     i:JSON.parse(JSON.stringify(I)),
@@ -1899,8 +1927,10 @@ function loadM(mi){
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
     sv('fBaseDt',rec.baseDt!==undefined?rec.baseDt:payDate(ym));
+    /* SSO/PVD ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ (ต่างจาก baseDt ที่เคารพการล้างค่า) */
+    sv('fSsoDt',rec.ssoDt||payDate(ym));sv('fPvdDt',rec.pvdDt||payDate(ym));
     A=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.a||defA()))),ym,ym,true);
-    D=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.d||defD()))),ym,ym,false);
+    D=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.d||defD()))),ym,ym,isTaxRow);
     I=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.i||defI()))),ym,ym,false);
     O=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.o||defO()))),ym,ym,false);
     if(rec.days){
@@ -1916,22 +1946,23 @@ function loadM(mi){
     const pv=getPrev(mi);
     if(pv){
       const s=pv.ym,prev=pv.rec;
-      sv('fBase',prev.base);sv('fSso','');sv('fPvd','');sv('fBaseDt',payDate(ym));
+      sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
+      sv('fBaseDt',payDate(ym));sv('fSsoDt',payDate(ym));sv('fPvdDt',payDate(ym));
       A=anchorDates(blankItems((prev.a||defA()).filter(x=>x.id!==BONUS_ID)),s,ym,true);
-      D=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,false);
+      D=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,isTaxRow);
       I=anchorDates(blankItems(prev.i||defI()),s,ym,false);
       O=anchorDates(blankItems(prev.o||defO()),s,ym,false);
       onBaseChg();
     }else{
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
-      sv('fBaseDt',payDate(ym));
-      A=anchorDates(defA(),ym,ym,true);D=defD();I=defI();O=defO();
+      ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
+      A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,isTaxRow);I=defI();O=defO();
     }
     reOT();
   }
   if(BONUS_MONTHS.includes(mi)){
     if(!A.find(x=>x.id===BONUS_ID))A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false,dt:payDate(ym)});
-    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false,dt:''});
+    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false,dt:payDate(ym)});
   }else{
     A=A.filter(x=>x.id!==BONUS_ID);
     D=D.filter(x=>x.id!==BONUS_TAX_ID);
@@ -1986,10 +2017,12 @@ function blankItems(arr){return dedupeIds((arr||[]).map(x=>({...x,v:'',ok:false,
    - dt==='' (ผู้ใช้ตั้งใจล้างทิ้ง) → คงความว่างไว้ ห้ามเติมกลับ */
 function anchorDates(arr,srcYm,dstYm,payday){
   const n=ymDelta(srcYm,dstYm);
+  const want=typeof payday==='function'?payday:()=>!!payday;
   return (arr||[]).map(x=>{
     let dt=x.dt;
-    if(dt===undefined)dt=payday?payDate(dstYm):'';
-    else if(dt&&n)dt=shiftDt(dt,n);
+    if(want(x)&&!dt)dt=payDate(dstYm);      /* ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ */
+    else if(dt===undefined)dt='';           /* ยังไม่เคยมีฟิลด์ → ว่างไว้ */
+    else if(dt&&n)dt=shiftDt(dt,n);         /* ลอกข้ามเดือน → เลื่อนตามระยะเดือน */
     return{...x,dt};
   });
 }
@@ -2035,9 +2068,9 @@ function buildCopyRec(src,mi,srcYm){
     /* เดือนปลายทางเคยตั้งเงินเดือนฐานไว้แล้ว — เก็บของเดิม อย่าทับด้วยของปีก่อน */
     base:(dst&&nf(dst.base)>0)?dst.base:(src.base||''),
     baseDt:(dst&&dst.baseDt!==undefined)?dst.baseDt:payDate(dstYm),
-    sso:'',pvd:'',
+    sso:'',pvd:'',ssoDt:payDate(dstYm),pvdDt:payDate(dstYm),
     a:anc((src.a||defA()).filter(x=>x.id!==BONUS_ID),true),
-    d:anc((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID),false),
+    d:anc((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID),isTaxRow),
     i:anc(src.i||defI(),false),
     o:anc(src.o||defO(),false),
     days:{}
@@ -2045,7 +2078,7 @@ function buildCopyRec(src,mi,srcYm){
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
   if(BONUS_MONTHS.includes(mi)){
     rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false,dt:payDate(dstYm)});
-    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false,dt:''});
+    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false,dt:payDate(dstYm)});
   }
   return rec;
 }
@@ -2247,8 +2280,9 @@ function doCalc(){
   const rps={bank:rBank,cash:rCash,credit:rCredit,sso,pvd};
   const rpsEl=ge('rPaySum');if(rpsEl)rpsEl.innerHTML=renderPmSum(rps);
   renderCkSum();
-  renderFlowTimeline({ym:pv,baseDt:gv('fBaseDt'),base,aArr,oArr,dArr,iArr,
-                      invBase,totOT,h15,h20,h30,sso,pvd,finalCash});
+  renderFlowTimeline({ym:pv,baseDt:gv('fBaseDt'),ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
+                      base,aArr,oArr,dArr,iArr,invBase,totOT,h15,h20,h30,sso,pvd,
+                      totInc,finalCash});
   ge('res').style.display='block';
   ge('res').scrollIntoView({behavior:'smooth'});
   saveM();
@@ -2259,6 +2293,8 @@ function doCalc(){
    เงินเข้า = เขียว อยู่เหนือแกน | เงินออก = แดง อยู่ใต้แกน
    ════════════════════════════════════════════════════ */
 const TL={DAY:38,PADL:52,PADR:30,PADT:14,LANE:15,STEM_MIN:14,STEM_MAX:56,AXIS_H:34,BAL_H:86};
+let _flow=null;      /* ข้อมูลกราฟล่าสุด สำหรับ crosshair ตอนเอาเมาส์ชี้ */
+let _flowPin=false;  /* บนมือถือ: แตะเพื่อ "ปัก" ค่าไว้อ่าน */
 
 /* รวบรวมรายการเงินเข้า/ออกทั้งหมดพร้อมวันที่
    รายการที่ผู้ใช้ยังไม่กรอกวันที่จะไปอยู่ undated ไม่ถูกทิ้งเงียบๆ */
@@ -2268,25 +2304,28 @@ function buildFlowEvents(c){
   const push=(dt,dir,kind,n,v)=>{v=+v||0;if(v<=0)return;
     (isDt(dt)?dated:undated).push({dt:isDt(dt)?dt:'',dir,kind,n,v});};
 
+  /* หมายเหตุสำคัญ: doCalc() รวมยอดโดย "ไม่กรองชื่อ" (totA/custDed/totInv ใช้ reduce ล้วน)
+     ถ้าตรงนี้กรอง x.n ทิ้ง รายการที่กรอกเงินไว้แต่ยังไม่ตั้งชื่อจะถูกนับใน "เงินคงเหลือใช้จริง"
+     แต่หายไปจากไทม์ไลน์ → ยอดไม่ตรงกันโดยไม่มีอะไรเตือน จึงใช้ชื่อสำรองแทนการกรอง */
+  const NN='(ไม่ระบุชื่อ)';
+
   /* ── เงินเข้า ── */
   push(pay,'in','base','เงินเดือนฐาน',c.base);
   if(c.totOT>0)push(pay,'in','ot',`OT รวม (${(c.h15+c.h20+c.h30).toFixed(2)} ชม.)`,c.totOT);
-  c.aArr.forEach(x=>{if(x.n)push(isDt(x.dt)?x.dt:pay,'in','a',x.n,nf(x.v));});
-  c.oArr.forEach(x=>{if(x.n)push(x.dt,'in','o',x.n,nf(x.v));});
+  c.aArr.forEach(x=>push(isDt(x.dt)?x.dt:pay,'in','a',x.n||NN,nf(x.v)));
+  c.oArr.forEach(x=>push(x.dt,'in','o',x.n||NN,nf(x.v)));
 
   /* ── เงินออก ── */
-  push(pay,'out','sso','ประกันสังคม',c.sso);
-  push(pay,'out','pvd','กองทุนสำรองเลี้ยงชีพ',c.pvd);
+  push(isDt(c.ssoDt)?c.ssoDt:pay,'out','sso','ประกันสังคม',c.sso);
+  push(isDt(c.pvdDt)?c.pvdDt:pay,'out','pvd','กองทุนสำรองเลี้ยงชีพ',c.pvd);
   c.dArr.forEach(x=>{
-    if(!x.n)return;
-    /* ภาษีหัก ณ ที่จ่ายถูกหักตอนเงินเดือนออก — เกณฑ์ชื่อเดียวกับ getTaxFromD() */
-    const at=isDt(x.dt)?x.dt:((x.n||'').includes('ภาษี')?pay:'');
-    push(at,'out','d',x.n,nf(x.v));
+    /* ภาษีหัก ณ ที่จ่ายถูกหักตอนเงินเดือนออก — ตาข่ายรองรับกรณีวันที่ยังว่าง */
+    const at=isDt(x.dt)?x.dt:(isTaxRow(x)?pay:'');
+    push(at,'out','d',x.n||NN,nf(x.v));
   });
   c.iArr.forEach(x=>{
-    if(!x.n)return;
     const v=x.t==='%'?c.invBase*nf(x.v)/100:nf(x.v);
-    push(x.dt,'out','inv',x.n,v);
+    push(x.dt,'out','inv',x.n||NN,v);
   });
 
   dated.sort((a,b)=>a.dt<b.dt?-1:a.dt>b.dt?1:b.v-a.v);
@@ -2424,35 +2463,108 @@ function renderFlowTimeline(c){
   g+=`<circle cx="${X(s1)}" cy="${YB(bal[nD-1])}" r="3.4" fill="#2b6cb0"/>`;
   g+=`<text x="${X(s1)}" y="${YB(bal[nD-1])-8}" text-anchor="end" font-size="9.5" font-weight="700" fill="#2b6cb0">คงเหลือ ${tlAmt(bal[nD-1])}</text>`;
 
-  /* ── กล่องรายการที่ยังไม่ระบุวันที่ ── */
+  /* ── ชั้นรับเมาส์ + crosshair (วาดท้ายสุดจะได้อยู่บนสุด) ── */
+  g+=`<g id="flowCross" style="display:none;pointer-events:none">`
+    +`<line id="flowCrossL" x1="0" y1="${TL.PADT}" x2="0" y2="${balTop+TL.BAL_H}" stroke="#2b6cb0" stroke-width="1" stroke-dasharray="3,3" opacity=".65"/>`
+    +`<circle id="flowCrossC" cx="0" cy="0" r="4.5" fill="#fff" stroke="#2b6cb0" stroke-width="2.5"/></g>`;
+  g+=`<rect id="flowHit" x="0" y="0" width="${W}" height="${H}" fill="transparent" style="cursor:crosshair"/>`;
+
+  /* ── กล่องรายการที่ยังไม่ระบุวันที่ + กระทบยอดกับกล่องสรุปเงิน ── */
   const uIn=undated.filter(e=>e.dir==='in'),uOut=undated.filter(e=>e.dir==='out');
   const uInT=uIn.reduce((a,e)=>a+e.v,0),uOutT=uOut.reduce((a,e)=>a+e.v,0);
-  let unHtml='';
+  const allIn=dated.concat(undated).filter(e=>e.dir==='in').reduce((a,e)=>a+e.v,0);
+  const allOut=dated.concat(undated).filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0);
+  const tlEnd=bal[nD-1]+uInT-uOutT;
+  /* ตาข่ายนิรภัย: ถ้ายอดไม่ตรงกับ finalCash ให้โชว์ส่วนต่าง แทนที่จะเพี้ยนเงียบๆ
+     (เช่นผู้ใช้พิมพ์จำนวนเงินติดลบ ซึ่ง push() ข้ามไป) */
+  const diff=(c.finalCash!=null)?(c.finalCash-tlEnd):0;
+  const hasDiff=Math.abs(diff)>=0.005;
+  /* เช็คฝั่งรายได้แยกอีกชั้น — กันกรณีที่คลาดกันสองฝั่งแล้วหักล้างกันพอดีจนยอดท้ายดูเหมือนตรง */
+  const incDiff=(c.totInc!=null)?(c.totInc-allIn):0;
+  const hasIncDiff=Math.abs(incDiff)>=0.005;
+
+  let unHtml='<div class="flow-un">';
   if(undated.length){
     const li=(e,sign,cls)=>`<div class="li"><span>${esc(e.n)}</span><span class="${cls}">${sign}${fmt(e.v)}</span></div>`;
-    unHtml=`<div class="flow-un">
-      <div class="flow-un-h">📌 ยังไม่ระบุวันที่ — ${undated.length} รายการ <span class="flow-un-tag">ไม่ถูกนับในเส้นยอดคงเหลือ</span></div>
-      ${uIn.map(e=>li(e,'+','vai')).join('')}
-      ${uOut.map(e=>li(e,'−','vad')).join('')}
-      <div class="li flow-un-sum"><span>ยอดคงเหลือบนไทม์ไลน์</span><span>${fmt(bal[nD-1])}</span></div>
-      <div class="li flow-un-sum"><span>รายการที่ยังไม่ระบุวันที่</span><span>${(uInT-uOutT)<0?'−':'+'}${fmt(Math.abs(uInT-uOutT))}</span></div>
-      <div class="li flow-un-tot"><span>= เงินคงเหลือใช้จริง</span><span>${fmt(bal[nD-1]+uInT-uOutT)}</span></div>
-      <button class="flow-fill" onclick="fillBlankDates()">📅 ใส่วันเงินเดือนออกให้รายการที่ยังว่าง</button>
-    </div>`;
-  }else{
-    unHtml=`<div class="flow-un"><div class="li flow-un-tot"><span>= เงินคงเหลือใช้จริง ณ สิ้นช่วง</span><span>${fmt(bal[nD-1])}</span></div></div>`;
+    unHtml+=`<div class="flow-un-h">📌 ยังไม่ระบุวันที่ — ${undated.length} รายการ <span class="flow-un-tag">ไม่ถูกนับในเส้นยอดคงเหลือ</span></div>`
+      +uIn.map(e=>li(e,'+','vai')).join('')
+      +uOut.map(e=>li(e,'−','vad')).join('')
+      +`<button class="flow-fill" onclick="fillBlankDates()">📅 ใส่วันเงินเดือนออกให้รายการที่ยังว่าง</button>`;
   }
+  unHtml+=`<div class="flow-rec-h">🧾 กระทบยอดกับกล่อง “สรุปเงิน”</div>
+    <div class="li${hasIncDiff?' flow-rec-warn':''}"><span>รวมเงินเข้าทั้งหมด <span class="flow-rec-ref">${hasIncDiff?`⚠️ ต่างจาก “รวมรายได้” ${fmt(Math.abs(incDiff))}`:'= รวมรายได้ ก่อนหักภาษี'}</span></span><span class="vai">${fmt(allIn)}</span></div>
+    <div class="li"><span>รวมเงินออกทั้งหมด <span class="flow-rec-ref">SSO + กองทุนฯ + รายการหัก + แบ่งลงทุน</span></span><span class="vad">−${fmt(allOut)}</span></div>
+    <div class="li flow-un-sum"><span>ยอดคงเหลือบนไทม์ไลน์</span><span>${fmt(bal[nD-1])}</span></div>`;
+  if(undated.length)unHtml+=`<div class="li flow-un-sum"><span>รายการที่ยังไม่ระบุวันที่</span><span>${(uInT-uOutT)<0?'−':'+'}${fmt(Math.abs(uInT-uOutT))}</span></div>`;
+  if(hasDiff)unHtml+=`<div class="li flow-un-sum flow-rec-warn"><span>⚠️ รายการที่ไม่ได้แสดงบนไทม์ไลน์</span><span>${diff<0?'−':'+'}${fmt(Math.abs(diff))}</span></div>`;
+  unHtml+=`<div class="li flow-un-tot"><span>= เงินคงเหลือใช้จริง</span><span>${fmt(tlEnd+diff)}</span></div>
+    </div>`;
 
   box.innerHTML=`<div class="card flow-card">
     <div class="ch cbl">🧭 ไทม์ไลน์กระแสเงิน
       <span class="ch-sub"><span class="fl-lg fl-in">▲ เงินเข้า</span> <span class="fl-lg fl-out">▼ เงินออก</span></span></div>
     <div class="cb">
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
-      <div class="flow-scroll"><svg id="flowSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg></div>
+      <div class="flow-scroll"><div class="flow-inner"><svg id="flowSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip" id="flowTip"></div></div></div>
       <div class="flow-note">เส้นยอดคงเหลือเริ่มนับที่ 0 ของงวดนี้ — รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(pay)}) จึงติดลบชั่วคราวได้ตามปกติ</div>
       ${unHtml}
     </div></div>`;
   ge('flowSvg').innerHTML=g;
+
+  /* state สำหรับ crosshair — เก็บเป็นตัวเลขล้วน แล้วคำนวณ X()/YB() ใหม่ตอน hover */
+  _flow={s0,nD,bal,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
+  _flowPin=false;
+  const svg=ge('flowSvg');
+  /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
+  svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')flowHover(e);});
+  svg.addEventListener('pointerleave',()=>{if(!_flowPin)flowHoverOut();});
+  /* แตะ/คลิกเพื่อปักค่าไว้อ่าน (จำเป็นบนมือถือ) */
+  svg.addEventListener('click',e=>{_flowPin=!_flowPin;if(_flowPin)flowHover(e);else flowHoverOut();});
+}
+
+/* แสดง crosshair + กล่องค่าของวันที่เมาส์ชี้อยู่ */
+function flowHover(evt){
+  if(!_flow)return;
+  const svg=ge('flowSvg'),tip=ge('flowTip'),cross=ge('flowCross');
+  if(!svg||!tip||!cross)return;
+  const r=svg.getBoundingClientRect();if(!r.width)return;
+  /* ต้องคูณสเกล viewBox — ตอนพิมพ์/จอแคบ SVG ถูกย่อด้วย width:100% */
+  const k=_flow.W/r.width;
+  const xs=(evt.clientX-r.left)*k;
+  const i=Math.max(0,Math.min(_flow.nD-1,Math.round((xs-_flow.PADL)/_flow.DAY)));
+  const s=_flow.s0+i,dt=serDt(s);
+  const x=_flow.PADL+i*_flow.DAY;
+  const yb=_flow.balTop+_flow.BAL_H-((_flow.bal[i]-_flow.lo)/_flow.span)*_flow.BAL_H;
+
+  ge('flowCrossL').setAttribute('x1',x);ge('flowCrossL').setAttribute('x2',x);
+  ge('flowCrossC').setAttribute('cx',x);ge('flowCrossC').setAttribute('cy',yb);
+  cross.style.display='';
+
+  const[yy,mm,dd]=dt.split('-').map(Number);
+  const dow=new Date(yy,mm-1,dd).getDay();
+  const gd=_flow.byDay[s]||{in:[],out:[]};
+  const tIn=gd.in.reduce((a,e)=>a+e.v,0),tOut=gd.out.reduce((a,e)=>a+e.v,0);
+  let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(_flow.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
+  if(gd.in.length||gd.out.length){
+    gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
+    gd.out.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;});
+    h+=`<div class="ftip-r ftip-net"><span>สุทธิวันนี้</span><span>${tIn-tOut<0?'−':'+'}${fmt(Math.abs(tIn-tOut))}</span></div>`;
+  }else{
+    h+=`<div class="ftip-r ftip-none"><span>— ไม่มีรายการวันนี้ —</span></div>`;
+  }
+  h+=`<div class="ftip-r ftip-bal"><span>💧 ยอดคงเหลือสะสม</span><span>${fmt(_flow.bal[i])}</span></div>`;
+  tip.innerHTML=h;
+  tip.style.display='block';
+  /* วางกล่องโดยไม่ให้ล้นขอบกราฟ */
+  const px=x/k, tw=tip.offsetWidth;
+  tip.style.left=Math.max(2,Math.min(r.width-tw-2,px-tw/2))+'px';
+  tip.style.top=Math.max(2,(_flow.balTop/k)-tip.offsetHeight-8)+'px';
+}
+function flowHoverOut(){
+  _flowPin=false;
+  const c=ge('flowCross'),t=ge('flowTip');
+  if(c)c.style.display='none';
+  if(t)t.style.display='none';
 }
 
 /* เติมวันเงินเดือนออกให้ทุกรายการที่ยังไม่ได้ระบุวันที่ แล้วคำนวณใหม่ */
@@ -2462,6 +2574,7 @@ function fillBlankDates(){
   A=colA();D=colD();I=colI();O=colO();
   let n=0;
   [A,D,I,O].forEach(arr=>arr.forEach(x=>{if(!isDt(x.dt)){x.dt=pd;n++;}}));
+  ['fSsoDt','fPvdDt'].forEach(id=>{if(!isDt(gv(id))){sv(id,pd);n++;}});
   if(!n){toast('ทุกรายการมีวันที่ครบแล้ว');return;}
   ['aList','dList','iList','oList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();
@@ -2472,11 +2585,11 @@ function fillBlankDates(){
 function resetM(){
   const ym=ymk(CT);
   ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
-  sv('fBaseDt',payDate(ym));
+  ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
   ge('otBody').innerHTML='';ge('res').style.display='none';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   delete DB[ym];
-  A=anchorDates(defA(),ym,ym,true);D=defD();I=defI();O=defO();
+  A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,isTaxRow);I=defI();O=defO();
   /* ล้าง DOM ของรายการเก่าก่อน render — กัน rA/rD pre-sync ดึงค่าเก่ามาทับ defaults */
   ['aList','dList','iList','oList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();buildOT();reOT();updateDots();
@@ -2678,8 +2791,8 @@ function doExport(){
     for(let mi=0;mi<12;mi++){
       const ym=`${yr}-${p2(mi+1)}`;const rec=DB[ym];if(!rec)continue;const m=mi+1;
       rows.push(cr('BASE',yr,m,'','',rec.base||'',rec.baseDt||''));
-      rows.push(cr('SSO',yr,m,'','',rec.sso||'',''));
-      rows.push(cr('PVD',yr,m,'','',rec.pvd||'',''));
+      rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
+      rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
       (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
       (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
@@ -2715,8 +2828,8 @@ function doImport(input){
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
         if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=extra;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
-        else if(T==='SSO')r.sso=val;
-        else if(T==='PVD')r.pvd=val;
+        else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
+        else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='I'||T==='INV'||T==='INVEST')r.i.push({id:key||uid(),n:name,v:val,t:extra||'฿',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
