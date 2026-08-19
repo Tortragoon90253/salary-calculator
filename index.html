@@ -316,6 +316,10 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-out{color:#feb2b2;font-weight:600}
 .ftip-none{color:#a0aec0;font-style:italic}
 .ftip-net{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700}
+.ftip-pm{font-size:.7rem;opacity:.9}
+.ftip-sub{font-size:.66rem;color:#a0aec0;font-weight:700;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.22);letter-spacing:.02em}
+.ftip-pmrow{color:#cbd5e0}
+.ftip-pmrow>span:last-child{font-weight:600}
 .ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
 #flowSvg g.fe{cursor:default}
 #flowSvg g.fe:hover rect{opacity:.72}
@@ -338,6 +342,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .pm-bank{background:#ebf8ff;color:#2b6cb0;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;display:inline-block;white-space:nowrap}
 .pm-cash{background:#f0fff4;color:#276749;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;display:inline-block;white-space:nowrap}
 .pm-credit{background:#faf5ff;color:#553c9a;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;display:inline-block;white-space:nowrap}
+.pm-inv{background:#e6fffa;color:#234e52;padding:2px 7px;border-radius:8px;font-size:.66rem;font-weight:700;display:inline-block;white-space:nowrap}
 .pmsum{background:#f7fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px 14px;margin-top:10px}
 .pmsum-title{font-size:.78rem;font-weight:700;color:#4a5568;margin-bottom:7px}
 .pmsum-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.78rem;border-bottom:1px solid #f0f4f8}
@@ -2270,7 +2275,7 @@ function doCalc(){
   ge('rInvL').innerHTML=invD.length
     ?invD.map(([l,a])=>`<div class="li"><span>${l}</span><span class="vat">${fmt(a)}</span></div>`).join('')
     :'<div class="li" style="color:#a0aec0;font-style:italic">— ไม่มีแผนลงทุน —</div>';
-  const pmBadge=p=>p==='cash'?'<span class="pm-cash" style="margin-left:5px">💵</span>':p==='credit'?'<span class="pm-credit" style="margin-left:5px">💳</span>':'<span class="pm-bank" style="margin-left:5px">🏦</span>';
+  const pmBadge=p=>{const m=PM_META[p]||PM_META.bank;return `<span class="${m.cls}" style="margin-left:5px" title="${m.label}">${m.icon}</span>`;};
   const dedRows=[['ประกันสังคม (5%)',sso,'bank'],['กองทุนสำรองเลี้ยงชีพ (7%)',pvd,'bank']];
   dArr.forEach(x=>{if(x.n&&nf(x.v))dedRows.push([x.n,nf(x.v),x.pm||'bank']);});
   ge('rDedL').innerHTML=dedRows.map(([l,a,p])=>`<div class="li"><span>${l}${pmBadge(p)}</span><span class="vad">${fmt(a)}</span></div>`).join('');
@@ -2293,6 +2298,17 @@ function doCalc(){
    เงินเข้า = เขียว อยู่เหนือแกน | เงินออก = แดง อยู่ใต้แกน
    ════════════════════════════════════════════════════ */
 const TL={DAY:38,PADL:52,PADR:30,PADT:14,LANE:15,STEM_MIN:14,STEM_MAX:56,AXIS_H:34,BAL_H:86};
+/* วิธีจ่าย — ใช้คำและไอคอนชุดเดียวกันทั้งแอป (renderPmSum, dropdown ในรายการหัก)
+   'inv' ไม่ใช่ pm จริง: แบ่งเงินลงทุนไม่มีฟิลด์วิธีจ่ายในข้อมูล จึงแยกเป็นหมวดของตัวเอง
+   เพื่อให้ผลรวมทุกหมวด = ยอดเงินออกของวันนั้นพอดี ไม่มีเงินหล่นหาย */
+const PM_META={
+  bank  :{icon:'🏦',label:'บัญชี',    cls:'pm-bank'},
+  cash  :{icon:'💵',label:'เงินสด',   cls:'pm-cash'},
+  credit:{icon:'💳',label:'บัตรเครดิต',cls:'pm-credit'},
+  inv   :{icon:'📈',label:'แบ่งลงทุน', cls:'pm-inv'}
+};
+const PM_ORDER=['bank','cash','credit','inv'];
+
 let _flow=null;      /* ข้อมูลกราฟล่าสุด สำหรับ crosshair ตอนเอาเมาส์ชี้ */
 let _flowPin=false;  /* บนมือถือ: แตะเพื่อ "ปัก" ค่าไว้อ่าน */
 
@@ -2301,8 +2317,8 @@ let _flowPin=false;  /* บนมือถือ: แตะเพื่อ "ป�
 function buildFlowEvents(c){
   const pay=isDt(c.baseDt)?c.baseDt:payDate(c.ym);
   const dated=[],undated=[];
-  const push=(dt,dir,kind,n,v)=>{v=+v||0;if(v<=0)return;
-    (isDt(dt)?dated:undated).push({dt:isDt(dt)?dt:'',dir,kind,n,v});};
+  const push=(dt,dir,kind,n,v,pm)=>{v=+v||0;if(v<=0)return;
+    (isDt(dt)?dated:undated).push({dt:isDt(dt)?dt:'',dir,kind,n,v,pm});};
 
   /* หมายเหตุสำคัญ: doCalc() รวมยอดโดย "ไม่กรองชื่อ" (totA/custDed/totInv ใช้ reduce ล้วน)
      ถ้าตรงนี้กรอง x.n ทิ้ง รายการที่กรอกเงินไว้แต่ยังไม่ตั้งชื่อจะถูกนับใน "เงินคงเหลือใช้จริง"
@@ -2316,16 +2332,17 @@ function buildFlowEvents(c){
   c.oArr.forEach(x=>push(x.dt,'in','o',x.n||NN,nf(x.v)));
 
   /* ── เงินออก ── */
-  push(isDt(c.ssoDt)?c.ssoDt:pay,'out','sso','ประกันสังคม',c.sso);
-  push(isDt(c.pvdDt)?c.pvdDt:pay,'out','pvd','กองทุนสำรองเลี้ยงชีพ',c.pvd);
+  /* SSO/PVD ไม่มีฟิลด์วิธีจ่าย แต่ getPaySummary() นับเป็น "บัญชี" มาตลอด — ยึดตามนั้น */
+  push(isDt(c.ssoDt)?c.ssoDt:pay,'out','sso','ประกันสังคม',c.sso,'bank');
+  push(isDt(c.pvdDt)?c.pvdDt:pay,'out','pvd','กองทุนสำรองเลี้ยงชีพ',c.pvd,'bank');
   c.dArr.forEach(x=>{
     /* ภาษีหัก ณ ที่จ่ายถูกหักตอนเงินเดือนออก — ตาข่ายรองรับกรณีวันที่ยังว่าง */
     const at=isDt(x.dt)?x.dt:(isTaxRow(x)?pay:'');
-    push(at,'out','d',x.n||NN,nf(x.v));
+    push(at,'out','d',x.n||NN,nf(x.v),PM_META[x.pm]?x.pm:'bank');
   });
   c.iArr.forEach(x=>{
     const v=x.t==='%'?c.invBase*nf(x.v)/100:nf(x.v);
-    push(x.dt,'out','inv',x.n||NN,v);
+    push(x.dt,'out','inv',x.n||NN,v,'inv');
   });
 
   dated.sort((a,b)=>a.dt<b.dt?-1:a.dt>b.dt?1:b.v-a.v);
@@ -2547,7 +2564,21 @@ function flowHover(evt){
   let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(_flow.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
   if(gd.in.length||gd.out.length){
     gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
-    gd.out.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;});
+    gd.out.slice().sort((a,b)=>b.v-a.v).forEach(e=>{
+      const m=PM_META[e.pm];
+      h+=`<div class="ftip-r"><span>${esc(e.n)}${m?` <span class="ftip-pm" title="${m.label}">${m.icon}</span>`:''}</span>`
+        +`<span class="ftip-out">−${fmt(e.v)}</span></div>`;
+    });
+    /* สรุปเงินออกของวันนั้นแยกตามวิธีจ่าย — ผลรวมทุกหมวด = tOut เสมอ
+       (รายการออกใบเดียว = หมวดเดียว จะซ้ำกับบรรทัดข้างบน จึงข้าม) */
+    if(gd.out.length>1){
+      const pmSum={};
+      gd.out.forEach(e=>{const k=PM_META[e.pm]?e.pm:'bank';pmSum[k]=(pmSum[k]||0)+e.v;});
+      h+=`<div class="ftip-sub">แยกตามวิธีจ่าย</div>`;
+      PM_ORDER.filter(k=>pmSum[k]>0).forEach(k=>{
+        h+=`<div class="ftip-r ftip-pmrow"><span>${PM_META[k].icon} ${PM_META[k].label}</span><span>${fmt(pmSum[k])}</span></div>`;
+      });
+    }
     h+=`<div class="ftip-r ftip-net"><span>สุทธิวันนี้</span><span>${tIn-tOut<0?'−':'+'}${fmt(Math.abs(tIn-tOut))}</span></div>`;
   }else{
     h+=`<div class="ftip-r ftip-none"><span>— ไม่มีรายการวันนี้ —</span></div>`;
