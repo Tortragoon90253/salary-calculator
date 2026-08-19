@@ -179,7 +179,7 @@ td input.mi.m3{border-color:#f6ad55;background:#fffaf0}
 .sumhdr{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:white;border-radius:10px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
 .sumhdr h2{font-size:1.05rem;font-weight:700}.sumhdr .yb{font-size:1.5rem;font-weight:800;opacity:.85}
 .stw{overflow-x:auto}
-table.stbl{width:100%;border-collapse:collapse;font-size:.75rem;min-width:760px}
+table.stbl{width:100%;border-collapse:collapse;font-size:.75rem;min-width:840px}
 table.stbl th{background:#2d3748;color:white;padding:7px 5px;text-align:center;white-space:nowrap}
 table.stbl td{padding:5px 5px;border:1px solid #e2e8f0;text-align:right;white-space:nowrap}
 table.stbl td:first-child{text-align:center;font-weight:700;color:#4a5568}
@@ -242,6 +242,11 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ics-btn{padding:3px 11px;border-radius:14px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s}
 .ics-btn.off{opacity:.28;filter:grayscale(.8)}
 .ded-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;margin-bottom:16px}
+.tyr-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:700px){.tyr-grid{grid-template-columns:1fr;gap:10px}}
+.tyr-h{font-size:.82rem;font-weight:700;color:#4a5568;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0}
+.tyr-sub{font-size:.66rem;color:#a0aec0;font-weight:500}
+.tyr-note{margin-top:12px;font-size:.74rem;color:#718096;padding-top:8px;border-top:1px dashed #cbd5e0}
 .ded-stat-item{background:#f7fafc;border-radius:8px;padding:10px 12px;border-left:4px solid #e2e8f0}
 .ded-stat-lbl{font-size:.68rem;color:#718096;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ded-stat-val{font-size:1rem;font-weight:800;color:#2d3748}
@@ -665,7 +670,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="ch cpu">📋 ตารางสรุปรายเดือน</div>
     <div class="cb"><div class="stw">
       <table class="stbl">
-        <thead><tr><th>เดือน</th><th>เงินเดือนฐาน</th><th>ค่าเพิ่มเติม</th><th>OT รวม</th><th>รายได้อื่นๆ</th><th>รายได้รวม</th><th>แบ่งลงทุน</th><th>หักรวม</th><th>รายได้รับจริง</th><th>ใช้จริง</th></tr></thead>
+        <thead><tr><th>เดือน</th><th>เงินเดือนฐาน</th><th>ค่าเพิ่มเติม</th><th>OT รวม</th><th>รายได้อื่นๆ</th><th>รายได้รวม</th><th>แบ่งลงทุน</th><th>ภาษี</th><th>หักรวม</th><th>รายได้รับจริง</th><th>ใช้จริง</th></tr></thead>
         <tbody id="sBody"></tbody>
       </table>
     </div></div>
@@ -680,6 +685,17 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         <div class="cbx"><h3>🥧 สัดส่วนรายการหัก + ลงทุนทั้งปี</h3><canvas id="cDedPie" height="180"></canvas></div>
       </div>
     </div>
+  </div>
+  <div class="card">
+    <div class="ch cbl">📊 สรุปตามวิธีจ่ายทั้งปี <span class="ch-sub">รายการหัก + ประกันสังคม + กองทุนฯ + แบ่งลงทุน</span></div>
+    <div class="cb">
+      <div id="pmYrStat" class="ded-stat-grid"></div>
+      <div class="cbx"><h3>📊 แยกตามวิธีจ่าย รายเดือน</h3><canvas id="cPmBar" height="170"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch cre">🧾 สรุปสำหรับยื่นภาษี &amp; งบวันหยุด <span class="ch-sub">ยอดรวมทั้งปี</span></div>
+    <div class="cb"><div id="taxYrBox"></div></div>
   </div>
   <div class="cg">
     <div class="cbx full">
@@ -920,7 +936,7 @@ let CT=new Date().getMonth();
 const DB={};
 let A=[],D=[],I=[],O=[];   /* O = รายได้อื่นๆ ที่ไม่ถูกนำไปคำนวณภาษี */
 let lastTax=undefined;
-let CH={c1:null,c2:null,c3:null,c4:null,c5:null};
+let CH={c1:null,c2:null,c3:null,c4:null,c5:null,c6:null};
 let incChartType='bar';
 let incSeriesOn=new Set(['inc','th','fin','ded']);
 let _incLbs=[],_dInc=[],_dTH=[],_dFin=[],_dDed=[];
@@ -3064,15 +3080,16 @@ function buildDedCats(){
     const pvd=rec.pvd?nf(rec.pvd):base*.07;
     if(sso)add('sso','ประกันสังคม (SSO)',i,sso);
     if(pvd)add('pvd','กองทุนสำรองเลี้ยงชีพ (PVD)',i,pvd);
+    /* ห้ามกรองด้วยชื่อ — computeRec() รวมทุกแถวโดยไม่สนชื่อ ถ้าตรงนี้ตัดแถวที่ยังไม่ตั้งชื่อทิ้ง
+       ยอดในกล่องหมวดหมู่จะไม่ตรงกับคอลัมน์ "หักรวม" ของตารางโดยไม่มีอะไรเตือน */
     (rec.d||[]).forEach(d=>{
-      const v=nf(d.v);if(!d.n||!v)return;
-      add('d_'+d.n,d.n,i,v);
+      const v=nf(d.v);if(!v)return;
+      const nm=d.n||'(ไม่ระบุชื่อ)';
+      add('d_'+nm,nm,i,v);
     });
-    /* แบ่งเงินลงทุน — รวมทุกแผนของเดือนนั้น (ฐาน = รายได้รวม − SSO − PVD − ภาษี) */
+    /* แบ่งเงินลงทุน — ใช้ยอดที่ compM() คำนวณไว้แล้ว ไม่คำนวณซ้ำ จะได้เป็นแหล่งเดียวกัน */
     const t=compM(ymk(i));
-    const invBase=t?Math.max(0,t.takeHome):0;
-    const invM=(rec.i||[]).reduce((s,x)=>{const v=nf(x.v);return s+(x.t==='%'?(invBase*v/100):v);},0);
-    if(invM)add('inv','📈 แบ่งเงินลงทุน',i,invM);
+    if(t&&t.totInv)add('inv','📈 แบ่งเงินลงทุน',i,t.totInv);
   }
   return order.filter(k=>cats[k].total>0).map((k,idx)=>({
     key:k,label:cats[k].label,data:cats[k].data,total:cats[k].total,
@@ -3104,11 +3121,15 @@ function renderDedSum(){
   }).join('')+(isSolo?`<button class="ded-show-all" onclick="showAllDed()">✕ แสดงทั้งหมด</button>`:'');
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
+  /* ตาข่ายนิรภัย — ยอดกล่องนี้ต้องเท่ากับ Σ หักรวม + Σ แบ่งลงทุน ของตารางสรุปเสมอ */
+  let expTot=0;for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)expTot+=t.totDed+t.totInv;}
+  const dedDiff=expTot-grandTotal;
   ge('dedCatStat').innerHTML=[...cats].sort((a,b)=>b.total-a.total).map(c=>{
     const pct=grandTotal?((c.total/grandTotal)*100).toFixed(1):0;
     const dimmed=!dedActive[c.key]?' dimmed':'';
     return`<div class="ded-stat-item${dimmed}" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${c.label}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
-  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมหัก + ลงทุนทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`;
+  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมหัก + ลงทุนทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`
+    +(Math.abs(dedDiff)>=0.005?`<div class="ded-stat-item" style="border-left-color:#c53030;background:#fff5f5"><div class="ded-stat-lbl" style="color:#c53030;font-weight:700">⚠️ ไม่ตรงกับตารางสรุป</div><div class="ded-stat-val" style="color:#c53030">${dedDiff<0?'−':'+'}฿${fN(Math.abs(dedDiff))}</div><div class="ded-stat-sub">ควรเป็น ฿${fN(expTot)}</div></div>`:'');
 
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
   if(CH.c5){CH.c5.destroy();CH.c5=null;}
@@ -3181,24 +3202,98 @@ function rebuildIncChart(){
     }}
   });
 }
+/* รวมยอดรายปีแยกตามวิธีจ่าย — ใช้กติกาเดียวกับ getPaySummary() ของหน้ารายเดือน
+   (SSO/กองทุนฯ นับเป็น "บัญชี") และแยกแบ่งลงทุนเป็นหมวดของตัวเองแบบเดียวกับ tooltip ไทม์ไลน์
+   ผลรวมทุกหมวดจึงเท่ากับ "รวมหัก + ลงทุนทั้งปี" เสมอ */
+function buildPmYear(){
+  const per={},tot={};
+  PM_ORDER.forEach(k=>{per[k]=Array(12).fill(0);tot[k]=0;});
+  const add=(k,i,v)=>{if(!v)return;per[k][i]+=v;tot[k]+=v;};
+  for(let i=0;i<12;i++){
+    const ym=ymk(i),rec=DB[ym],t=compM(ym);
+    if(!rec||!t)continue;
+    add('bank',i,t.sso);add('bank',i,t.pvd);
+    (rec.d||[]).forEach(d=>{const v=nf(d.v);if(!v)return;add(PM_META[d.pm]?d.pm:'bank',i,v);});
+    add('inv',i,t.totInv);
+  }
+  return{per,tot,grand:PM_ORDER.reduce((s,k)=>s+tot[k],0)};
+}
+
+/* นับวันเสาร์/อาทิตย์จริงของเดือนนั้น — ใช้คำนวณงบวันหยุดรายปี */
+function wkDaysIn(ym){
+  const[y,m]=ym.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
+  let n=0;for(let d=1;d<=cnt;d++){const dw=new Date(y,m-1,d).getDay();if(dw===0||dw===6)n++;}
+  return n;
+}
+
+function renderPmYear(){
+  const{per,tot,grand}=buildPmYear();
+  const box=ge('pmYrStat');if(!box)return;
+  if(CH.c6){CH.c6.destroy();CH.c6=null;}
+  if(!grand){box.innerHTML='<div style="color:#a0aec0;font-style:italic;font-size:.78rem">— ยังไม่มีข้อมูล —</div>';return;}
+  const COLR={bank:'#2b6cb0',cash:'#276749',credit:'#553c9a',inv:'#234e52'};
+  const BG={bank:'rgba(43,108,176,.75)',cash:'rgba(39,103,73,.75)',credit:'rgba(85,60,154,.75)',inv:'rgba(35,78,82,.75)'};
+  const used=PM_ORDER.filter(k=>tot[k]>0);
+  box.innerHTML=used.map(k=>{
+    const pct=grand?((tot[k]/grand)*100).toFixed(1):0;
+    return`<div class="ded-stat-item" style="border-left-color:${COLR[k]}"><div class="ded-stat-lbl">${PM_META[k].icon} ${PM_META[k].label}</div><div class="ded-stat-val" style="color:${COLR[k]}">฿${fN(tot[k])}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
+  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grand)}</div><div class="ded-stat-sub">100%</div></div>`;
+  CH.c6=new Chart(ge('cPmBar'),{type:'bar',
+    data:{labels:MS,datasets:used.map(k=>({label:PM_META[k].icon+' '+PM_META[k].label,data:per[k].map(v=>+v.toFixed(2)),backgroundColor:BG[k],borderColor:COLR[k],borderWidth:1,stack:'s'}))},
+    options:{responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
+}
+
+function renderTaxYear(){
+  const box=ge('taxYrBox');if(!box)return;
+  let taxable=0,nonTax=0,tax=0,sso=0,pvd=0,fin=0,months=0,wkbTot=0,wkbMonths=0;
+  for(let i=0;i<12;i++){
+    const ym=ymk(i),t=compM(ym);if(!t)continue;
+    months++;
+    taxable+=t.totInc-t.totO;nonTax+=t.totO;tax+=t.taxDed;sso+=t.sso;pvd+=t.pvd;fin+=t.final;
+    const w=nf((DB[ym]||{}).wkb||_wkbDef);
+    if(w>0){wkbTot+=w*wkDaysIn(ym);wkbMonths++;}
+  }
+  if(!months){box.innerHTML='<div style="color:#a0aec0;font-style:italic;font-size:.78rem">— ยังไม่มีข้อมูล —</div>';return;}
+  const row=(l,v,cls,sub)=>`<div class="li"><span>${l}${sub?` <span class="tyr-sub">${sub}</span>`:''}</span><span class="${cls||''}">${fmt(v)}</span></div>`;
+  const ssoNote=sso>9000?'เกินเพดานลดหย่อน — ใช้ได้สูงสุด 9,000 ฿/ปี':'เพดานลดหย่อน 9,000 ฿/ปี';
+  box.innerHTML=`<div class="tyr-grid">
+      <div>
+        <div class="tyr-h">🧾 สำหรับยื่นภาษี</div>
+        ${row('รายได้ที่เข้าฐานภาษีทั้งปี',taxable,'vai')}
+        ${row('รายได้ไม่คิดภาษีทั้งปี',nonTax,'vai','ไม่นำไปคำนวณภาษี')}
+        ${row('ภาษีหัก ณ ที่จ่ายรวมทั้งปี',tax,'vad')}
+        ${row('ประกันสังคมรวมทั้งปี',sso,'vad',ssoNote)}
+        ${row('กองทุนสำรองเลี้ยงชีพรวมทั้งปี',pvd,'vad')}
+      </div>
+      <div>
+        <div class="tyr-h">🗓️ งบใช้จ่ายวันหยุด</div>
+        ${wkbMonths?row('งบวันหยุดรวมทั้งปี',wkbTot,'vad',`${wkbMonths} เดือนที่มีงบ`):'<div class="li" style="color:#a0aec0;font-style:italic">— ยังไม่ได้ตั้งงบวันหยุด —</div>'}
+        ${row('เงินใช้จริงรวมทั้งปี',fin,'vai')}
+        ${wkbMonths?row('เหลือหลังหักงบวันหยุด',fin-wkbTot,(fin-wkbTot)<0?'vad':'vai'):''}
+      </div>
+    </div>
+    <div class="tyr-note">${months<12?`⚠️ มีข้อมูล ${months} เดือน จาก 12 เดือน — ตัวเลขยังไม่ครบปี`:'✅ ข้อมูลครบ 12 เดือน'}</div>`;
+}
+
 function renderSum(){
   ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;
-  let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0;
+  let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0,ttx=0;
   let lbs=[],dInc=[],dTH=[],dFin=[],dDed=[],dH15=[],dH20=[],dH30=[],dAcc=[],run=0;let html='';
   for(let i=0;i<12;i++){
     const t=compM(ymk(i));lbs.push(MS[i]);
     if(t){
-      tb+=t.base;ta+=t.totA;tot+=t.totOT;to+=t.totO;ti+=t.totInc;tiv+=t.totInv;td+=t.totDed;tth+=t.takeHome;tf+=t.final;
+      tb+=t.base;ta+=t.totA;tot+=t.totOT;to+=t.totO;ti+=t.totInc;tiv+=t.totInv;td+=t.totDed;tth+=t.takeHome;tf+=t.final;ttx+=t.taxDed;
       run+=t.totInv;
       dInc.push(+t.totInc.toFixed(2));dTH.push(+t.takeHome.toFixed(2));dFin.push(+t.final.toFixed(2));dDed.push(+t.totDed.toFixed(2));
       dH15.push(+t.h15.toFixed(2));dH20.push(+t.h20.toFixed(2));dH30.push(+t.h30.toFixed(2));dAcc.push(+run.toFixed(2));
-      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td></tr>`;
+      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td></tr>`;
     }else{
       [dInc,dTH,dFin,dDed,dH15,dH20,dH30].forEach(a=>a.push(0));dAcc.push(+run.toFixed(2));
-      html+=`<tr><td>${MF[i]}</td><td class="nd" colspan="9">— ยังไม่มีข้อมูล —</td></tr>`;
+      html+=`<tr><td>${MF[i]}</td><td class="nd" colspan="10">— ยังไม่มีข้อมูล —</td></tr>`;
     }
   }
-  html+=`<tr class="stot"><td>รวมทั้งปี</td><td>${fN(tb)}</td><td>${fN(ta)}</td><td>${fN(tot)}</td><td>${fN(to)}</td><td>${fN(ti)}</td><td>${fN(tiv)}</td><td>${fN(td)}</td><td>${fN(tth)}</td><td>${fN(tf)}</td></tr>`;
+  html+=`<tr class="stot"><td>รวมทั้งปี</td><td>${fN(tb)}</td><td>${fN(ta)}</td><td>${fN(tot)}</td><td>${fN(to)}</td><td>${fN(ti)}</td><td>${fN(tiv)}</td><td>${fN(ttx)}</td><td>${fN(td)}</td><td>${fN(tth)}</td><td>${fN(tf)}</td></tr>`;
   ge('sBody').innerHTML=html;
   const filled=[];for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)filled.push({mi:i,amt:t.totInv});}
   const last=filled.length?filled[filled.length-1]:null;
@@ -3225,6 +3320,8 @@ function renderSum(){
     {label:'Forecast',data:dF,borderColor:'#a0aec0',backgroundColor:'rgba(160,174,192,.08)',borderWidth:2,borderDash:[6,4],fill:false,tension:.35,pointBackgroundColor:'#a0aec0',pointRadius:3,spanGaps:false},
   ]},options:{...co,scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
   renderDedSum();
+  renderPmYear();
+  renderTaxYear();
 }
 
 document.addEventListener('visibilitychange',()=>{
