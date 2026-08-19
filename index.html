@@ -262,7 +262,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   /* ไทม์ไลน์: ปล่อยให้ viewBox ย่อลงพอดีหน้ากระดาษ แทนการตัดขอบ */
   .flow-scroll{overflow:visible!important}
   .flow-hint{display:none!important}
-  .flow-tip,#flowCross{display:none!important}
+  .flow-tip,#flowCross,.wkb-btn{display:none!important}
   #flowSvg{width:100%!important;height:auto!important}
   .flow-card{page-break-inside:avoid}
 }
@@ -321,15 +321,25 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-pmrow{color:#cbd5e0}
 .ftip-pmrow>span:last-child{font-weight:600}
 .ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
-.ftip-safe{font-weight:700;color:#f6e05e}
-.ftip-safe.wk{background:rgba(246,224,94,.14);border-radius:5px;padding:1px 4px;margin:1px -4px 0}
-.ftip-wk{background:#f6e05e;color:#744210;border-radius:7px;padding:0 5px;font-size:.6rem;font-weight:700;margin-left:4px}
+.ftip-plan{font-weight:700;color:#d6bcfa}
+.ftip-plan.wk{background:rgba(214,188,250,.16);border-radius:5px;padding:1px 4px;margin:1px -4px 0}
+.ftip-wk{background:#d6bcfa;color:#44337a;border-radius:7px;padding:0 5px;font-size:.6rem;font-weight:700;margin-left:4px}
 #flowSvg g.fe{cursor:default}
 #flowSvg g.fe:hover rect{opacity:.72}
 .fl-lg{font-weight:700;margin-left:6px}
 .fl-in{color:#276749}
 .fl-out{color:#c53030}
 .flow-note{font-size:.72rem;color:#718096;margin-top:8px;line-height:1.5}
+.flow-ctl{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.78rem;font-weight:700;color:#553c9a;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:8px 12px;margin-bottom:6px}
+.flow-ctl input{width:96px;padding:4px 7px;border:1px solid #d6bcfa;border-radius:6px;font-size:.8rem;text-align:right;background:#fff}
+.flow-ctl-sum{font-weight:600;color:#718096;font-size:.74rem}
+.wkb-tag{font-size:.66rem;font-weight:700;border-radius:8px;padding:2px 7px;white-space:nowrap}
+.wkb-def{background:#e9d8fd;color:#553c9a}
+.wkb-ovr{background:#feebc8;color:#c05621}
+.wkb-btn{border:none;border-radius:7px;padding:3px 9px;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;background:#805ad5;color:#fff;white-space:nowrap}
+.wkb-btn:hover{background:#6b46c1}
+.wkb-btn.gh{background:#edf2f7;color:#4a5568}
+.wkb-btn.gh:hover{background:#e2e8f0}
 .flow-empty{font-size:.82rem;color:#a0aec0;text-align:center;padding:18px 8px;font-style:italic}
 .flow-un{margin-top:10px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 13px}
 .flow-un-h{font-size:.8rem;font-weight:700;color:#4a5568;margin-bottom:6px}
@@ -1798,9 +1808,10 @@ async function init(){
       });
     }
   }catch(e){}
+  adoptWkbDef();
   buildTabs();updateDots();switchTab(CT,true);
   /* จากนั้น sync กับ cloud ใน background — ถ้ามีข้อมูลใหม่จะ re-render อัตโนมัติ */
-  try{await restore();}finally{fbReady=true;}
+  try{await restore();adoptWkbDef();}finally{fbReady=true;}
 }
 
 function buildTabs(){
@@ -1858,6 +1869,7 @@ function saveM(fb=false){
   }
   DB[ym]={base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
     ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
+    wkb:(_wkb===_wkbDef?'':_wkb),wkbDef:_wkbDef,
     a:JSON.parse(JSON.stringify(A)),
     d:JSON.parse(JSON.stringify(D)),
     i:JSON.parse(JSON.stringify(I)),
@@ -1937,6 +1949,7 @@ function loadM(mi){
     sv('fBaseDt',rec.baseDt!==undefined?rec.baseDt:payDate(ym));
     /* SSO/PVD ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ (ต่างจาก baseDt ที่เคารพการล้างค่า) */
     sv('fSsoDt',rec.ssoDt||payDate(ym));sv('fPvdDt',rec.pvdDt||payDate(ym));
+    _wkb=rec.wkb||_wkbDef;
     A=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.a||defA()))),ym,ym,true);
     D=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.d||defD()))),ym,ym,isTaxRow);
     I=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.i||defI()))),ym,ym,false);
@@ -1956,6 +1969,7 @@ function loadM(mi){
       const s=pv.ym,prev=pv.rec;
       sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
       sv('fBaseDt',payDate(ym));sv('fSsoDt',payDate(ym));sv('fPvdDt',payDate(ym));
+      _wkb=_wkbDef;
       A=anchorDates(blankItems((prev.a||defA()).filter(x=>x.id!==BONUS_ID)),s,ym,true);
       D=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,isTaxRow);
       I=anchorDates(blankItems(prev.i||defI()),s,ym,false);
@@ -1964,6 +1978,7 @@ function loadM(mi){
     }else{
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
       ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
+      _wkb=_wkbDef;
       A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,isTaxRow);I=defI();O=defO();
     }
     reOT();
@@ -2076,7 +2091,7 @@ function buildCopyRec(src,mi,srcYm){
     /* เดือนปลายทางเคยตั้งเงินเดือนฐานไว้แล้ว — เก็บของเดิม อย่าทับด้วยของปีก่อน */
     base:(dst&&nf(dst.base)>0)?dst.base:(src.base||''),
     baseDt:(dst&&dst.baseDt!==undefined)?dst.baseDt:payDate(dstYm),
-    sso:'',pvd:'',ssoDt:payDate(dstYm),pvdDt:payDate(dstYm),
+    sso:'',pvd:'',ssoDt:payDate(dstYm),pvdDt:payDate(dstYm),wkb:(src.wkb||''),wkbDef:_wkbDef,
     a:anc((src.a||defA()).filter(x=>x.id!==BONUS_ID),true),
     d:anc((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID),isTaxRow),
     i:anc(src.i||defI(),false),
@@ -2314,6 +2329,31 @@ const PM_ORDER=['bank','cash','credit','inv'];
 
 let _flow=null;      /* ข้อมูลกราฟล่าสุด สำหรับ crosshair ตอนเอาเมาส์ชี้ */
 let _flowPin=false;  /* บนมือถือ: แตะเพื่อ "ปัก" ค่าไว้อ่าน */
+/* งบใช้จ่ายวันหยุด — แหล่งความจริงอยู่ที่ตัวแปร ไม่ใช่ DOM (ช่องกรอกถูก re-render ทิ้งทุกครั้ง)
+   _wkbDef = ค่าเริ่มต้นที่จำไว้ตลอด · _wkb = ค่าที่ใช้จริงของเดือนที่เปิดอยู่ (อาจถูก override) */
+const WKBD_KEY='sol_wkb_def';
+let _wkb='',_wkbDef='';
+try{_wkbDef=localStorage.getItem(WKBD_KEY)||'';}catch(e){}
+/* ค่าเริ่มต้นถูกฝังไว้ในข้อมูลรายเดือนด้วย เพราะการซิงค์ปกติส่งขึ้นคลาวด์ทีละเดือน
+   (fbSaveMonth เขียนเฉพาะ field ของเดือนนั้น) ค่าที่เก็บนอกข้อมูลรายเดือนจะไม่ตามไปเครื่องอื่น */
+function adoptWkbDef(){
+  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]&&DB[k].wkbDef).sort();
+  if(keys.length){
+    _wkbDef=String(DB[keys[keys.length-1]].wkbDef);
+    try{localStorage.setItem(WKBD_KEY,_wkbDef);}catch(e){}
+  }
+}
+/* กรอกค่าใหม่ = ตั้งเฉพาะเดือนนี้ (ถ้าเท่ากับค่าเริ่มต้นก็ถือว่าไม่ได้ override) */
+function setWkb(v){_wkb=String(v??'').trim();setTimeout(doCalc,0);}
+/* เลื่อนขั้นค่าปัจจุบันเป็นค่าเริ่มต้นถาวร แล้วประทับลงทุกเดือนที่บันทึกไว้ ให้ทุกเครื่องเห็นตรงกัน */
+function setWkbDefault(){
+  _wkbDef=_wkb;
+  try{localStorage.setItem(WKBD_KEY,_wkbDef);}catch(e){}
+  Object.keys(DB).forEach(k=>{if(/^\d{4}-\d{2}$/.test(k)&&DB[k])DB[k].wkbDef=_wkbDef;});
+  toast(`⭐ จำงบวันหยุด ${_wkbDef?'฿'+_wkbDef+'/วัน':'(ว่าง)'} เป็นค่าเริ่มต้นแล้ว`);
+  setTimeout(doCalc,0);
+}
+function resetWkbToDefault(){_wkb=_wkbDef;setTimeout(doCalc,0);}
 
 /* รวบรวมรายการเงินเข้า/ออกทั้งหมดพร้อมวันที่
    รายการที่ผู้ใช้ยังไม่กรอกวันที่จะไปอยู่ undated ไม่ถูกทิ้งเงียบๆ */
@@ -2462,19 +2502,17 @@ function renderFlowTimeline(c){
     if(gd){run+=gd.in.reduce((a,e)=>a+e.v,0)-gd.out.reduce((a,e)=>a+e.v,0);}
     bal.push(run);lo=Math.min(lo,run);hi=Math.max(hi,run);
   }
-  /* เส้น "ใช้ได้จริง" = เงินที่มีอยู่ในมือวันนั้น − ภาระที่ยังไม่ถูกตัด
-     bal[i] รวมรายการของวันที่ i แล้ว "ภาระที่เหลือ" จึงเป็นเงินออกของวันหลัง i เป็นต้นไป
-     + รายการที่ยังไม่ระบุวันที่ (หักด้วย — ปลอดภัยไว้ก่อน)
-     ไม่บวกรายได้ในอนาคตเข้ามา เพราะยังไม่อยู่ในมือ */
-  const uOutAll=undated.filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0);
-  const safe=[];
-  let owed=dated.filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0)+uOutAll;
+  /* เส้นจำลอง "ถ้าใช้ตามงบวันหยุด" = ยอดคงเหลือ − งบวันหยุดสะสม
+     หักทุกวันเสาร์และอาทิตย์ วันละเท่ากับงบที่ผู้ใช้กรอก */
+  const wkb=nf(_wkb);
+  const plan=[];let wkAcc=0,wkDays=0;
   for(let i=0;i<nD;i++){
-    const gd=byDay[s0+i];
-    if(gd)owed-=gd.out.reduce((a,e)=>a+e.v,0);
-    safe.push(bal[i]-owed);
+    const[qy,qm,qd]=serDt(s0+i).split('-').map(Number);
+    const dw=new Date(qy,qm-1,qd).getDay();
+    if(wkb>0&&(dw===0||dw===6)){wkAcc+=wkb;wkDays++;}
+    plan.push(bal[i]-wkAcc);
   }
-  safe.forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);});   /* สเกลแกน y ต้องครอบทั้งสองเส้น */
+  if(wkb>0)plan.forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);});   /* สเกลแกน y ต้องครอบทั้งสองเส้น */
 
   const span=(hi-lo)||1;
   const YB=v=>balTop+TL.BAL_H-((v-lo)/span)*TL.BAL_H;
@@ -2484,23 +2522,25 @@ function renderFlowTimeline(c){
     path+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
   }
   area=path+`L${(X(s1)+TL.DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}L${(TL.PADL-TL.DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}Z`;
-  /* เส้นที่ 2 — ใช้สเกลเดียวกับเส้นยอดคงเหลือ จะได้เทียบกันได้ตรงๆ */
-  let sPath='';
-  for(let i=0;i<nD;i++){
-    const x1=X(s0+i)-TL.DAY/2,x2=X(s0+i)+TL.DAY/2,y=YB(safe[i]);
-    sPath+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
+  /* เส้นจำลอง — ใช้สเกลเดียวกับเส้นยอดคงเหลือ จะได้เทียบกันได้ตรงๆ */
+  let pPath='';
+  if(wkb>0){
+    for(let i=0;i<nD;i++){
+      const x1=X(s0+i)-TL.DAY/2,x2=X(s0+i)+TL.DAY/2,y=YB(plan[i]);
+      pPath+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
+    }
   }
   g+=`<text x="${TL.PADL-TL.DAY/2}" y="${balTop-5}" font-size="10" font-weight="700" fill="#2b6cb0">💧 ยอดคงเหลือสะสม</text>`;
-  g+=`<text x="${TL.PADL-TL.DAY/2+118}" y="${balTop-5}" font-size="10" font-weight="700" fill="#b7791f">🛡️ ใช้ได้จริง</text>`;
+  if(wkb>0)g+=`<text x="${TL.PADL-TL.DAY/2+118}" y="${balTop-5}" font-size="10" font-weight="700" fill="#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</text>`;
   g+=`<path d="${area}" fill="rgba(43,108,176,.12)"/>`;
   g+=`<line x1="${TL.PADL-TL.DAY/2}" y1="${YB(0)}" x2="${X(s1)+TL.DAY/2}" y2="${YB(0)}" stroke="#a0aec0" stroke-width="1" stroke-dasharray="4,3"/>`;
-  g+=`<path d="${sPath}" fill="none" stroke="#b7791f" stroke-width="2" stroke-dasharray="5,3"/>`;
+  if(wkb>0)g+=`<path d="${pPath}" fill="none" stroke="#805ad5" stroke-width="2" stroke-dasharray="2,3"/>`;
   g+=`<path d="${path}" fill="none" stroke="#2b6cb0" stroke-width="2"/>`;
-  /* จุดเน้นเฉพาะเสาร์/อาทิตย์ — วันที่ผู้ใช้ต้องอ่านค่า "ใช้ได้จริง" จริงๆ */
-  for(let i=0;i<nD;i++){
+  /* จุดบนวันเสาร์/อาทิตย์ = วันที่งบถูกใช้ */
+  if(wkb>0)for(let i=0;i<nD;i++){
     const[wy,wm,wd]=serDt(s0+i).split('-').map(Number);
     const dw=new Date(wy,wm-1,wd).getDay();
-    if(dw===0||dw===6)g+=`<circle cx="${X(s0+i)}" cy="${YB(safe[i])}" r="3" fill="#b7791f" stroke="#fff" stroke-width="1"><title>${DFULL[dw]} ${tlThDate(serDt(s0+i))} — ใช้ได้จริง ${fmt(safe[i])}</title></circle>`;
+    if(dw===0||dw===6)g+=`<circle cx="${X(s0+i)}" cy="${YB(plan[i])}" r="3" fill="#805ad5" stroke="#fff" stroke-width="1"><title>${DFULL[dw]} ${tlThDate(serDt(s0+i))} — ถ้าใช้ตามงบ ${fmt(plan[i])}</title></circle>`;
   }
   /* จุดต่ำสุด + ยอดปลายงวด */
   const iMin=bal.indexOf(Math.min(...bal));
@@ -2510,8 +2550,10 @@ function renderFlowTimeline(c){
   }
   g+=`<circle cx="${X(s1)}" cy="${YB(bal[nD-1])}" r="3.4" fill="#2b6cb0"/>`;
   g+=`<text x="${X(s1)}" y="${YB(bal[nD-1])-8}" text-anchor="end" font-size="9.5" font-weight="700" fill="#2b6cb0">คงเหลือ ${tlAmt(bal[nD-1])}</text>`;
-  g+=`<circle cx="${X(s1)}" cy="${YB(safe[nD-1])}" r="3.4" fill="#b7791f"/>`;
-  g+=`<text x="${X(s1)}" y="${YB(safe[nD-1])+(safe[nD-1]<=bal[nD-1]?14:-8)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#b7791f">ใช้ได้จริง ${tlAmt(safe[nD-1])}</text>`;
+  if(wkb>0){
+    g+=`<circle cx="${X(s1)}" cy="${YB(plan[nD-1])}" r="3.4" fill="${plan[nD-1]<0?'#c53030':'#805ad5'}"/>`;
+    g+=`<text x="${X(s1)}" y="${YB(plan[nD-1])+(plan[nD-1]<=bal[nD-1]?15:-9)}" text-anchor="end" font-size="9.5" font-weight="700" fill="${plan[nD-1]<0?'#c53030':'#805ad5'}">ตามงบ ${tlAmt(plan[nD-1])}</text>`;
+  }
 
   /* ── ชั้นรับเมาส์ + crosshair (วาดท้ายสุดจะได้อยู่บนสุด) ── */
   g+=`<g id="flowCross" style="display:none;pointer-events:none">`
@@ -2555,19 +2597,29 @@ function renderFlowTimeline(c){
     <div class="ch cbl">🧭 ไทม์ไลน์กระแสเงิน
       <span class="ch-sub"><span class="fl-lg fl-in">▲ เงินเข้า</span> <span class="fl-lg fl-out">▼ เงินออก</span></span></div>
     <div class="cb">
+      <div class="flow-ctl">🗓️ งบใช้จ่ายวันหยุด
+        <input type="number" id="fWkb" value="${esc(_wkb)}" min="0" placeholder="0" onchange="setWkb(this.value)">
+        บาท/วัน (เสาร์–อาทิตย์)
+        ${_wkb===_wkbDef
+          ? `<span class="wkb-tag wkb-def" title="ค่านี้ถูกจำไว้และใช้กับทุกเดือน">⭐ ค่าเริ่มต้นตลอด</span>`
+          : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 เฉพาะเดือนนี้</span>`
+            +`<button class="wkb-btn" onclick="setWkbDefault()">⭐ จำเป็นค่าเริ่มต้นตลอด</button>`
+            +`<button class="wkb-btn gh" onclick="resetWkbToDefault()">↩︎ กลับไปใช้ ${_wkbDef?tlAmt(nf(_wkbDef)):'(ว่าง)'}</button>`}
+        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุด × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong> · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}</span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
+      </div>
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
       <div class="flow-scroll"><div class="flow-inner"><svg id="flowSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip" id="flowTip"></div></div></div>
       <div class="flow-note">
         <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(pay)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
-        <strong style="color:#b7791f">🛡️ ใช้ได้จริง</strong> — เงินที่มีอยู่ในมือวันนั้น หัก<strong>ภาระที่ยังไม่ถูกตัด</strong>ออกแล้ว = ใช้ได้เท่านี้โดยบิลที่เหลือยังจ่ายครบ (เหมาะกับตัดสินใจช่วงวันหยุด — จุดกลมบนเส้นคือเสาร์/อาทิตย์)<br>
-        <span style="color:#a0aec0">คิดแบบปลอดภัยไว้ก่อน: หักรายการที่ยังไม่ระบุวันที่ด้วย และไม่นับรายได้ในอนาคตเข้ามา · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
+        <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์</strong> (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
+        <span style="color:#a0aec0">เส้นจำลองไม่กระทบตัวเลขจริงที่คำนวณไว้ · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
       </div>
       ${unHtml}
     </div></div>`;
   ge('flowSvg').innerHTML=g;
 
   /* state สำหรับ crosshair — เก็บเป็นตัวเลขล้วน แล้วคำนวณ X()/YB() ใหม่ตอน hover */
-  _flow={s0,nD,bal,safe,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
+  _flow={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
   _flowPin=false;
   const svg=ge('flowSvg');
   /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
@@ -2590,11 +2642,13 @@ function flowHover(evt){
   const s=_flow.s0+i,dt=serDt(s);
   const x=_flow.PADL+i*_flow.DAY;
   const YBh=v=>_flow.balTop+_flow.BAL_H-((v-_flow.lo)/_flow.span)*_flow.BAL_H;
-  const yb=YBh(_flow.bal[i]),ys=YBh(_flow.safe[i]);
+  const yb=YBh(_flow.bal[i]),ys=YBh(_flow.plan[i]);
 
   ge('flowCrossL').setAttribute('x1',x);ge('flowCrossL').setAttribute('x2',x);
   ge('flowCrossC').setAttribute('cx',x);ge('flowCrossC').setAttribute('cy',yb);
-  ge('flowCrossS').setAttribute('cx',x);ge('flowCrossS').setAttribute('cy',ys);
+  const csS=ge('flowCrossS');
+  csS.style.display=_flow.wkb>0?'':'none';
+  csS.setAttribute('cx',x);csS.setAttribute('cy',ys);
   cross.style.display='';
 
   const[yy,mm,dd]=dt.split('-').map(Number);
@@ -2626,7 +2680,7 @@ function flowHover(evt){
   }
   h+=`<div class="ftip-r ftip-bal"><span>💧 ยอดคงเหลือสะสม</span><span>${fmt(_flow.bal[i])}</span></div>`;
   const wk=dow===0||dow===6;
-  h+=`<div class="ftip-r ftip-safe${wk?' wk':''}"><span>🛡️ ใช้ได้จริง${wk?' <span class="ftip-wk">วันหยุด</span>':''}</span><span>${fmt(_flow.safe[i])}</span></div>`;
+  if(_flow.wkb>0)h+=`<div class="ftip-r ftip-plan${wk?' wk':''}"><span>🗓️ ถ้าใช้ตามงบ${wk?' <span class="ftip-wk">หักงบวันนี้</span>':''}</span><span>${fmt(_flow.plan[i])}</span></div>`;
   tip.innerHTML=h;
   tip.style.display='block';
   /* วางกล่องโดยไม่ให้ล้นขอบกราฟ */
@@ -2660,6 +2714,7 @@ function resetM(){
   const ym=ymk(CT);
   ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
   ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
+  _wkb=_wkbDef;
   ge('otBody').innerHTML='';ge('res').style.display='none';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   delete DB[ym];
@@ -2864,7 +2919,7 @@ function doExport(){
   yrs.forEach(yr=>{
     for(let mi=0;mi<12;mi++){
       const ym=`${yr}-${p2(mi+1)}`;const rec=DB[ym];if(!rec)continue;const m=mi+1;
-      rows.push(cr('BASE',yr,m,'','',rec.base||'',rec.baseDt||''));
+      rows.push(cr('BASE',yr,m,'','',rec.base||'',rec.baseDt||'',rec.wkb||'',rec.wkbDef||''));
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
@@ -2901,7 +2956,7 @@ function doImport(input){
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
-        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=extra;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
+        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=extra;if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
@@ -2913,6 +2968,7 @@ function doImport(input){
       const cnt=Object.keys(tmp).length;if(!cnt)throw new Error('ไม่พบข้อมูลในไฟล์');
       Object.keys(tmp).forEach(ym=>normDays(tmp[ym]));
       Object.assign(DB,tmp);
+      adoptWkbDef();
       /* บันทึก localStorage */
       try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
       const first=Object.keys(tmp).sort()[0];
