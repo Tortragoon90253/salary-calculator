@@ -242,6 +242,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ics-btn{padding:3px 11px;border-radius:14px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s}
 .ics-btn.off{opacity:.28;filter:grayscale(.8)}
 .ded-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;margin-bottom:16px}
+.tlsel-row{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;color:#2b6cb0;background:#ebf8ff;border:1px solid #bee3f8;border-radius:8px;padding:8px 12px;margin-bottom:8px}
+.tlsel-row select{padding:4px 8px;border:1px solid #90cdf4;border-radius:6px;font-size:.8rem;background:#fff;color:#2b6cb0;font-weight:700;font-family:inherit}
 .tyr-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:700px){.tyr-grid{grid-template-columns:1fr;gap:10px}}
 .tyr-h{font-size:.82rem;font-weight:700;color:#4a5568;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0}
@@ -267,8 +269,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   /* ไทม์ไลน์: ปล่อยให้ viewBox ย่อลงพอดีหน้ากระดาษ แทนการตัดขอบ */
   .flow-scroll{overflow:visible!important}
   .flow-hint{display:none!important}
-  .flow-tip,#flowCross,.wkb-btn{display:none!important}
-  #flowSvg{width:100%!important;height:auto!important}
+  .flow-tip,.fx-cross,.wkb-btn{display:none!important}
+  .fx-svg{width:100%!important;height:auto!important}
   .flow-card{page-break-inside:avoid}
 }
 /* Payment Method */
@@ -309,7 +311,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .flow-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:4px}
 .flow-hint{display:none;text-align:center;font-size:.75rem;color:#a0aec0;padding:5px 0 2px;letter-spacing:.02em}
 @media(max-width:800px){.flow-hint{display:block}}
-#flowSvg{display:block;font-family:'Segoe UI',Tahoma,sans-serif;touch-action:pan-x}
+.fx-svg{display:block;font-family:'Segoe UI',Tahoma,sans-serif;touch-action:pan-x}
 .flow-inner{position:relative;display:inline-block}
 .flow-tip{display:none;position:absolute;z-index:5;pointer-events:none;background:rgba(26,54,93,.96);color:#fff;border-radius:8px;padding:8px 11px;font-size:.72rem;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25);min-width:170px;max-width:280px}
 .ftip-d{font-weight:700;font-size:.76rem;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.22)}
@@ -329,14 +331,15 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-plan{font-weight:700;color:#d6bcfa}
 .ftip-plan.wk{background:rgba(214,188,250,.16);border-radius:5px;padding:1px 4px;margin:1px -4px 0}
 .ftip-wk{background:#d6bcfa;color:#44337a;border-radius:7px;padding:0 5px;font-size:.6rem;font-weight:700;margin-left:4px}
-#flowSvg g.fe{cursor:default}
-#flowSvg g.fe:hover rect{opacity:.72}
+.fx-svg text.ft{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.fx-svg g.fe{cursor:default}
+.fx-svg g.fe:hover rect{opacity:.72}
 .fl-lg{font-weight:700;margin-left:6px}
 .fl-in{color:#276749}
 .fl-out{color:#c53030}
 .flow-note{font-size:.72rem;color:#718096;margin-top:8px;line-height:1.5}
 .flow-ctl{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.78rem;font-weight:700;color:#553c9a;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:8px 12px;margin-bottom:6px}
-.flow-ctl input{width:96px;padding:4px 7px;border:1px solid #d6bcfa;border-radius:6px;font-size:.8rem;text-align:right;background:#fff}
+.flow-ctl input,.flow-ctl .fx-wkb{width:96px;padding:4px 7px;border:1px solid #d6bcfa;border-radius:6px;font-size:.8rem;text-align:right;background:#fff}
 .flow-ctl-sum{font-weight:600;color:#718096;font-size:.74rem}
 .wkb-tag{font-size:.66rem;font-weight:700;border-radius:8px;padding:2px 7px;white-space:nowrap}
 .wkb-def{background:#e9d8fd;color:#553c9a}
@@ -674,6 +677,14 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         <tbody id="sBody"></tbody>
       </table>
     </div></div>
+  </div>
+  <div class="card">
+    <div class="ch cbl">🧭 ไทม์ไลน์กระแสเงินรายเดือน
+      <span class="ch-sub">เลือกเดือนที่ต้องการดู</span></div>
+    <div class="cb">
+      <div class="tlsel-row">เดือน <select id="tlMonSel" onchange="renderYearTimeline()"></select></div>
+      <div id="tlYear"></div>
+    </div>
   </div>
   <div class="card">
     <div class="ch cpu">💸 สรุปรายการหัก + เงินลงทุน แยกตามหมวดหมู่</div>
@@ -2332,7 +2343,22 @@ function doCalc(){
    ไทม์ไลน์กระแสเงิน — SVG วาดเอง (ไม่ใช่ Chart.js จึงไม่แตะ CH)
    เงินเข้า = เขียว อยู่เหนือแกน | เงินออก = แดง อยู่ใต้แกน
    ════════════════════════════════════════════════════ */
-const TL={DAY:38,PADL:52,PADR:30,PADT:14,LANE:15,STEM_MIN:14,STEM_MAX:56,AXIS_H:34,BAL_H:108};
+const TL={DAY:44,PADL:52,PADR:30,PADT:14,LANE:15,STEM_MIN:14,AXIS_H:34,BAL_H:108};
+
+/* จัดเลนไม่ให้ป้ายทับกัน — ช่องหนึ่งวันกว้างแค่ TL.DAY แต่ป้ายกว้างกว่านั้นมาก
+   ป้ายที่ชนกับของเดิมในเลนนั้นจะถูกดันออกไปเลนถัดไป จึงไม่มีป้ายทับกันเลย
+   items ต้องเรียงวันน้อย→มาก และในวันเดียวกันเรียงยอดมาก→น้อย */
+function packLanes(items){
+  const lanes=[];
+  items.forEach(it=>{
+    const x1=it.x-it.w/2-4,x2=it.x+it.w/2+4;
+    for(let k=0;;k++){
+      const ln=lanes[k]||(lanes[k]=[]);
+      if(ln.every(([a,b])=>x2<=a||x1>=b)){ln.push([x1,x2]);it.lane=k;break;}
+    }
+  });
+  return lanes.length;
+}
 /* วิธีจ่าย — ใช้คำและไอคอนชุดเดียวกันทั้งแอป (renderPmSum, dropdown ในรายการหัก)
    'inv' ไม่ใช่ pm จริง: แบ่งเงินลงทุนไม่มีฟิลด์วิธีจ่ายในข้อมูล จึงแยกเป็นหมวดของตัวเอง
    เพื่อให้ผลรวมทุกหมวด = ยอดเงินออกของวันนั้นพอดี ไม่มีเงินหล่นหาย */
@@ -2344,8 +2370,6 @@ const PM_META={
 };
 const PM_ORDER=['bank','cash','credit','inv'];
 
-let _flow=null;      /* ข้อมูลกราฟล่าสุด สำหรับ crosshair ตอนเอาเมาส์ชี้ */
-let _flowPin=false;  /* บนมือถือ: แตะเพื่อ "ปัก" ค่าไว้อ่าน */
 /* งบใช้จ่ายวันหยุด — แหล่งความจริงอยู่ที่ตัวแปร ไม่ใช่ DOM (ช่องกรอกถูก re-render ทิ้งทุกครั้ง)
    _wkbDef = ค่าเริ่มต้นที่จำไว้ตลอด · _wkb = ค่าที่ใช้จริงของเดือนที่เปิดอยู่ (อาจถูก override) */
 const WKBD_KEY='sol_wkb_def';
@@ -2413,8 +2437,10 @@ const tlShort=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;}
 const tlAmt=v=>(v<0?'−฿':'฿')+Math.round(Math.abs(v)).toLocaleString('en-US');
 const tlThDate=dt=>{const[y,m,d]=dt.split('-').map(Number);return `${d} ${MS[m-1]} ${y}`;};
 
-function renderFlowTimeline(c){
-  const box=ge('flowTL');if(!box)return;
+function renderFlowTimeline(c,opts){
+  opts=opts||{};
+  const box=opts.el||ge('flowTL');if(!box)return;
+  const interactive=opts.interactive!==false;   /* หน้าสรุปรายปี = อ่านอย่างเดียว ปุ่มแก้ข้อมูลต้องไม่โผล่ */
   const{dated,undated,pay}=buildFlowEvents(c);
 
   if(!dated.length){
@@ -2429,6 +2455,10 @@ function renderFlowTimeline(c){
   const sAll=dated.map(e=>dSer(e.dt));
   let s0=Math.min(sPay,...sAll)-1;
   let s1=Math.max(sPay,...sAll)+1;
+  /* ช่วงสั้นเกินไป (เช่นเดือนที่มีแต่รายการวันเงินเดือนออก) กราฟจะแคบจนป้ายคำอธิบาย
+     กับป้ายปลายเส้นทับกัน — ขยายช่วงให้กว้างพออ่านได้ */
+  const MIN_D=9;
+  while(s1-s0+1<MIN_D){s1++;if(s1-s0+1<MIN_D)s0--;}
   const nD=s1-s0+1;
   const X=s=>TL.PADL+(s-s0)*TL.DAY;
   const W=TL.PADL+(nD-1)*TL.DAY+TL.PADR;
@@ -2437,22 +2467,31 @@ function renderFlowTimeline(c){
   const byDay={};
   dated.forEach(e=>{const s=dSer(e.dt);(byDay[s]=byDay[s]||{in:[],out:[]})[e.dir].push(e);});
   const days=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
-  let maxIn=0,maxOut=0,maxDayTot=0;
+  /* ── เตรียมป้ายทั้งหมดแล้วจัดเลน ก่อนกำหนดความสูงแถบ (ความสูงขึ้นกับจำนวนเลนจริง) ── */
+  const chipLabel=e=>`${tlShort(e.n,14)} ${tlAmt(e.v)}`;
+  const chipW=e=>Math.max(64,chipLabel(e).length*5.6+12);
+  const totLabel=(dir,t)=>`${dir==='in'?'+':'−'}${tlAmt(t)}`;
+  const chips={in:[],out:[]},tots={in:[],out:[]};
   days.forEach(s=>{
-    const g=byDay[s];
-    maxIn=Math.max(maxIn,g.in.length);maxOut=Math.max(maxOut,g.out.length);
-    const ti=g.in.reduce((a,e)=>a+e.v,0),to=g.out.reduce((a,e)=>a+e.v,0);
-    maxDayTot=Math.max(maxDayTot,ti,to);
+    const x=TL.PADL+(s-s0)*TL.DAY;
+    ['in','out'].forEach(dir=>{
+      const list=byDay[s][dir];if(!list.length)return;
+      list.slice().sort((a,b)=>b.v-a.v).forEach(e=>chips[dir].push({s,x,w:chipW(e),e}));
+      const t=list.reduce((a,z)=>a+z.v,0);
+      tots[dir].push({s,x,w:Math.max(52,totLabel(dir,t).length*5.6+8),t});
+    });
   });
+  /* ชิปก่อน แล้วป้ายยอดรวมของวันไปอยู่ชั้นนอกสุดถัดจากชิปทั้งหมด */
+  const nChipIn=packLanes(chips.in),nChipOut=packLanes(chips.out);
+  const nLaneIn=nChipIn+packLanes(tots.in),nLaneOut=nChipOut+packLanes(tots.out);
+  tots.in.forEach(it=>it.lane+=nChipIn);tots.out.forEach(it=>it.lane+=nChipOut);
 
-  const UP_H=TL.STEM_MAX+maxIn*TL.LANE+22;
+  const LANE0=TL.STEM_MIN+9;                     /* ระยะจากแกนถึงเลนแรก */
+  const UP_H=LANE0+nLaneIn*TL.LANE+10;
   const yAxis=TL.PADT+UP_H;                      /* เส้นแกนหลัก */
-  const DN_H=TL.STEM_MAX+maxOut*TL.LANE+22;
+  const DN_H=LANE0+nLaneOut*TL.LANE+10;
   const balTop=yAxis+TL.AXIS_H+DN_H+16;
   const H=balTop+TL.BAL_H+30;
-
-  /* ก้านสูงตามสัดส่วนแบบ sqrt — ไม่งั้นรายการเล็กจะแบนติดแกน */
-  const stemH=t=>maxDayTot>0?TL.STEM_MIN+(TL.STEM_MAX-TL.STEM_MIN)*Math.sqrt(t/maxDayTot):TL.STEM_MIN;
 
   const COL={in:'#38a169',inBg:'#c6f6d5',out:'#e53e3e',outBg:'#fed7d7',
              inv:'#2c7a7b',invBg:'#b2f5ea',axis:'#cbd5e0',txt:'#2d3748',mut:'#718096'};
@@ -2486,29 +2525,33 @@ function renderFlowTimeline(c){
     const isInv=e.kind==='inv';
     const stroke=dir==='in'?COL.in:(isInv?COL.inv:COL.out);
     const bg=dir==='in'?COL.inBg:(isInv?COL.invBg:COL.outBg);
-    const label=`${tlShort(e.n,14)} ${tlAmt(e.v)}`;
-    const w=Math.max(64,label.length*5.6+12),h=13;
+    const label=chipLabel(e),w=chipW(e),h=13;
     return `<g class="fe"><title>${esc(e.n)} — ${dir==='in'?'+':'−'}${fmt(e.v)}\n${tlThDate(e.dt)}</title>`
       +`<rect x="${cx-w/2}" y="${cy-h/2}" width="${w}" height="${h}" rx="6" fill="${bg}" stroke="${stroke}" stroke-width="1"/>`
       +`<text x="${cx}" y="${cy+3.6}" text-anchor="middle" font-size="8.6" fill="${dir==='in'?'#22543d':(isInv?'#234e52':'#742a2a')}">${esc(label)}</text></g>`;
   };
 
-  days.forEach(s=>{
-    const gd=byDay[s],x=X(s);
-    ['in','out'].forEach(dir=>{
-      const list=gd[dir];if(!list.length)return;
-      const tot=list.reduce((a,e)=>a+e.v,0);
-      const sh=stemH(tot),sign=dir==='in'?-1:1;
-      const yTip=dir==='in'?yAxis+sign*sh:yAxis+TL.AXIS_H+sh;
-      const yFoot=dir==='in'?yAxis:yAxis+TL.AXIS_H;
-      const col=dir==='in'?COL.in:COL.out;
-      g+=`<line x1="${x}" y1="${yFoot}" x2="${x}" y2="${yTip}" stroke="${col}" stroke-width="2"/>`;
+  const laneY=(dir,k)=>(dir==='in'?yAxis:yAxis+TL.AXIS_H)+(dir==='in'?-1:1)*(LANE0+k*TL.LANE);
+  /* ก้านก่อน — ยืดถึงเลนนอกสุดที่วันนั้นใช้ ป้ายทุกใบของวันอยู่กึ่งกลาง x เดียวกัน ก้านจึงเชื่อมครบ */
+  ['in','out'].forEach(dir=>{
+    const yFoot=dir==='in'?yAxis:yAxis+TL.AXIS_H;
+    const col=dir==='in'?COL.in:COL.out;
+    const far={};
+    chips[dir].concat(tots[dir]).forEach(it=>{far[it.s]=Math.max(far[it.s]??-1,it.lane);});
+    Object.keys(far).forEach(sk=>{
+      const s=+sk,x=X(s);
+      /* หยุดก่อนถึงป้ายนอกสุด 9px — ไม่งั้นเส้นจะพาดทับตัวเลขยอดรวมของวัน */
+      const yEnd=laneY(dir,far[sk])-(dir==='in'?-1:1)*9;
+      g+=`<line x1="${x}" y1="${yFoot}" x2="${x}" y2="${yEnd}" stroke="${col}" stroke-width="2"/>`;
       g+=`<circle cx="${x}" cy="${yFoot}" r="2.6" fill="${col}"/>`;
-      /* รายการย่อยซ้อนออกไปจากปลายก้าน แล้วยอดรวมของวันอยู่ชั้นนอกสุด (กันตัวหนังสือทับกัน) */
-      const sorted=list.slice().sort((a,b)=>b.v-a.v);
-      sorted.forEach((e,j)=>{g+=chip(e,x,yTip+sign*(9+j*TL.LANE),dir);});
-      const yTot=yTip+sign*(9+sorted.length*TL.LANE+(dir==='in'?1:5));
-      g+=`<text x="${x}" y="${yTot}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${col}">${dir==='in'?'+':'−'}${tlAmt(tot)}</text>`;
+    });
+  });
+  /* ป้ายทีหลัง — ชิปทึบจะได้ทับเส้นก้าน ไม่ใช่ถูกเส้นพาดหน้า */
+  ['in','out'].forEach(dir=>{
+    const col=dir==='in'?COL.in:COL.out;
+    chips[dir].forEach(it=>{g+=chip(it.e,it.x,laneY(dir,it.lane),dir);});
+    tots[dir].forEach(it=>{
+      g+=`<text class="ft" x="${it.x}" y="${laneY(dir,it.lane)+3.4}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${col}">${totLabel(dir,it.t)}</text>`;
     });
   });
 
@@ -2521,7 +2564,7 @@ function renderFlowTimeline(c){
   }
   /* เส้นจำลอง "ถ้าใช้ตามงบวันหยุด" = ยอดคงเหลือ − งบวันหยุดสะสม
      หักทุกวันเสาร์และอาทิตย์ วันละเท่ากับงบที่ผู้ใช้กรอก */
-  const wkb=nf(_wkb);
+  const wkb=nf(c.wkb!=null?c.wkb:_wkb);
   const plan=[];let wkAcc=0,wkDays=0;
   for(let i=0;i<nD;i++){
     const[qy,qm,qd]=serDt(s0+i).split('-').map(Number);
@@ -2573,11 +2616,11 @@ function renderFlowTimeline(c){
   }
 
   /* ── ชั้นรับเมาส์ + crosshair (วาดท้ายสุดจะได้อยู่บนสุด) ── */
-  g+=`<g id="flowCross" style="display:none;pointer-events:none">`
-    +`<line id="flowCrossL" x1="0" y1="${TL.PADT}" x2="0" y2="${balTop+TL.BAL_H}" stroke="#2b6cb0" stroke-width="1" stroke-dasharray="3,3" opacity=".65"/>`
-    +`<circle id="flowCrossC" cx="0" cy="0" r="4.5" fill="#fff" stroke="#2b6cb0" stroke-width="2.5"/>`
-    +`<circle id="flowCrossS" cx="0" cy="0" r="4.5" fill="#fff" stroke="#b7791f" stroke-width="2.5"/></g>`;
-  g+=`<rect id="flowHit" x="0" y="0" width="${W}" height="${H}" fill="transparent" style="cursor:crosshair"/>`;
+  g+=`<g class="fx-cross" style="display:none;pointer-events:none">`
+    +`<line class="fx-crossL" x1="0" y1="${TL.PADT}" x2="0" y2="${balTop+TL.BAL_H}" stroke="#2b6cb0" stroke-width="1" stroke-dasharray="3,3" opacity=".65"/>`
+    +`<circle class="fx-crossC" cx="0" cy="0" r="4.5" fill="#fff" stroke="#2b6cb0" stroke-width="2.5"/>`
+    +`<circle class="fx-crossS" cx="0" cy="0" r="4.5" fill="#fff" stroke="#b7791f" stroke-width="2.5"/></g>`;
+  g+=`<rect class="fx-hit" x="0" y="0" width="${W}" height="${H}" fill="transparent" style="cursor:crosshair"/>`;
 
   /* ── กล่องรายการที่ยังไม่ระบุวันที่ + กระทบยอดกับกล่องสรุปเงิน ── */
   const uIn=undated.filter(e=>e.dir==='in'),uOut=undated.filter(e=>e.dir==='out');
@@ -2599,7 +2642,7 @@ function renderFlowTimeline(c){
     unHtml+=`<div class="flow-un-h">📌 ยังไม่ระบุวันที่ — ${undated.length} รายการ <span class="flow-un-tag">ไม่ถูกนับในเส้นยอดคงเหลือ</span></div>`
       +uIn.map(e=>li(e,'+','vai')).join('')
       +uOut.map(e=>li(e,'−','vad')).join('')
-      +`<button class="flow-fill" onclick="fillBlankDates()">📅 ใส่วันเงินเดือนออกให้รายการที่ยังว่าง</button>`;
+      +(interactive?`<button class="flow-fill" onclick="fillBlankDates()">📅 ใส่วันเงินเดือนออกให้รายการที่ยังว่าง</button>`:'');
   }
   unHtml+=`<div class="flow-rec-h">🧾 กระทบยอดกับกล่อง “สรุปเงิน”</div>
     <div class="li${hasIncDiff?' flow-rec-warn':''}"><span>รวมเงินเข้าทั้งหมด <span class="flow-rec-ref">${hasIncDiff?`⚠️ ต่างจาก “รวมรายได้” ${fmt(Math.abs(incDiff))}`:'= รวมรายได้ ก่อนหักภาษี'}</span></span><span class="vai">${fmt(allIn)}</span></div>
@@ -2614,18 +2657,19 @@ function renderFlowTimeline(c){
     <div class="ch cbl">🧭 ไทม์ไลน์กระแสเงิน
       <span class="ch-sub"><span class="fl-lg fl-in">▲ เงินเข้า</span> <span class="fl-lg fl-out">▼ เงินออก</span></span></div>
     <div class="cb">
-      <div class="flow-ctl">🗓️ งบใช้จ่ายวันหยุด
-        <input type="number" id="fWkb" value="${esc(_wkb)}" min="0" placeholder="0" onchange="setWkb(this.value)">
-        บาท/วัน (เสาร์–อาทิตย์)
-        ${_wkb===_wkbDef
+      ${(interactive||wkb>0)?`<div class="flow-ctl">🗓️ งบใช้จ่ายวันหยุด
+        ${interactive
+          ? `<input type="number" class="fx-wkb" value="${esc(_wkb)}" min="0" placeholder="0" onchange="setWkb(this.value)"> บาท/วัน (เสาร์–อาทิตย์)`
+          : `<strong>${tlAmt(wkb)}</strong> บาท/วัน (เสาร์–อาทิตย์)`}
+        ${!interactive?'' : _wkb===_wkbDef
           ? `<span class="wkb-tag wkb-def" title="ค่านี้ถูกจำไว้และใช้กับทุกเดือน">⭐ ค่าเริ่มต้นตลอด</span>`
           : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 เฉพาะเดือนนี้</span>`
             +`<button class="wkb-btn" onclick="setWkbDefault()">⭐ จำเป็นค่าเริ่มต้นตลอด</button>`
             +`<button class="wkb-btn gh" onclick="resetWkbToDefault()">↩︎ กลับไปใช้ ${_wkbDef?tlAmt(nf(_wkbDef)):'(ว่าง)'}</button>`}
         ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุด × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong> · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}</span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
-      </div>
+      </div>`:''}
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
-      <div class="flow-scroll"><div class="flow-inner"><svg id="flowSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip" id="flowTip"></div></div></div>
+      <div class="flow-scroll"><div class="flow-inner"><svg class="fx-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip fx-tip"></div></div></div>
       <div class="flow-note">
         <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(pay)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
         <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์</strong> (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
@@ -2633,46 +2677,49 @@ function renderFlowTimeline(c){
       </div>
       ${unHtml}
     </div></div>`;
-  ge('flowSvg').innerHTML=g;
+  const svg=box.querySelector('.fx-svg');
+  svg.innerHTML=g;
 
-  /* state สำหรับ crosshair — เก็บเป็นตัวเลขล้วน แล้วคำนวณ X()/YB() ใหม่ตอน hover */
-  _flow={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
-  _flowPin=false;
-  const svg=ge('flowSvg');
+  /* state ผูกไว้กับ svg ตัวนั้น ๆ ไม่ใช่ตัวแปร global — หน้าเดียวมีไทม์ไลน์ได้หลายอันโดยไม่ปนกัน */
+  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
+  svg._fxPin=false;
   /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
   svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')flowHover(e);});
-  svg.addEventListener('pointerleave',()=>{if(!_flowPin)flowHoverOut();});
+  svg.addEventListener('pointerleave',e=>{if(!svg._fxPin)flowHoverOut(svg);});
   /* แตะ/คลิกเพื่อปักค่าไว้อ่าน (จำเป็นบนมือถือ) */
-  svg.addEventListener('click',e=>{_flowPin=!_flowPin;if(_flowPin)flowHover(e);else flowHoverOut();});
+  svg.addEventListener('click',e=>{svg._fxPin=!svg._fxPin;if(svg._fxPin)flowHover(e);else flowHoverOut(svg);});
 }
 
 /* แสดง crosshair + กล่องค่าของวันที่เมาส์ชี้อยู่ */
 function flowHover(evt){
-  if(!_flow)return;
-  const svg=ge('flowSvg'),tip=ge('flowTip'),cross=ge('flowCross');
-  if(!svg||!tip||!cross)return;
+  /* อ่าน state จาก svg ที่ถูก hover เท่านั้น — หน้าเดียวมีไทม์ไลน์หลายอันได้โดยไม่ปนกัน */
+  const svg=evt.currentTarget,F=svg&&svg._fx;
+  if(!F)return;
+  const wrap=svg.parentNode;
+  const tip=wrap.querySelector('.fx-tip'),cross=svg.querySelector('.fx-cross');
+  if(!tip||!cross)return;
   const r=svg.getBoundingClientRect();if(!r.width)return;
   /* ต้องคูณสเกล viewBox — ตอนพิมพ์/จอแคบ SVG ถูกย่อด้วย width:100% */
-  const k=_flow.W/r.width;
+  const k=F.W/r.width;
   const xs=(evt.clientX-r.left)*k;
-  const i=Math.max(0,Math.min(_flow.nD-1,Math.round((xs-_flow.PADL)/_flow.DAY)));
-  const s=_flow.s0+i,dt=serDt(s);
-  const x=_flow.PADL+i*_flow.DAY;
-  const YBh=v=>_flow.balTop+_flow.BAL_H-((v-_flow.lo)/_flow.span)*_flow.BAL_H;
-  const yb=YBh(_flow.bal[i]),ys=YBh(_flow.plan[i]);
+  const i=Math.max(0,Math.min(F.nD-1,Math.round((xs-F.PADL)/F.DAY)));
+  const s=F.s0+i,dt=serDt(s);
+  const x=F.PADL+i*F.DAY;
+  const YBh=v=>F.balTop+F.BAL_H-((v-F.lo)/F.span)*F.BAL_H;
+  const yb=YBh(F.bal[i]),ys=YBh(F.plan[i]);
 
-  ge('flowCrossL').setAttribute('x1',x);ge('flowCrossL').setAttribute('x2',x);
-  ge('flowCrossC').setAttribute('cx',x);ge('flowCrossC').setAttribute('cy',yb);
-  const csS=ge('flowCrossS');
-  csS.style.display=_flow.wkb>0?'':'none';
+  const csL=svg.querySelector('.fx-crossL'),csC=svg.querySelector('.fx-crossC'),csS=svg.querySelector('.fx-crossS');
+  csL.setAttribute('x1',x);csL.setAttribute('x2',x);
+  csC.setAttribute('cx',x);csC.setAttribute('cy',yb);
+  csS.style.display=F.wkb>0?'':'none';
   csS.setAttribute('cx',x);csS.setAttribute('cy',ys);
   cross.style.display='';
 
   const[yy,mm,dd]=dt.split('-').map(Number);
   const dow=new Date(yy,mm-1,dd).getDay();
-  const gd=_flow.byDay[s]||{in:[],out:[]};
+  const gd=F.byDay[s]||{in:[],out:[]};
   const tIn=gd.in.reduce((a,e)=>a+e.v,0),tOut=gd.out.reduce((a,e)=>a+e.v,0);
-  let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(_flow.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
+  let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(F.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
   if(gd.in.length||gd.out.length){
     gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
     gd.out.slice().sort((a,b)=>b.v-a.v).forEach(e=>{
@@ -2695,19 +2742,20 @@ function flowHover(evt){
   }else{
     h+=`<div class="ftip-r ftip-none"><span>— ไม่มีรายการวันนี้ —</span></div>`;
   }
-  h+=`<div class="ftip-r ftip-bal"><span>💧 ยอดคงเหลือสะสม</span><span>${fmt(_flow.bal[i])}</span></div>`;
+  h+=`<div class="ftip-r ftip-bal"><span>💧 ยอดคงเหลือสะสม</span><span>${fmt(F.bal[i])}</span></div>`;
   const wk=dow===0||dow===6;
-  if(_flow.wkb>0)h+=`<div class="ftip-r ftip-plan${wk?' wk':''}"><span>🗓️ ถ้าใช้ตามงบ${wk?' <span class="ftip-wk">หักงบวันนี้</span>':''}</span><span>${fmt(_flow.plan[i])}</span></div>`;
+  if(F.wkb>0)h+=`<div class="ftip-r ftip-plan${wk?' wk':''}"><span>🗓️ ถ้าใช้ตามงบ${wk?' <span class="ftip-wk">หักงบวันนี้</span>':''}</span><span>${fmt(F.plan[i])}</span></div>`;
   tip.innerHTML=h;
   tip.style.display='block';
   /* วางกล่องโดยไม่ให้ล้นขอบกราฟ */
   const px=x/k, tw=tip.offsetWidth;
   tip.style.left=Math.max(2,Math.min(r.width-tw-2,px-tw/2))+'px';
-  tip.style.top=Math.max(2,(_flow.balTop/k)-tip.offsetHeight-8)+'px';
+  tip.style.top=Math.max(2,(F.balTop/k)-tip.offsetHeight-8)+'px';
 }
-function flowHoverOut(){
-  _flowPin=false;
-  const c=ge('flowCross'),t=ge('flowTip');
+function flowHoverOut(svg){
+  if(!svg)return;
+  svg._fxPin=false;
+  const c=svg.querySelector('.fx-cross'),t=svg.parentNode.querySelector('.fx-tip');
   if(c)c.style.display='none';
   if(t)t.style.display='none';
 }
@@ -3276,6 +3324,40 @@ function renderTaxYear(){
     <div class="tyr-note">${months<12?`⚠️ มีข้อมูล ${months} เดือน จาก 12 เดือน — ตัวเลขยังไม่ครบปี`:'✅ ข้อมูลครบ 12 เดือน'}</div>`;
 }
 
+/* ประกอบ context ของไทม์ไลน์จากข้อมูลที่บันทึกไว้ ไม่ใช่จากฟอร์มที่เปิดอยู่
+   เพื่อให้หน้าสรุปแสดงเดือนไหนก็ได้ ตัวเลขทั้งหมดมาจาก computeRec() ตัวเดียวกับตารางสรุป */
+function flowCtxFromRec(ym){
+  const rec=DB[ym],t=compM(ym);
+  if(!rec||!t)return null;
+  return{ym,baseDt:rec.baseDt,ssoDt:rec.ssoDt,pvdDt:rec.pvdDt,
+    base:t.base,aArr:rec.a||[],oArr:rec.o||[],dArr:rec.d||[],iArr:rec.i||[],
+    invBase:t.invBase,totOT:t.totOT,h15:t.h15,h20:t.h20,h30:t.h30,
+    sso:t.sso,pvd:t.pvd,totInc:t.totInc,finalCash:t.final,
+    wkb:(rec.wkb||_wkbDef||'')};
+}
+
+/* ไทม์ไลน์ในหน้าสรุปรายปี — อ่านอย่างเดียว ไม่มีปุ่มที่แก้ข้อมูลของเดือนอื่น */
+function renderYearTimeline(){
+  const box=ge('tlYear'),sel=ge('tlMonSel');
+  if(!box||!sel)return;
+  const ym=sel.value;
+  if(!ym){box.innerHTML='<div class="flow-empty">— ยังไม่มีข้อมูลในปีนี้ —</div>';return;}
+  const c=flowCtxFromRec(ym);
+  if(!c){box.innerHTML='<div class="flow-empty">— เดือนนี้ยังไม่มีข้อมูล —</div>';return;}
+  renderFlowTimeline(c,{el:box,interactive:false});
+}
+
+function fillTlMonSel(){
+  const sel=ge('tlMonSel');if(!sel)return;
+  const keep=sel.value;
+  const opts=[];
+  for(let i=0;i<12;i++){const ym=ymk(i);if(compM(ym))opts.push({ym,label:MF[i]});}
+  sel.innerHTML=opts.map(o=>`<option value="${o.ym}">${o.label} ${CY}</option>`).join('');
+  if(!opts.length){sel.innerHTML='<option value="">— ไม่มีข้อมูล —</option>';return;}
+  /* คงเดือนที่เลือกไว้ถ้ายังมีอยู่ ไม่งั้นใช้เดือนล่าสุดที่มีข้อมูล */
+  sel.value=opts.some(o=>o.ym===keep)?keep:opts[opts.length-1].ym;
+}
+
 function renderSum(){
   ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;
   let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0,ttx=0;
@@ -3322,6 +3404,8 @@ function renderSum(){
   renderDedSum();
   renderPmYear();
   renderTaxYear();
+  fillTlMonSel();
+  renderYearTimeline();
 }
 
 document.addEventListener('visibilitychange',()=>{
