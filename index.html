@@ -1678,7 +1678,7 @@ function renderCkSum(){
 /* ── Add / Del ── */
 function addA(){A.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:payDate(gv('fPrd'))});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
 function delA(id){A=A.filter(x=>x.id!==id);rA();}
-function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ok:false,dn:false,dt:''});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
+function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ok:false,dn:false,dt:payDate(gv('fPrd'))});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
 function delD(id){D=D.filter(x=>x.id!==id);rD();}
 function addO(){O.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:''});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
 function delO(id){O=O.filter(x=>x.id!==id);rO();updInv();}
@@ -1946,12 +1946,12 @@ function loadM(mi){
   const rec=DB[ym];
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
-    sv('fBaseDt',rec.baseDt!==undefined?rec.baseDt:payDate(ym));
+    sv('fBaseDt',rec.baseDt||payDate(ym));
     /* SSO/PVD ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ (ต่างจาก baseDt ที่เคารพการล้างค่า) */
     sv('fSsoDt',rec.ssoDt||payDate(ym));sv('fPvdDt',rec.pvdDt||payDate(ym));
     _wkb=rec.wkb||_wkbDef;
     A=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.a||defA()))),ym,ym,true);
-    D=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.d||defD()))),ym,ym,isTaxRow);
+    D=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.d||defD()))),ym,ym,true);
     I=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.i||defI()))),ym,ym,false);
     O=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.o||defO()))),ym,ym,false);
     if(rec.days){
@@ -1971,7 +1971,7 @@ function loadM(mi){
       sv('fBaseDt',payDate(ym));sv('fSsoDt',payDate(ym));sv('fPvdDt',payDate(ym));
       _wkb=_wkbDef;
       A=anchorDates(blankItems((prev.a||defA()).filter(x=>x.id!==BONUS_ID)),s,ym,true);
-      D=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,isTaxRow);
+      D=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,true);
       I=anchorDates(blankItems(prev.i||defI()),s,ym,false);
       O=anchorDates(blankItems(prev.o||defO()),s,ym,false);
       onBaseChg();
@@ -1979,7 +1979,7 @@ function loadM(mi){
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
       ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
       _wkb=_wkbDef;
-      A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,isTaxRow);I=defI();O=defO();
+      A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,true);I=defI();O=defO();
     }
     reOT();
   }
@@ -2043,8 +2043,9 @@ function anchorDates(arr,srcYm,dstYm,payday){
   const want=typeof payday==='function'?payday:()=>!!payday;
   return (arr||[]).map(x=>{
     let dt=x.dt;
-    if(want(x)&&!dt)dt=payDate(dstYm);      /* ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ */
-    else if(dt===undefined)dt='';           /* ยังไม่เคยมีฟิลด์ → ว่างไว้ */
+    if(want(x)&&!dt)dt=payDate(dstYm);      /* กลุ่มที่ผูกกับวันเงินเดือนออก (เงินเดือนฐาน/ค่าเพิ่มเติม/
+                                               รายการหัก/SSO/กองทุนฯ) — ว่างเมื่อไหร่ก็เติมวันที่ 5 กลับ */
+    else if(dt===undefined)dt='';           /* รายได้อื่นๆ / แบ่งลงทุน — ว่างไว้ให้กรอกเอง */
     else if(dt&&n)dt=shiftDt(dt,n);         /* ลอกข้ามเดือน → เลื่อนตามระยะเดือน */
     return{...x,dt};
   });
@@ -2093,7 +2094,7 @@ function buildCopyRec(src,mi,srcYm){
     baseDt:(dst&&dst.baseDt!==undefined)?dst.baseDt:payDate(dstYm),
     sso:'',pvd:'',ssoDt:payDate(dstYm),pvdDt:payDate(dstYm),wkb:(src.wkb||''),wkbDef:_wkbDef,
     a:anc((src.a||defA()).filter(x=>x.id!==BONUS_ID),true),
-    d:anc((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID),isTaxRow),
+    d:anc((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID),true),
     i:anc(src.i||defI(),false),
     o:anc(src.o||defO(),false),
     days:{}
@@ -2718,7 +2719,7 @@ function resetM(){
   ge('otBody').innerHTML='';ge('res').style.display='none';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   delete DB[ym];
-  A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,isTaxRow);I=defI();O=defO();
+  A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,true);I=defI();O=defO();
   /* ล้าง DOM ของรายการเก่าก่อน render — กัน rA/rD pre-sync ดึงค่าเก่ามาทับ defaults */
   ['aList','dList','iList','oList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();buildOT();reOT();updateDots();
@@ -4654,7 +4655,7 @@ init();
     const _pd=payDate(ymk(CT));
     (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=findByName(A.filter(x=>x.id!=='bonus'),a.n);if(ex){ex.v=String(r(a.v));ex.ok=true;_fdt(ex,a);}else A.push(_fdt({id:uid(),n:a.n,v:String(r(a.v)),ok:true,dt:_pd},a));});
     (f.otherIncomes||[]).forEach(o=>{if(!o||!o.n)return;const ex=findByName(O,o.n);if(ex){ex.v=String(r(o.v));ex.ok=true;_fdt(ex,o);}else O.push(_fdt({id:uid(),n:o.n,v:String(r(o.v)),ok:true,dt:''},o));});
-    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(D,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;_fdt(ex,d);}else D.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true,dt:''},d));});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(D,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;_fdt(ex,d);}else D.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true,dt:_pd},d));});
     (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=findByName(I,iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));_fdt(ex,iv);}else I.push(_fdt({id:uid(),n:iv.n,t,v:String(nf(iv.v)),dt:''},iv));});
     /* คูณสเกล (เช่น ลดค่าใช้จ่ายทุกรายการ 10%) */
     applyScale(A.filter(x=>x.id!=='bonus'),f.scaleAllowances,true);
@@ -4690,7 +4691,7 @@ init();
     const _pd=payDate(ym);
     (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=findByName(rec.a.filter(x=>x.id!=='bonus'),a.n);if(ex){ex.v=String(r(a.v));_fdt(ex,a);}else rec.a.push(_fdt({id:uid(),n:a.n,v:String(r(a.v)),ok:true,dt:_pd},a));});
     (f.otherIncomes||[]).forEach(o=>{if(!o||!o.n)return;const ex=findByName(rec.o,o.n);if(ex){ex.v=String(r(o.v));_fdt(ex,o);}else rec.o.push(_fdt({id:uid(),n:o.n,v:String(r(o.v)),ok:true,dt:''},o));});
-    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(rec.d,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;_fdt(ex,d);}else rec.d.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true,dt:''},d));});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(rec.d,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;_fdt(ex,d);}else rec.d.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true,dt:_pd},d));});
     (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=findByName(rec.i,iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));_fdt(ex,iv);}else rec.i.push(_fdt({id:uid(),n:iv.n,t,v:String(nf(iv.v)),dt:''},iv));});
     applyScale(rec.a.filter(x=>x.id!=='bonus'),f.scaleAllowances,true);
     applyScale(rec.d,f.scaleDeductions,true);applyScale(rec.i,f.scaleInvestments,false);
