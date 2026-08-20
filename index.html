@@ -323,9 +323,9 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-out{color:#feb2b2;font-weight:600}
 .ftip-none{color:#a0aec0;font-style:italic}
 .ftip-net{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700}
-.ftip-pm{font-size:.7rem;opacity:.9}
 .ftip-sub{font-size:.66rem;color:#a0aec0;font-weight:700;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.22);letter-spacing:.02em}
-.ftip-pmrow{color:#cbd5e0}
+.ftip-pmrow{color:#cbd5e0;font-weight:600}
+.ftip-gi>span:first-child{padding-left:11px;opacity:.92}
 .ftip-pmrow>span:last-child{font-weight:600}
 .ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
 .ftip-plan{font-weight:700;color:#d6bcfa}
@@ -2755,20 +2755,21 @@ function flowHover(evt){
   let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(F.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
   if(gd.in.length||gd.out.length){
     gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
-    gd.out.slice().sort((a,b)=>b.v-a.v).forEach(e=>{
-      const m=PM_META[e.pm];
-      h+=`<div class="ftip-r"><span>${esc(e.n)}${m?` <span class="ftip-pm" title="${m.label}">${m.icon}</span>`:''}</span>`
-        +`<span class="ftip-out">−${fmt(e.v)}</span></div>`;
-    });
-    /* สรุปเงินออกของวันนั้นแยกตามวิธีจ่าย — ผลรวมทุกหมวด = tOut เสมอ
-       แสดงทุกวันที่มีรายการเงินออก เพื่อให้อ่านรูปแบบเดียวกันได้ทุกวัน
-       (วันที่ไม่มีรายการหักเลย ข้ามไป ไม่งั้นจะเหลือหัวข้อลอยไม่มีบรรทัดข้างใต้) */
+    /* เงินออกจัดเป็นกลุ่มตามวิธีจ่าย หัวกลุ่มคือยอดรวมของประเภทนั้นไปในตัว
+       ผลรวมทุกหัวกลุ่ม = tOut เสมอ (ทุกรายการเงินออกมี pm: จากฟอร์ม / SSO-PVD='bank' / ลงทุน='inv')
+       วันที่ไม่มีรายการเงินออกเลยข้ามทั้งบล็อก ไม่งั้นจะเหลือหัวข้อลอยไม่มีบรรทัดข้างใต้ */
     if(gd.out.length){
-      const pmSum={};
-      gd.out.forEach(e=>{const k=PM_META[e.pm]?e.pm:'bank';pmSum[k]=(pmSum[k]||0)+e.v;});
-      h+=`<div class="ftip-sub">แยกตามวิธีจ่าย</div>`;
-      PM_ORDER.filter(k=>pmSum[k]>0).forEach(k=>{
-        h+=`<div class="ftip-r ftip-pmrow"><span>${PM_META[k].icon} ${PM_META[k].label}</span><span>${fmt(pmSum[k])}</span></div>`;
+      const grp={};
+      gd.out.forEach(e=>{const k=PM_META[e.pm]?e.pm:'bank';(grp[k]=grp[k]||[]).push(e);});
+      const sum=k=>grp[k].reduce((a,e)=>a+e.v,0);
+      /* กลุ่มเรียงมากไปน้อย ยอดเท่ากันใช้ PM_ORDER ตัดสิน ผลจะได้คงที่ไม่สลับไปมา */
+      const keys=Object.keys(grp).sort((a,b)=>sum(b)-sum(a)||PM_ORDER.indexOf(a)-PM_ORDER.indexOf(b));
+      h+=`<div class="ftip-sub">รายการหัก แยกตามวิธีจ่าย</div>`;
+      keys.forEach(k=>{
+        h+=`<div class="ftip-r ftip-pmrow"><span>${PM_META[k].icon} ${PM_META[k].label}</span><span>${fmt(sum(k))}</span></div>`;
+        grp[k].slice().sort((a,b)=>b.v-a.v).forEach(e=>{
+          h+=`<div class="ftip-r ftip-gi"><span>${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
+        });
       });
     }
     h+=`<div class="ftip-r ftip-net"><span>สุทธิวันนี้</span><span>${tIn-tOut<0?'−':'+'}${fmt(Math.abs(tIn-tOut))}</span></div>`;
