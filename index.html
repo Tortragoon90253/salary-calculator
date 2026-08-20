@@ -313,7 +313,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 @media(max-width:800px){.flow-hint{display:block}}
 .fx-svg{display:block;font-family:'Segoe UI',Tahoma,sans-serif;touch-action:pan-x}
 .flow-inner{position:relative;display:inline-block}
-.flow-tip{display:none;position:absolute;z-index:5;pointer-events:none;background:rgba(26,54,93,.96);color:#fff;border-radius:8px;padding:8px 11px;font-size:.72rem;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25);min-width:170px;max-width:280px}
+.flow-tip{display:none;position:absolute;z-index:5;pointer-events:none;background:rgba(26,54,93,.96);color:#fff;border-radius:8px;padding:8px 11px;font-size:.72rem;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25);min-width:170px;max-width:300px}
 .ftip-d{font-weight:700;font-size:.76rem;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.22)}
 .ftip-pay{background:#bee3f8;color:#2b6cb0;border-radius:7px;padding:1px 6px;font-size:.62rem;font-weight:700;white-space:nowrap}
 .ftip-r{display:flex;justify-content:space-between;gap:12px}
@@ -324,8 +324,11 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-none{color:#a0aec0;font-style:italic}
 .ftip-net{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700}
 .ftip-sub{font-size:.66rem;color:#a0aec0;font-weight:700;margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,.22);letter-spacing:.02em}
+.ftip-gross{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;color:#cbd5e0;font-weight:600}
+.ftip-take{color:#9ae6b4;font-weight:700}
+.ftip-note{font-size:.63rem;color:#a0aec0;font-style:italic;margin:1px 0 2px;white-space:normal;line-height:1.35}
 .ftip-pmrow{color:#cbd5e0;font-weight:600}
-.ftip-gi>span:first-child{padding-left:11px;opacity:.92}
+.ftip-gi>span:first-child,.ftip-sd>span:first-child{padding-left:11px;opacity:.92}
 .ftip-pmrow>span:last-child{font-weight:600}
 .ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
 .ftip-plan{font-weight:700;color:#d6bcfa}
@@ -2372,6 +2375,8 @@ const PM_META={
   inv   :{icon:'📈',label:'แบ่งลงทุน', cls:'pm-inv'}
 };
 const PM_ORDER=['bank','cash','credit','inv'];
+/* รายการหักตามกฎหมายที่ถูกหักจากเงินได้ก่อนถึงมือ — ชุดเดียวกับสูตร takeHome ในหน้าผลคำนวณ */
+const STAT_KIND={sso:1,pvd:1,tax:1};
 
 /* งบใช้จ่ายวันหยุด — แหล่งความจริงอยู่ที่ตัวแปร ไม่ใช่ DOM (ช่องกรอกถูก re-render ทิ้งทุกครั้ง)
    _wkbDef = ค่าเริ่มต้นที่จำไว้ตลอด · _wkb = ค่าที่ใช้จริงของเดือนที่เปิดอยู่ (อาจถูก override) */
@@ -2425,7 +2430,10 @@ function buildFlowEvents(c){
   c.dArr.forEach(x=>{
     /* ภาษีหัก ณ ที่จ่ายถูกหักตอนเงินเดือนออก — ตาข่ายรองรับกรณีวันที่ยังว่าง */
     const at=isDt(x.dt)?x.dt:(isTaxRow(x)?pay:'');
-    push(at,'out','d',x.n||NN,nf(x.v),PM_META[x.pm]?x.pm:'bank');
+    /* แยก kind ของแถวภาษีไว้ เพื่อให้ tooltip สรุป "ก่อนหัก → หลังหัก" ได้
+       ใช้ isTaxRow() ตัวเดียวกับที่ getTaxFromD() ใช้ ยอดจึงตรงกับ takeHome เสมอ
+       (ครอบคลุมแถวภาษีโบนัสด้วย ทั้งจาก BONUS_TAX_ID และจากชื่อที่มีคำว่า "ภาษี") */
+    push(at,'out',isTaxRow(x)?'tax':'d',x.n||NN,nf(x.v),PM_META[x.pm]?x.pm:'bank');
   });
   c.iArr.forEach(x=>{
     const v=x.t==='%'?c.invBase*nf(x.v)/100:nf(x.v);
@@ -2714,7 +2722,12 @@ function renderFlowTimeline(c,opts){
   svg.innerHTML=g;
 
   /* state ผูกไว้กับ svg ตัวนั้น ๆ ไม่ใช่ตัวแปร global — หน้าเดียวมีไทม์ไลน์ได้หลายอันโดยไม่ปนกัน */
-  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay:payShow};
+  /* ยอดรวมทั้งงวดของ ประกันสังคม/กองทุนฯ/ภาษี — นับจากทุกกอง ไม่ให้ตกหล่น
+     ใช้เทียบกับของวันที่ hover เพื่อเตือนเมื่อผู้ใช้ย้ายวันที่ตัวใดตัวหนึ่งไปวันอื่น */
+  const _every=dated.concat(undated,offRange);
+  const statAll=_every.filter(e=>STAT_KIND[e.kind]).reduce((a,e)=>a+e.v,0);
+  const incAll=_every.filter(e=>e.dir==='in').reduce((a,e)=>a+e.v,0);
+  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay:payShow,statAll,incAll};
   svg._fxPin=false;
   /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
   svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')flowHover(e);});
@@ -2755,16 +2768,36 @@ function flowHover(evt){
   let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(F.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
   if(gd.in.length||gd.out.length){
     gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
+    /* ── สรุป "ก่อนหัก → ยอดรายได้รับจริง" ──
+       ใช้สูตรและศัพท์เดียวกับหัวข้อใหญ่ของหน้าผลคำนวณ: รายได้รวม − SSO − กองทุนฯ − ภาษี
+       โชว์เฉพาะวันที่มีทั้งเงินเข้าและรายการหักตามกฎหมาย วันที่ก่อนหัก = หลังหัก ไม่ได้บอกอะไร */
+    const stat=gd.out.filter(e=>STAT_KIND[e.kind]);
+    const statSum=stat.reduce((a,e)=>a+e.v,0);
+    const showTake=gd.in.length&&stat.length;
+    if(showTake){
+      h+=`<div class="ftip-r ftip-gross"><span>รวมรายได้ ก่อนหัก</span><span>${fmt(tIn)}</span></div>`;
+      stat.slice().sort((a,b)=>b.v-a.v).forEach(e=>{
+        h+=`<div class="ftip-r ftip-sd"><span>− ${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
+      });
+      h+=`<div class="ftip-r ftip-take"><span>= ยอดรายได้รับจริง</span><span>${fmt(tIn-statSum)}</span></div>`;
+      /* บล็อกนี้คิดเฉพาะวันนี้ ถ้ายังมีรายได้หรือรายการหักตามกฎหมายกระจายอยู่วันอื่น
+         ยอดจะไม่เท่ากับ "ยอดรายได้รับจริง" ของทั้งงวด — บอกส่วนต่างไว้ตรง ๆ จะได้บวกกลับได้เอง */
+      const restD=(F.statAll||0)-statSum, restI=(F.incAll||0)-tIn;
+      if(restI>=0.005)h+=`<div class="ftip-note">* มีรายได้อีก ${fmt(restI)} เข้าวันอื่นของงวดนี้</div>`;
+      if(restD>=0.005)h+=`<div class="ftip-note">* ประกันสังคม/กองทุนฯ/ภาษี อีก ${fmt(restD)} ถูกหักวันอื่น</div>`;
+    }
     /* เงินออกจัดเป็นกลุ่มตามวิธีจ่าย หัวกลุ่มคือยอดรวมของประเภทนั้นไปในตัว
-       ผลรวมทุกหัวกลุ่ม = tOut เสมอ (ทุกรายการเงินออกมี pm: จากฟอร์ม / SSO-PVD='bank' / ลงทุน='inv')
-       วันที่ไม่มีรายการเงินออกเลยข้ามทั้งบล็อก ไม่งั้นจะเหลือหัวข้อลอยไม่มีบรรทัดข้างใต้ */
-    if(gd.out.length){
+       ตัด 3 รายการตามกฎหมายออกเมื่อบล็อกข้างบนสรุปให้แล้ว จะได้ไม่อ่านซ้ำสองที่
+       — แต่ตัดเฉพาะตอนที่บล็อกนั้นแสดงจริง ไม่งั้นวันที่ผู้ใช้ย้าย SSO ไปลงโดยไม่มีเงินเข้า
+       รายการจะหายไปจาก tooltip ทั้งวันโดยไม่มีที่ให้เห็นเลย */
+    const outList=showTake?gd.out.filter(e=>!STAT_KIND[e.kind]):gd.out;
+    if(outList.length){
       const grp={};
-      gd.out.forEach(e=>{const k=PM_META[e.pm]?e.pm:'bank';(grp[k]=grp[k]||[]).push(e);});
+      outList.forEach(e=>{const k=PM_META[e.pm]?e.pm:'bank';(grp[k]=grp[k]||[]).push(e);});
       const sum=k=>grp[k].reduce((a,e)=>a+e.v,0);
       /* กลุ่มเรียงมากไปน้อย ยอดเท่ากันใช้ PM_ORDER ตัดสิน ผลจะได้คงที่ไม่สลับไปมา */
       const keys=Object.keys(grp).sort((a,b)=>sum(b)-sum(a)||PM_ORDER.indexOf(a)-PM_ORDER.indexOf(b));
-      h+=`<div class="ftip-sub">รายการหัก แยกตามวิธีจ่าย</div>`;
+      h+=`<div class="ftip-sub">${showTake?'รายการหักอื่น':'รายการหัก'} แยกตามวิธีจ่าย</div>`;
       keys.forEach(k=>{
         h+=`<div class="ftip-r ftip-pmrow"><span>${PM_META[k].icon} ${PM_META[k].label}</span><span>${fmt(sum(k))}</span></div>`;
         grp[k].slice().sort((a,b)=>b.v-a.v).forEach(e=>{
