@@ -2490,7 +2490,15 @@ function renderFlowTimeline(c,opts){
     const x=TL.PADL+(s-s0)*TL.DAY;
     ['in','out'].forEach(dir=>{
       const list=byDay[s][dir];if(!list.length)return;
-      list.slice().sort((a,b)=>b.v-a.v).forEach(e=>chips[dir].push({s,x,w:chipW(e),e}));
+      /* อ่านจากบนลงล่าง = มากไปน้อย ทั้งสองฝั่ง
+         laneY() ให้เลนสูงขึ้น = "สูงขึ้น" ฝั่งเงินเข้า แต่ = "ต่ำลง" ฝั่งเงินออก
+         ฝั่งเข้าจึงต้องดันยอดน้อยเข้าก่อน (ได้เลนต่ำ = ติดแกน = ล่างสุด) สลับกับฝั่งออก */
+      const ord=list.slice().sort((a,b)=>dir==='in'?a.v-b.v:b.v-a.v);
+      /* จองความกว้างเท่ากันทุกใบของวันเดียวกัน (= ใบที่กว้างสุด) packLanes() จะได้แจกเลน
+         ติดกันตามลำดับที่ดันเข้าเสมอ ไม่งั้นชิปแคบจะแทรกช่องที่ชิปกว้างแทรกไม่ได้ แล้วลำดับสลับ
+         w ใช้แค่ตอนจัดเลน — chip() คำนวณความกว้างที่วาดจริงเองอีกที รูปจึงไม่เปลี่ยน */
+      const wDay=Math.max(...ord.map(chipW));
+      ord.forEach(e=>chips[dir].push({s,x,w:wDay,e}));
       const t=list.reduce((a,z)=>a+z.v,0);
       tots[dir].push({s,x,w:Math.max(52,totLabel(dir,t).length*5.6+8),t});
     });
