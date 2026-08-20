@@ -357,6 +357,9 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .flow-rec-ref{font-size:.68rem;color:#a0aec0;font-weight:500}
 .flow-rec-warn{color:#c53030}
 .flow-un-tot{border-top:2px solid #cbd5e0;font-weight:700;color:#2b6cb0;font-size:.88rem}
+.flow-off-h{color:#c05621}
+.flow-off-note{font-size:.7rem;color:#975a16;background:#fffaf0;border:1px solid #fbd38d;border-radius:7px;padding:6px 9px;margin-bottom:6px;line-height:1.5}
+.flow-off-dt{font-size:.68rem;color:#c05621;font-weight:700;margin-left:4px}
 .flow-fill{margin-top:9px;width:100%;padding:8px;border:none;border-radius:7px;background:#bee3f8;color:#2b6cb0;font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit}
 .flow-fill:hover{background:#90cdf4}
 .pmsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
@@ -2441,7 +2444,7 @@ function renderFlowTimeline(c,opts){
   opts=opts||{};
   const box=opts.el||ge('flowTL');if(!box)return;
   const interactive=opts.interactive!==false;   /* หน้าสรุปรายปี = อ่านอย่างเดียว ปุ่มแก้ข้อมูลต้องไม่โผล่ */
-  const{dated,undated,pay}=buildFlowEvents(c);
+  let{dated,undated,pay}=buildFlowEvents(c);
 
   if(!dated.length){
     box.innerHTML=`<div class="card flow-card"><div class="ch cbl">🧭 ไทม์ไลน์กระแสเงิน</div>
@@ -2451,7 +2454,18 @@ function renderFlowTimeline(c,opts){
 
   /* ── ช่วงแกน: จากรายการแรกถึงรายการสุดท้าย (รวมวันเงินเดือนออกเสมอ)
      เผื่อหัวท้ายข้างละ 1 วันให้หายใจ — ระหว่างนั้นแสดงครบทุกวันตามปฏิทิน ── */
-  const sPay=dSer(pay);
+  /* กันกราฟบานจนแท็บค้าง: s0/s1 เคยมาจาก min/max ของวันที่ทุกรายการตรง ๆ
+     พอมีรายการเดียวที่พิมพ์ปีผิด แกนเคยยาวถึง 86,000 วัน = SVG กว้าง 3.8 ล้าน px
+     จึงยึดวันเงินเดือนออกของงวด (คิดจากคีย์เดือน จึงเพี้ยนตามข้อมูลไม่ได้) เป็นศูนย์กลางกรอบ */
+  const WIN=45;
+  const sAnchor=dSer(payDate(c.ym)||pay);
+  const inWin=s=>Math.abs(s-sAnchor)<=WIN;
+  const offRange=dated.filter(e=>!inWin(dSer(e.dt)));
+  if(offRange.length)dated=dated.filter(e=>inWin(dSer(e.dt)));
+  /* ถ้าวันเงินเดือนออกที่กรอกไว้เองก็หลุดกรอบ ให้ใช้วันตามงวดเป็นตัวอ้างอิงที่แสดงผลแทน */
+  const payShow=inWin(dSer(pay))?pay:payDate(c.ym);
+
+  const sPay=dSer(payShow);
   const sAll=dated.map(e=>dSer(e.dt));
   let s0=Math.min(sPay,...sAll)-1;
   let s1=Math.max(sPay,...sAll)+1;
@@ -2625,9 +2639,13 @@ function renderFlowTimeline(c,opts){
   /* ── กล่องรายการที่ยังไม่ระบุวันที่ + กระทบยอดกับกล่องสรุปเงิน ── */
   const uIn=undated.filter(e=>e.dir==='in'),uOut=undated.filter(e=>e.dir==='out');
   const uInT=uIn.reduce((a,e)=>a+e.v,0),uOutT=uOut.reduce((a,e)=>a+e.v,0);
-  const allIn=dated.concat(undated).filter(e=>e.dir==='in').reduce((a,e)=>a+e.v,0);
-  const allOut=dated.concat(undated).filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0);
-  const tlEnd=bal[nD-1]+uInT-uOutT;
+  /* รายการนอกกรอบคิดแบบเดียวกับรายการที่ยังไม่ระบุวันที่ — ไม่เข้าเส้นยอดคงเหลือ
+     แต่ยังถูกนับในกระทบยอด ยอด "เงินคงเหลือใช้จริง" จึงตรงกับกล่องสรุปเงินเสมอ */
+  const fInT=offRange.filter(e=>e.dir==='in').reduce((a,e)=>a+e.v,0);
+  const fOutT=offRange.filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0);
+  const allIn=dated.concat(undated,offRange).filter(e=>e.dir==='in').reduce((a,e)=>a+e.v,0);
+  const allOut=dated.concat(undated,offRange).filter(e=>e.dir==='out').reduce((a,e)=>a+e.v,0);
+  const tlEnd=bal[nD-1]+uInT-uOutT+fInT-fOutT;
   /* ตาข่ายนิรภัย: ถ้ายอดไม่ตรงกับ finalCash ให้โชว์ส่วนต่าง แทนที่จะเพี้ยนเงียบๆ
      (เช่นผู้ใช้พิมพ์จำนวนเงินติดลบ ซึ่ง push() ข้ามไป) */
   const diff=(c.finalCash!=null)?(c.finalCash-tlEnd):0;
@@ -2644,11 +2662,18 @@ function renderFlowTimeline(c,opts){
       +uOut.map(e=>li(e,'−','vad')).join('')
       +(interactive?`<button class="flow-fill" onclick="fillBlankDates()">📅 ใส่วันเงินเดือนออกให้รายการที่ยังว่าง</button>`:'');
   }
+  if(offRange.length){
+    const li=e=>`<div class="li"><span>${esc(e.n)} <span class="flow-off-dt">${tlThDate(e.dt)}</span></span><span class="${e.dir==='in'?'vai':'vad'}">${e.dir==='in'?'+':'−'}${fmt(e.v)}</span></div>`;
+    unHtml+=`<div class="flow-un-h flow-off-h">⚠️ วันที่อยู่นอกช่วง — ${offRange.length} รายการ <span class="flow-un-tag">ไม่ถูกนับในเส้นยอดคงเหลือ</span></div>`
+      +`<div class="flow-off-note">ห่างจากวันเงินเดือนออก (${tlThDate(payShow)}) เกิน ${WIN} วัน จึงไม่ถูกวาดบนแกน — ลองตรวจว่า <strong>ปี</strong> ในช่องวันที่ของรายการเหล่านี้ถูกต้องหรือไม่</div>`
+      +offRange.map(li).join('');
+  }
   unHtml+=`<div class="flow-rec-h">🧾 กระทบยอดกับกล่อง “สรุปเงิน”</div>
     <div class="li${hasIncDiff?' flow-rec-warn':''}"><span>รวมเงินเข้าทั้งหมด <span class="flow-rec-ref">${hasIncDiff?`⚠️ ต่างจาก “รวมรายได้” ${fmt(Math.abs(incDiff))}`:'= รวมรายได้ ก่อนหักภาษี'}</span></span><span class="vai">${fmt(allIn)}</span></div>
     <div class="li"><span>รวมเงินออกทั้งหมด <span class="flow-rec-ref">SSO + กองทุนฯ + รายการหัก + แบ่งลงทุน</span></span><span class="vad">−${fmt(allOut)}</span></div>
     <div class="li flow-un-sum"><span>ยอดคงเหลือบนไทม์ไลน์</span><span>${fmt(bal[nD-1])}</span></div>`;
   if(undated.length)unHtml+=`<div class="li flow-un-sum"><span>รายการที่ยังไม่ระบุวันที่</span><span>${(uInT-uOutT)<0?'−':'+'}${fmt(Math.abs(uInT-uOutT))}</span></div>`;
+  if(offRange.length)unHtml+=`<div class="li flow-un-sum"><span>รายการที่วันที่อยู่นอกช่วง</span><span>${(fInT-fOutT)<0?'−':'+'}${fmt(Math.abs(fInT-fOutT))}</span></div>`;
   if(hasDiff)unHtml+=`<div class="li flow-un-sum flow-rec-warn"><span>⚠️ รายการที่ไม่ได้แสดงบนไทม์ไลน์</span><span>${diff<0?'−':'+'}${fmt(Math.abs(diff))}</span></div>`;
   unHtml+=`<div class="li flow-un-tot"><span>= เงินคงเหลือใช้จริง</span><span>${fmt(tlEnd+diff)}</span></div>
     </div>`;
@@ -2671,7 +2696,7 @@ function renderFlowTimeline(c,opts){
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
       <div class="flow-scroll"><div class="flow-inner"><svg class="fx-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip fx-tip"></div></div></div>
       <div class="flow-note">
-        <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(pay)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
+        <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(payShow)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
         <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์</strong> (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
         <span style="color:#a0aec0">เส้นจำลองไม่กระทบตัวเลขจริงที่คำนวณไว้ · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
       </div>
@@ -2681,7 +2706,7 @@ function renderFlowTimeline(c,opts){
   svg.innerHTML=g;
 
   /* state ผูกไว้กับ svg ตัวนั้น ๆ ไม่ใช่ตัวแปร global — หน้าเดียวมีไทม์ไลน์ได้หลายอันโดยไม่ปนกัน */
-  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay};
+  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay:payShow};
   svg._fxPin=false;
   /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
   svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')flowHover(e);});
