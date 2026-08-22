@@ -330,6 +330,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-pmrow{color:#cbd5e0;font-weight:600}
 .ftip-gi>span:first-child,.ftip-sd>span:first-child{padding-left:11px;opacity:.92}
 .ftip-pmrow>span:last-child{font-weight:600}
+.ftip-dedsum{border-top:1px dashed rgba(255,255,255,.28);margin-top:3px;padding-top:3px;font-weight:700;color:#e2e8f0}
 .ftip-bal{border-top:1px solid rgba(255,255,255,.22);margin-top:3px;padding-top:3px;font-weight:700;color:#90cdf4}
 .ftip-plan{font-weight:700;color:#d6bcfa}
 .ftip-plan.wk{background:rgba(214,188,250,.16);border-radius:5px;padding:1px 4px;margin:1px -4px 0}
@@ -2821,6 +2822,16 @@ function flowHover(evt){
           h+=`<div class="ftip-r ftip-gi"><span>${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
         });
       });
+      /* แถวปิดท้าย — รวมทุกกลุ่มวิธีจ่ายเข้าด้วยกัน จะได้ไม่ต้องไล่บวกหัวกลุ่มเอง
+         มีรายการเดียวหัวกลุ่มก็บอกยอดเดียวกันอยู่แล้ว จึงข้ามไป */
+      const outSum=outList.reduce((a,e)=>a+e.v,0);
+      if(outList.length>1){
+        h+=`<div class="ftip-r ftip-dedsum"><span>รวม${showTake?'รายการหักอื่น':'รายการหัก'}ทั้งหมด</span><span class="ftip-out">−${fmt(outSum)}</span></div>`;
+      }
+      /* วันที่แยก 3 รายการตามกฎหมายไปสรุปข้างบน "ทั้งหมด" ของวันนี้ยังมากกว่านั้น — บอกยอดเต็มไว้ด้วย */
+      if(showTake&&statSum>0){
+        h+=`<div class="ftip-note">* รวมกับประกันสังคม/กองทุนฯ/ภาษี เป็นเงินออกวันนี้ทั้งหมด ${fmt(outSum+statSum)}</div>`;
+      }
     }
     h+=`<div class="ftip-r ftip-net"><span>สุทธิวันนี้</span><span>${tIn-tOut<0?'−':'+'}${fmt(Math.abs(tIn-tOut))}</span></div>`;
   }else{
