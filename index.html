@@ -335,6 +335,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ftip-plan{font-weight:700;color:#d6bcfa}
 .ftip-plan.wk{background:rgba(214,188,250,.16);border-radius:5px;padding:1px 4px;margin:1px -4px 0}
 .ftip-wk{background:#d6bcfa;color:#44337a;border-radius:7px;padding:0 5px;font-size:.6rem;font-weight:700;margin-left:4px}
+.ftip-wk-off{background:rgba(255,255,255,.14);color:#cbd5e0;border-radius:7px;padding:0 5px;font-size:.6rem;font-weight:600;margin-left:4px}
 .fx-svg text.ft{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
 .fx-svg g.fe{cursor:default}
 .fx-svg g.fe:hover rect{opacity:.72}
@@ -345,6 +346,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .flow-ctl{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.78rem;font-weight:700;color:#553c9a;background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:8px 12px;margin-bottom:6px}
 .flow-ctl input,.flow-ctl .fx-wkb{width:96px;padding:4px 7px;border:1px solid #d6bcfa;border-radius:6px;font-size:.8rem;text-align:right;background:#fff}
 .flow-ctl-sum{font-weight:600;color:#718096;font-size:.74rem}
+.wkb-skip{color:#a0aec0;font-weight:600}
 .wkb-tag{font-size:.66rem;font-weight:700;border-radius:8px;padding:2px 7px;white-space:nowrap}
 .wkb-def{background:#e9d8fd;color:#553c9a}
 .wkb-ovr{background:#feebc8;color:#c05621}
@@ -2611,13 +2613,25 @@ function renderFlowTimeline(c,opts){
     bal.push(run);lo=Math.min(lo,run);hi=Math.max(hi,run);
   }
   /* เส้นจำลอง "ถ้าใช้ตามงบวันหยุด" = ยอดคงเหลือ − งบวันหยุดสะสม
-     หักทุกวันเสาร์และอาทิตย์ วันละเท่ากับงบที่ผู้ใช้กรอก */
+     หักทุกวันเสาร์และอาทิตย์ตั้งแต่วันเงินเดือนออกเป็นต้นไป วันละเท่ากับงบที่ผู้ใช้กรอก */
   const wkb=nf(c.wkb!=null?c.wkb:_wkb);
-  const plan=[];let wkAcc=0,wkDays=0;
-  for(let i=0;i<nD;i++){
-    const[qy,qm,qd]=serDt(s0+i).split('-').map(Number);
+  /* งบเริ่มถูกหักตั้งแต่วันเงินเดือนออกเป็นต้นไป — เสาร์/อาทิตย์ที่อยู่ก่อนเงินเข้ายังไม่มีงบให้ใช้
+     ถ้าหักด้วย เส้นจำลองจะจมลงตั้งแต่ยังไม่มีเงิน แล้วอ่านผิดว่าใช้ตามงบนี้ไม่ไหว
+     (วันเงินเดือนออกเองนับด้วย ถ้าวันนั้นตรงกับเสาร์หรืออาทิตย์ — เงินเข้าวันเดียวกันแล้ว) */
+  const isWkbDay=s=>{
+    if(s<sPay)return false;
+    const[qy,qm,qd]=serDt(s).split('-').map(Number);
     const dw=new Date(qy,qm-1,qd).getDay();
-    if(wkb>0&&(dw===0||dw===6)){wkAcc+=wkb;wkDays++;}
+    return dw===0||dw===6;
+  };
+  const plan=[];let wkAcc=0,wkDays=0,wkSkip=0;
+  for(let i=0;i<nD;i++){
+    const s=s0+i,[qy,qm,qd]=serDt(s).split('-').map(Number);
+    const dw=new Date(qy,qm-1,qd).getDay();
+    if(wkb>0){
+      if(isWkbDay(s)){wkAcc+=wkb;wkDays++;}
+      else if(dw===0||dw===6)wkSkip++;                /* วันหยุดก่อนเงินเดือนออก — ยังไม่เริ่มนับ */
+    }
     plan.push(bal[i]-wkAcc);
   }
   if(wkb>0)plan.forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);});   /* สเกลแกน y ต้องครอบทั้งสองเส้น */
@@ -2646,9 +2660,10 @@ function renderFlowTimeline(c,opts){
   g+=`<path d="${path}" fill="none" stroke="#2b6cb0" stroke-width="2"/>`;
   /* จุดบนวันเสาร์/อาทิตย์ = วันที่งบถูกใช้ */
   if(wkb>0)for(let i=0;i<nD;i++){
-    const[wy,wm,wd]=serDt(s0+i).split('-').map(Number);
+    const s=s0+i;if(!isWkbDay(s))continue;
+    const[wy,wm,wd]=serDt(s).split('-').map(Number);
     const dw=new Date(wy,wm-1,wd).getDay();
-    if(dw===0||dw===6)g+=`<circle cx="${X(s0+i)}" cy="${YB(plan[i])}" r="3" fill="#805ad5" stroke="#fff" stroke-width="1"><title>${DFULL[dw]} ${tlThDate(serDt(s0+i))} — ถ้าใช้ตามงบ ${fmt(plan[i])}</title></circle>`;
+    g+=`<circle cx="${X(s)}" cy="${YB(plan[i])}" r="3" fill="#805ad5" stroke="#fff" stroke-width="1"><title>${DFULL[dw]} ${tlThDate(serDt(s))} — ถ้าใช้ตามงบ ${fmt(plan[i])}</title></circle>`;
   }
   /* จุดต่ำสุด + ยอดปลายงวด */
   const iMin=bal.indexOf(Math.min(...bal));
@@ -2718,20 +2733,20 @@ function renderFlowTimeline(c,opts){
     <div class="cb">
       ${(interactive||wkb>0)?`<div class="flow-ctl">🗓️ งบใช้จ่ายวันหยุด
         ${interactive
-          ? `<input type="number" class="fx-wkb" value="${esc(_wkb)}" min="0" placeholder="0" onchange="setWkb(this.value)"> บาท/วัน (เสาร์–อาทิตย์)`
-          : `<strong>${tlAmt(wkb)}</strong> บาท/วัน (เสาร์–อาทิตย์)`}
+          ? `<input type="number" class="fx-wkb" value="${esc(_wkb)}" min="0" placeholder="0" onchange="setWkb(this.value)"> บาท/วัน (เสาร์–อาทิตย์ ตั้งแต่วันเงินเดือนออก)`
+          : `<strong>${tlAmt(wkb)}</strong> บาท/วัน (เสาร์–อาทิตย์ ตั้งแต่วันเงินเดือนออก)`}
         ${!interactive?'' : _wkb===_wkbDef
           ? `<span class="wkb-tag wkb-def" title="ค่านี้ถูกจำไว้และใช้กับทุกเดือน">⭐ ค่าเริ่มต้นตลอด</span>`
           : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 เฉพาะเดือนนี้</span>`
             +`<button class="wkb-btn" onclick="setWkbDefault()">⭐ จำเป็นค่าเริ่มต้นตลอด</button>`
             +`<button class="wkb-btn gh" onclick="resetWkbToDefault()">↩︎ กลับไปใช้ ${_wkbDef?tlAmt(nf(_wkbDef)):'(ว่าง)'}</button>`}
-        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุด × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong> · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}</span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
+        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุดตั้งแต่ ${tlThDate(payShow)} × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong>${wkSkip?` · <span class="wkb-skip">ข้าม ${wkSkip} วันหยุดก่อนเงินเดือนออก</span>`:''} · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}</span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
       </div>`:''}
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
       <div class="flow-scroll"><div class="flow-inner"><svg class="fx-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip fx-tip"></div></div></div>
       <div class="flow-note">
         <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(payShow)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
-        <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์</strong> (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
+        <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์ โดยเริ่มนับตั้งแต่วันเงินเดือนออก (${tlThDate(payShow)}) เป็นต้นไป</strong> วันหยุดที่อยู่ก่อนหน้านั้นยังไม่ถูกหัก เพราะเงินยังไม่เข้า (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
         <span style="color:#a0aec0">เส้นจำลองไม่กระทบตัวเลขจริงที่คำนวณไว้ · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
       </div>
       ${unHtml}
@@ -2838,8 +2853,9 @@ function flowHover(evt){
     h+=`<div class="ftip-r ftip-none"><span>— ไม่มีรายการวันนี้ —</span></div>`;
   }
   h+=`<div class="ftip-r ftip-bal"><span>💧 ยอดคงเหลือสะสม</span><span>${fmt(F.bal[i])}</span></div>`;
-  const wk=dow===0||dow===6;
-  if(F.wkb>0)h+=`<div class="ftip-r ftip-plan${wk?' wk':''}"><span>🗓️ ถ้าใช้ตามงบ${wk?' <span class="ftip-wk">หักงบวันนี้</span>':''}</span><span>${fmt(F.plan[i])}</span></div>`;
+  /* วันหยุดก่อนวันเงินเดือนออกยังไม่ถูกหักงบ — ป้ายต้องบอกให้ตรงกับเส้น ไม่งั้นดูเหมือนงบหาย */
+  const wkAll=dow===0||dow===6,wk=wkAll&&s>=dSer(F.pay);
+  if(F.wkb>0)h+=`<div class="ftip-r ftip-plan${wk?' wk':''}"><span>🗓️ ถ้าใช้ตามงบ${wk?' <span class="ftip-wk">หักงบวันนี้</span>':(wkAll?' <span class="ftip-wk-off">ยังไม่ถึงวันเงินเดือนออก</span>':'')}</span><span>${fmt(F.plan[i])}</span></div>`;
   tip.innerHTML=h;
   tip.style.display='block';
   /* วางกล่องโดยไม่ให้ล้นขอบกราฟ */
