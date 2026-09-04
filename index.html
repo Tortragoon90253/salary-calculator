@@ -179,7 +179,7 @@ td input.mi.m3{border-color:#f6ad55;background:#fffaf0}
 .sumhdr{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:white;border-radius:10px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
 .sumhdr h2{font-size:1.05rem;font-weight:700}.sumhdr .yb{font-size:1.5rem;font-weight:800;opacity:.85}
 .stw{overflow-x:auto}
-table.stbl{width:100%;border-collapse:collapse;font-size:.75rem;min-width:840px}
+table.stbl{width:100%;border-collapse:collapse;font-size:.75rem;min-width:990px}
 table.stbl th{background:#2d3748;color:white;padding:7px 5px;text-align:center;white-space:nowrap}
 table.stbl td{padding:5px 5px;border:1px solid #e2e8f0;text-align:right;white-space:nowrap}
 table.stbl td:first-child{text-align:center;font-weight:700;color:#4a5568}
@@ -187,6 +187,7 @@ table.stbl tr:hover{background:#f7fafc}
 table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-weight:700}
 .sdn{color:#276749;font-weight:700}.sdo{color:#553c9a;font-weight:600}.sdd{color:#c53030}.sdi{color:#234e52;font-weight:600}
 .sdx{color:#6b46c1;font-weight:600}
+.sdw{color:#805ad5;font-weight:600}
 .nd{color:#a0aec0;font-style:italic;text-align:center!important}
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 @media(max-width:700px){.cg{grid-template-columns:1fr}}
@@ -262,6 +263,10 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .wrap{padding:4px;max-width:100%}
   body{background:white}
   .card,.cbx{box-shadow:none;border:1px solid #e2e8f0}
+  /* ตารางสรุปรายเดือนกว้างขึ้นหลังเพิ่มคอลัมน์งบวันหยุด — ย่อให้พอดีหน้ากระดาษแทนการตัดขอบ */
+  .stw{overflow-x:visible!important}
+  table.stbl{min-width:0!important;font-size:.62rem}
+  table.stbl th,table.stbl td{padding:4px 3px}
 }
 @media print{
   body.print-monthly #mv{display:block!important}
@@ -682,10 +687,10 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
   <button class="pdfbtn" onclick="window.print()">🖨️ Export รายงาน PDF</button>
   <div class="card">
-    <div class="ch cpu">📋 ตารางสรุปรายเดือน</div>
+    <div class="ch cpu">📋 ตารางสรุปรายเดือน <span class="ch-sub">รวมงบใช้จ่ายวันหยุด</span></div>
     <div class="cb"><div class="stw">
       <table class="stbl">
-        <thead><tr><th>เดือน</th><th>เงินเดือนฐาน</th><th>ค่าเพิ่มเติม</th><th>OT รวม</th><th>รายได้อื่นๆ</th><th>รายได้รวม</th><th>แบ่งลงทุน</th><th>ภาษี</th><th>หักรวม</th><th>รายได้รับจริง</th><th>ใช้จริง</th></tr></thead>
+        <thead><tr><th>เดือน</th><th>เงินเดือนฐาน</th><th>ค่าเพิ่มเติม</th><th>OT รวม</th><th>รายได้อื่นๆ</th><th>รายได้รวม</th><th>แบ่งลงทุน</th><th>ภาษี</th><th>หักรวม</th><th>รายได้รับจริง</th><th>ใช้จริง</th><th>งบวันหยุด</th><th>เหลือหลังหักงบ</th></tr></thead>
         <tbody id="sBody"></tbody>
       </table>
     </div></div>
@@ -3471,22 +3476,25 @@ function fillTlMonSel(){
 
 function renderSum(){
   ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;
-  let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0,ttx=0;
+  let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0,ttx=0,twk=0,tlf=0;
   let lbs=[],dInc=[],dTH=[],dFin=[],dDed=[],dH15=[],dH20=[],dH30=[],dAcc=[],run=0;let html='';
   for(let i=0;i<12;i++){
     const t=compM(ymk(i));lbs.push(MS[i]);
     if(t){
       tb+=t.base;ta+=t.totA;tot+=t.totOT;to+=t.totO;ti+=t.totInc;tiv+=t.totInv;td+=t.totDed;tth+=t.takeHome;tf+=t.final;ttx+=t.taxDed;
       run+=t.totInv;
+      /* งบใช้จ่ายวันหยุดของเดือนนี้ = งบต่อวัน × จำนวนวันเสาร์/อาทิตย์จริง (สูตรเดียวกับกล่องสรุปรายปี) */
+      const wkd=nf((DB[ymk(i)]||{}).wkb||_wkbDef),wkm=wkd>0?wkd*wkDaysIn(ymk(i)):0,lft=t.final-wkm;
+      twk+=wkm;tlf+=lft;
       dInc.push(+t.totInc.toFixed(2));dTH.push(+t.takeHome.toFixed(2));dFin.push(+t.final.toFixed(2));dDed.push(+t.totDed.toFixed(2));
       dH15.push(+t.h15.toFixed(2));dH20.push(+t.h20.toFixed(2));dH30.push(+t.h30.toFixed(2));dAcc.push(+run.toFixed(2));
-      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td></tr>`;
+      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td><td class="sdw">${wkm?fN(wkm):'—'}</td><td class="${lft<0?'sdd':'sdn'}">${wkm?fN(lft):'—'}</td></tr>`;
     }else{
       [dInc,dTH,dFin,dDed,dH15,dH20,dH30].forEach(a=>a.push(0));dAcc.push(+run.toFixed(2));
-      html+=`<tr><td>${MF[i]}</td><td class="nd" colspan="10">— ยังไม่มีข้อมูล —</td></tr>`;
+      html+=`<tr><td>${MF[i]}</td><td class="nd" colspan="12">— ยังไม่มีข้อมูล —</td></tr>`;
     }
   }
-  html+=`<tr class="stot"><td>รวมทั้งปี</td><td>${fN(tb)}</td><td>${fN(ta)}</td><td>${fN(tot)}</td><td>${fN(to)}</td><td>${fN(ti)}</td><td>${fN(tiv)}</td><td>${fN(ttx)}</td><td>${fN(td)}</td><td>${fN(tth)}</td><td>${fN(tf)}</td></tr>`;
+  html+=`<tr class="stot"><td>รวมทั้งปี</td><td>${fN(tb)}</td><td>${fN(ta)}</td><td>${fN(tot)}</td><td>${fN(to)}</td><td>${fN(ti)}</td><td>${fN(tiv)}</td><td>${fN(ttx)}</td><td>${fN(td)}</td><td>${fN(tth)}</td><td>${fN(tf)}</td><td>${twk?fN(twk):'—'}</td><td>${twk?fN(tlf):'—'}</td></tr>`;
   ge('sBody').innerHTML=html;
   const filled=[];for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)filled.push({mi:i,amt:t.totInv});}
   const last=filled.length?filled[filled.length-1]:null;
