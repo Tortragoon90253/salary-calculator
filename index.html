@@ -344,6 +344,14 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .fx-svg text.ft{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
 .fx-svg g.fe{cursor:default}
 .fx-svg g.fe:hover rect{opacity:.72}
+/* รายการที่ติ๊ก "จัดการแล้ว" ในตาราง — ขีดฆ่าทับบนไทม์ไลน์ด้วย จะได้กวาดตาแล้วรู้ว่าเหลืออะไรต้องทำ
+   เป็นแค่การแสดงผล ยอดยังถูกนับในเส้นยอดคงเหลือและทุกการคำนวณเหมือนเดิม */
+.fx-svg g.fe.fe-dn{opacity:.62}
+.fx-svg g.fe.fe-dn text{text-decoration:line-through}
+.ftip-r.ftip-dn>span{text-decoration:line-through;opacity:.68}
+.flow-un .li.li-dn>span{text-decoration:line-through;opacity:.62}
+.flow-ck{background:#c6f6d5;color:#276749;border-radius:8px;padding:2px 9px;font-size:.7rem;font-weight:700;white-space:nowrap;margin-left:6px}
+.flow-ck.full{background:#9ae6b4}
 .fl-lg{font-weight:700;margin-left:6px}
 .fl-in{color:#276749}
 .fl-out{color:#c53030}
@@ -1667,9 +1675,25 @@ function tgCk(k,id,on){
   it.dn=!!on;
   /* toggle คลาสบนแถวแทน re-render เต็ม — กันช่องที่กำลังพิมพ์อยู่เสียโฟกัส */
   const row=ge(_CKROW[k]+id);if(row)row.classList.toggle('done',it.dn);
-  updCkBars();ckAutoSave();
+  updCkBars();refreshFlowTL();ckAutoSave();
 }
-function ckAll(k,on){_CKL[k]().forEach(x=>x.dn=!!on);_CKR[k]();ckAutoSave();}
+function ckAll(k,on){_CKL[k]().forEach(x=>x.dn=!!on);_CKR[k]();refreshFlowTL();ckAutoSave();}
+
+/* ขีดฆ่าบนไทม์ไลน์ต้องขยับทันทีที่ติ๊ก — วาดซ้ำจาก context เดิม อัปเดตเฉพาะสถานะ dn
+   ยอดเงินทั้งหมดยังเป็นชุดเดิมที่ doCalc คำนวณไว้ ตัวเลขบนกราฟจึงไม่ขยับตาม */
+function refreshFlowTL(){
+  const c=_flowCtx,box=ge('flowTL');
+  if(!c||!box||!box.innerHTML)return;
+  const dnMap=arr=>{const m={};(arr||[]).forEach(x=>{m[x.id]=!!x.dn;});return m;};
+  [[c.aArr,A],[c.oArr,O],[c.dArr,D],[c.iArr,I]].forEach(([tgt,src])=>{
+    const m=dnMap(src);
+    (tgt||[]).forEach(x=>{if(x.id in m)x.dn=m[x.id];});
+  });
+  /* วาดใหม่ทั้งการ์ด = แถบเลื่อนเด้งกลับไปซ้ายสุด ถ้าไม่จำตำแหน่งไว้ก่อน */
+  const sc=box.querySelector('.flow-scroll'),sx=sc?sc.scrollLeft:0;
+  renderFlowTimeline(c);
+  const sc2=box.querySelector('.flow-scroll');if(sc2)sc2.scrollLeft=sx;
+}
 let _ckSt;
 function ckAutoSave(){clearTimeout(_ckSt);_ckSt=setTimeout(()=>saveM(),800);}
 
@@ -2394,6 +2418,9 @@ const PM_META={
 const PM_ORDER=['bank','cash','credit','inv'];
 /* รายการหักตามกฎหมายที่ถูกหักจากเงินได้ก่อนถึงมือ — ชุดเดียวกับสูตร takeHome ในหน้าผลคำนวณ */
 const STAT_KIND={sso:1,pvd:1,tax:1};
+/* kind ที่มาจากตารางซึ่งมีช่องติ๊ก "จัดการแล้ว" (A/O/D/I) — ใช้นับตัวเลขบนหัวการ์ดไทม์ไลน์
+   เงินเดือนฐาน/OT/ประกันสังคม/กองทุนฯ ไม่มีช่องติ๊ก จึงไม่ถูกนับเป็นตัวหาร */
+const CK_KIND={a:1,o:1,d:1,tax:1,inv:1};
 
 /* งบใช้จ่ายวันหยุด — แหล่งความจริงอยู่ที่ตัวแปร ไม่ใช่ DOM (ช่องกรอกถูก re-render ทิ้งทุกครั้ง)
    _wkbDef = ค่าเริ่มต้นที่จำไว้ตลอด · _wkb = ค่าที่ใช้จริงของเดือนที่เปิดอยู่ (อาจถูก override) */
@@ -2426,8 +2453,10 @@ function resetWkbToDefault(){_wkb=_wkbDef;setTimeout(doCalc,0);}
 function buildFlowEvents(c){
   const pay=isDt(c.baseDt)?c.baseDt:payDate(c.ym);
   const dated=[],undated=[];
-  const push=(dt,dir,kind,n,v,pm)=>{v=+v||0;if(v<=0)return;
-    (isDt(dt)?dated:undated).push({dt:isDt(dt)?dt:'',dir,kind,n,v,pm});};
+  /* dn = ติ๊ก "จัดการแล้ว" ของรายการนั้น — ใช้ขีดฆ่าบนไทม์ไลน์เท่านั้น ไม่แตะยอดใดๆ
+     เงินเดือน/OT/ประกันสังคม/กองทุนฯ ไม่มีช่องติ๊ก จึงเป็น false เสมอ */
+  const push=(dt,dir,kind,n,v,pm,dn)=>{v=+v||0;if(v<=0)return;
+    (isDt(dt)?dated:undated).push({dt:isDt(dt)?dt:'',dir,kind,n,v,pm,dn:!!dn});};
 
   /* หมายเหตุสำคัญ: doCalc() รวมยอดโดย "ไม่กรองชื่อ" (totA/custDed/totInv ใช้ reduce ล้วน)
      ถ้าตรงนี้กรอง x.n ทิ้ง รายการที่กรอกเงินไว้แต่ยังไม่ตั้งชื่อจะถูกนับใน "เงินคงเหลือใช้จริง"
@@ -2437,8 +2466,8 @@ function buildFlowEvents(c){
   /* ── เงินเข้า ── */
   push(pay,'in','base','เงินเดือนฐาน',c.base);
   if(c.totOT>0)push(pay,'in','ot',`OT รวม (${(c.h15+c.h20+c.h30).toFixed(2)} ชม.)`,c.totOT);
-  c.aArr.forEach(x=>push(isDt(x.dt)?x.dt:pay,'in','a',x.n||NN,nf(x.v)));
-  c.oArr.forEach(x=>push(x.dt,'in','o',x.n||NN,nf(x.v)));
+  c.aArr.forEach(x=>push(isDt(x.dt)?x.dt:pay,'in','a',x.n||NN,nf(x.v),null,x.dn));
+  c.oArr.forEach(x=>push(x.dt,'in','o',x.n||NN,nf(x.v),null,x.dn));
 
   /* ── เงินออก ── */
   /* SSO/PVD ไม่มีฟิลด์วิธีจ่าย แต่ getPaySummary() นับเป็น "บัญชี" มาตลอด — ยึดตามนั้น */
@@ -2450,11 +2479,11 @@ function buildFlowEvents(c){
     /* แยก kind ของแถวภาษีไว้ เพื่อให้ tooltip สรุป "ก่อนหัก → หลังหัก" ได้
        ใช้ isTaxRow() ตัวเดียวกับที่ getTaxFromD() ใช้ ยอดจึงตรงกับ takeHome เสมอ
        (ครอบคลุมแถวภาษีโบนัสด้วย ทั้งจาก BONUS_TAX_ID และจากชื่อที่มีคำว่า "ภาษี") */
-    push(at,'out',isTaxRow(x)?'tax':'d',x.n||NN,nf(x.v),PM_META[x.pm]?x.pm:'bank');
+    push(at,'out',isTaxRow(x)?'tax':'d',x.n||NN,nf(x.v),PM_META[x.pm]?x.pm:'bank',x.dn);
   });
   c.iArr.forEach(x=>{
     const v=x.t==='%'?c.invBase*nf(x.v)/100:nf(x.v);
-    push(x.dt,'out','inv',x.n||NN,v,'inv');
+    push(x.dt,'out','inv',x.n||NN,v,'inv',x.dn);
   });
 
   dated.sort((a,b)=>a.dt<b.dt?-1:a.dt>b.dt?1:b.v-a.v);
@@ -2465,10 +2494,14 @@ const tlShort=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;}
 const tlAmt=v=>(v<0?'−฿':'฿')+Math.round(Math.abs(v)).toLocaleString('en-US');
 const tlThDate=dt=>{const[y,m,d]=dt.split('-').map(Number);return `${d} ${MS[m-1]} ${y}`;};
 
+/* context ล่าสุดของไทม์ไลน์ในหน้าคำนวณ — เก็บไว้ให้ refreshFlowTL() วาดซ้ำได้ตอนติ๊ก "จัดการแล้ว"
+   โดยไม่ต้องเรียก doCalc() ใหม่ (doCalc เลื่อนจอไปที่กล่องผลลัพธ์ทุกครั้ง) */
+let _flowCtx=null;
 function renderFlowTimeline(c,opts){
   opts=opts||{};
   const box=opts.el||ge('flowTL');if(!box)return;
   const interactive=opts.interactive!==false;   /* หน้าสรุปรายปี = อ่านอย่างเดียว ปุ่มแก้ข้อมูลต้องไม่โผล่ */
+  if(!opts.el)_flowCtx=c;
   let{dated,undated,pay}=buildFlowEvents(c);
 
   /* ป้ายบอกงวด — ไม่มีตรงไหนบนไทม์ไลน์บอกเดือน/ปีมาก่อนเลย งวดคนละปีจึงหน้าตาเหมือนกันเป๊ะ */
@@ -2509,7 +2542,7 @@ function renderFlowTimeline(c,opts){
   dated.forEach(e=>{const s=dSer(e.dt);(byDay[s]=byDay[s]||{in:[],out:[]})[e.dir].push(e);});
   const days=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
   /* ── เตรียมป้ายทั้งหมดแล้วจัดเลน ก่อนกำหนดความสูงแถบ (ความสูงขึ้นกับจำนวนเลนจริง) ── */
-  const chipLabel=e=>`${tlShort(e.n,14)} ${tlAmt(e.v)}`;
+  const chipLabel=e=>`${e.dn?'✓ ':''}${tlShort(e.n,14)} ${tlAmt(e.v)}`;
   const chipW=e=>Math.max(64,chipLabel(e).length*5.6+12);
   const totLabel=(dir,t)=>`${dir==='in'?'+':'−'}${tlAmt(t)}`;
   const chips={in:[],out:[]},tots={in:[],out:[]};
@@ -2581,8 +2614,9 @@ function renderFlowTimeline(c,opts){
     const stroke=dir==='in'?COL.in:(isInv?COL.inv:COL.out);
     const bg=dir==='in'?COL.inBg:(isInv?COL.invBg:COL.outBg);
     const label=chipLabel(e),w=chipW(e),h=13;
-    return `<g class="fe"><title>${esc(e.n)} — ${dir==='in'?'+':'−'}${fmt(e.v)}\n${tlThDate(e.dt)}</title>`
-      +`<rect x="${cx-w/2}" y="${cy-h/2}" width="${w}" height="${h}" rx="6" fill="${bg}" stroke="${stroke}" stroke-width="1"/>`
+    /* ติ๊ก "จัดการแล้ว" แล้ว = จาง + กรอบประ + ขีดฆ่า (line-through มาจากคลาส fe-dn ใน CSS) */
+    return `<g class="fe${e.dn?' fe-dn':''}"><title>${esc(e.n)} — ${dir==='in'?'+':'−'}${fmt(e.v)}\n${tlThDate(e.dt)}${e.dn?'\n✓ จัดการแล้ว':''}</title>`
+      +`<rect x="${cx-w/2}" y="${cy-h/2}" width="${w}" height="${h}" rx="6" fill="${bg}" stroke="${stroke}" stroke-width="1"${e.dn?' stroke-dasharray="3,2"':''}/>`
       +`<text x="${cx}" y="${cy+3.6}" text-anchor="middle" font-size="8.6" fill="${dir==='in'?'#22543d':(isInv?'#234e52':'#742a2a')}">${esc(label)}</text></g>`;
   };
 
@@ -2708,16 +2742,23 @@ function renderFlowTimeline(c,opts){
   const incDiff=(c.totInc!=null)?(c.totInc-allIn):0;
   const hasIncDiff=Math.abs(incDiff)>=0.005;
 
+  /* ── สรุปจำนวนรายการที่ติ๊ก "จัดการแล้ว" — นับทุกรายการของงวด รวมที่ยังไม่ระบุวันที่/นอกช่วง ── */
+  const ckAllEv=dated.concat(undated,offRange).filter(e=>CK_KIND[e.kind]);
+  const ckDone=ckAllEv.filter(e=>e.dn).length;
+  const ckTag=ckAllEv.length
+    ? ` <span class="flow-ck${ckDone===ckAllEv.length?' full':''}" title="ติ๊ก ☑ จัดการแล้ว ในตารางรายการ แล้วรายการนั้นจะถูกขีดฆ่าบนไทม์ไลน์">✅ จัดการแล้ว ${ckDone}/${ckAllEv.length}</span>`
+    : '';
+
   let unHtml='<div class="flow-un">';
   if(undated.length){
-    const li=(e,sign,cls)=>`<div class="li"><span>${esc(e.n)}</span><span class="${cls}">${sign}${fmt(e.v)}</span></div>`;
+    const li=(e,sign,cls)=>`<div class="li${e.dn?' li-dn':''}"><span>${e.dn?'✓ ':''}${esc(e.n)}</span><span class="${cls}">${sign}${fmt(e.v)}</span></div>`;
     unHtml+=`<div class="flow-un-h">📌 ยังไม่ระบุวันที่ — ${undated.length} รายการ <span class="flow-un-tag">ไม่ถูกนับในเส้นยอดคงเหลือ</span></div>`
       +uIn.map(e=>li(e,'+','vai')).join('')
       +uOut.map(e=>li(e,'−','vad')).join('')
       +(interactive?`<button class="flow-fill" onclick="fillBlankDates()">📅 ใส่วันเงินเดือนออกให้รายการที่ยังว่าง</button>`:'');
   }
   if(offRange.length){
-    const li=e=>`<div class="li"><span>${esc(e.n)} <span class="flow-off-dt">${tlThDate(e.dt)}</span></span><span class="${e.dir==='in'?'vai':'vad'}">${e.dir==='in'?'+':'−'}${fmt(e.v)}</span></div>`;
+    const li=e=>`<div class="li${e.dn?' li-dn':''}"><span>${e.dn?'✓ ':''}${esc(e.n)} <span class="flow-off-dt">${tlThDate(e.dt)}</span></span><span class="${e.dir==='in'?'vai':'vad'}">${e.dir==='in'?'+':'−'}${fmt(e.v)}</span></div>`;
     unHtml+=`<div class="flow-un-h flow-off-h">⚠️ วันที่อยู่นอกช่วง — ${offRange.length} รายการ <span class="flow-un-tag">ไม่ถูกนับในเส้นยอดคงเหลือ</span></div>`
       +`<div class="flow-off-note">ห่างจากวันเงินเดือนออก (${tlThDate(payShow)}) เกิน ${WIN} วัน จึงไม่ถูกวาดบนแกน — ลองตรวจว่า <strong>ปี</strong> ในช่องวันที่ของรายการเหล่านี้ถูกต้องหรือไม่</div>`
       +offRange.map(li).join('');
@@ -2734,7 +2775,7 @@ function renderFlowTimeline(c,opts){
 
   box.innerHTML=`<div class="card flow-card">
     <div class="ch cbl">🧭 ไทม์ไลน์กระแสเงิน${perTag}
-      <span class="ch-sub"><span class="fl-lg fl-in">▲ เงินเข้า</span> <span class="fl-lg fl-out">▼ เงินออก</span></span></div>
+      <span class="ch-sub">${ckTag}<span class="fl-lg fl-in">▲ เงินเข้า</span> <span class="fl-lg fl-out">▼ เงินออก</span></span></div>
     <div class="cb">
       ${(interactive||wkb>0)?`<div class="flow-ctl">🗓️ งบใช้จ่ายวันหยุด
         ${interactive
@@ -2752,6 +2793,7 @@ function renderFlowTimeline(c,opts){
       <div class="flow-note">
         <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(payShow)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
         <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์ โดยเริ่มนับตั้งแต่วันเงินเดือนออก (${tlThDate(payShow)}) เป็นต้นไป</strong> วันหยุดที่อยู่ก่อนหน้านั้นยังไม่ถูกหัก เพราะเงินยังไม่เข้า (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
+        ${ckAllEv.length?`<strong>✓ ป้ายที่ถูกขีดฆ่า</strong> — รายการที่ติ๊ก <strong>☑ จัดการแล้ว</strong> ไว้ในตาราง${interactive?'ด้านบน':''} (โอน/จ่าย/เงินเข้าเรียบร้อยแล้ว) ยอดยังถูกนับในเส้นยอดคงเหลือและทุกการคำนวณตามเดิม<br>`:''}
         <span style="color:#a0aec0">เส้นจำลองไม่กระทบตัวเลขจริงที่คำนวณไว้ · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
       </div>
       ${unHtml}
@@ -2803,9 +2845,12 @@ function flowHover(evt){
   const dow=new Date(yy,mm-1,dd).getDay();
   const gd=F.byDay[s]||{in:[],out:[]};
   const tIn=gd.in.reduce((a,e)=>a+e.v,0),tOut=gd.out.reduce((a,e)=>a+e.v,0);
+  /* รายการที่ติ๊ก "จัดการแล้ว" ถูกขีดฆ่าในกล่องนี้ด้วย ให้ตรงกับป้ายบนไทม์ไลน์ */
+  const ckC=e=>e.dn?' ftip-dn':'';
+  const ckN=e=>`${e.dn?'✓ ':''}${esc(e.n)}`;
   let h=`<div class="ftip-d">${tlThDate(dt)} (${DFULL[dow]})${s===dSer(F.pay)?' <span class="ftip-pay">วันเงินเดือนออก</span>':''}</div>`;
   if(gd.in.length||gd.out.length){
-    gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r"><span>${esc(e.n)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
+    gd.in.slice().sort((a,b)=>b.v-a.v).forEach(e=>{h+=`<div class="ftip-r${ckC(e)}"><span>${ckN(e)}</span><span class="ftip-in">+${fmt(e.v)}</span></div>`;});
     /* ── สรุป "ก่อนหัก → ยอดรายได้รับจริง" ──
        ใช้สูตรและศัพท์เดียวกับหัวข้อใหญ่ของหน้าผลคำนวณ: รายได้รวม − SSO − กองทุนฯ − ภาษี
        โชว์เฉพาะวันที่มีทั้งเงินเข้าและรายการหักตามกฎหมาย วันที่ก่อนหัก = หลังหัก ไม่ได้บอกอะไร */
@@ -2815,7 +2860,7 @@ function flowHover(evt){
     if(showTake){
       h+=`<div class="ftip-r ftip-gross"><span>รวมรายได้ ก่อนหัก</span><span>${fmt(tIn)}</span></div>`;
       stat.slice().sort((a,b)=>b.v-a.v).forEach(e=>{
-        h+=`<div class="ftip-r ftip-sd"><span>− ${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
+        h+=`<div class="ftip-r ftip-sd${ckC(e)}"><span>− ${ckN(e)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
       });
       h+=`<div class="ftip-r ftip-take"><span>= ยอดรายได้รับจริง</span><span>${fmt(tIn-statSum)}</span></div>`;
       /* บล็อกนี้คิดเฉพาะวันนี้ ถ้ายังมีรายได้หรือรายการหักตามกฎหมายกระจายอยู่วันอื่น
@@ -2839,7 +2884,7 @@ function flowHover(evt){
       keys.forEach(k=>{
         h+=`<div class="ftip-r ftip-pmrow"><span>${PM_META[k].icon} ${PM_META[k].label}</span><span>${fmt(sum(k))}</span></div>`;
         grp[k].slice().sort((a,b)=>b.v-a.v).forEach(e=>{
-          h+=`<div class="ftip-r ftip-gi"><span>${esc(e.n)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
+          h+=`<div class="ftip-r ftip-gi${ckC(e)}"><span>${ckN(e)}</span><span class="ftip-out">−${fmt(e.v)}</span></div>`;
         });
       });
       /* แถวปิดท้าย — รวมทุกกลุ่มวิธีจ่ายเข้าด้วยกัน จะได้ไม่ต้องไล่บวกหัวกลุ่มเอง
