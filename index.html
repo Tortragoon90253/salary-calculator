@@ -711,7 +711,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       • <strong>ภาษี</strong> เป็นส่วนหนึ่งของ <strong>หักรวม</strong> อยู่แล้ว (หักรวม = ประกันสังคม + กองทุนฯ + รายการหักทั้งหมด รวมภาษี) — อย่านำสองคอลัมน์นี้มาบวกกัน<br>
       • <strong>ใช้จริง</strong> = รายได้รวม − หักรวม − แบ่งลงทุน · ส่วน <strong>รายได้รับจริง</strong> ยังไม่ได้หักรายการหักอื่นและเงินลงทุน<br>
       • <strong>งบวันหยุด</strong> = งบต่อวัน × เสาร์–อาทิตย์ของงวดนั้น นับตั้งแต่<strong>วันเงินเดือนออก</strong>ถึงก่อนวันเงินเดือนออกของงวดถัดไป (นิยามเดียวกับเส้นจำลองบนไทม์ไลน์)<br>
-      • ตัวเลข <strong>“จบช่วงเหลือ”</strong> บนไทม์ไลน์คิดเฉพาะช่วงวันที่วาดบนแกน และไม่รวมรายการที่ยังไม่ระบุวันที่/วันที่อยู่นอกช่วง จึง<strong>ไม่เท่ากับ “เหลือหลังหักงบ”</strong> ในตารางนี้ ซึ่งคิดเต็มทั้งงวด
+      • เทียบกับไทม์ไลน์ได้ที่กล่อง <strong>🧾 กระทบยอดกับกล่อง “สรุปเงิน”</strong> ซึ่งมีบรรทัด <strong>“= เหลือหลังหักงบวันหยุด”</strong> ตรงกับคอลัมน์นี้เสมอ<br>
+      • ส่วนตัวเลข <strong>“จบช่วงเหลือ”</strong> บนกราฟเป็นปลายเส้นจำลอง จึงคิดเฉพาะช่วงวันที่วาดบนแกน และไม่รวมรายการที่ยังไม่ระบุวันที่/วันที่อยู่นอกช่วง — <strong>คนละตัวกับคอลัมน์นี้</strong> ปกติที่จะไม่เท่ากัน
     </div></div>
   </div>
   <div class="card">
@@ -2784,8 +2785,17 @@ function renderFlowTimeline(c,opts){
   if(undated.length)unHtml+=`<div class="li flow-un-sum"><span>รายการที่ยังไม่ระบุวันที่</span><span>${(uInT-uOutT)<0?'−':'+'}${fmt(Math.abs(uInT-uOutT))}</span></div>`;
   if(offRange.length)unHtml+=`<div class="li flow-un-sum"><span>รายการที่วันที่อยู่นอกช่วง</span><span>${(fInT-fOutT)<0?'−':'+'}${fmt(Math.abs(fInT-fOutT))}</span></div>`;
   if(hasDiff)unHtml+=`<div class="li flow-un-sum flow-rec-warn"><span>⚠️ รายการที่ไม่ได้แสดงบนไทม์ไลน์</span><span>${diff<0?'−':'+'}${fmt(Math.abs(diff))}</span></div>`;
-  unHtml+=`<div class="li flow-un-tot"><span>= เงินคงเหลือใช้จริง</span><span>${fmt(tlEnd+diff)}</span></div>
-    </div>`;
+  unHtml+=`<div class="li flow-un-tot"><span>= เงินคงเหลือใช้จริง</span><span>${fmt(tlEnd+diff)}</span></div>`;
+  /* ต่อยอดจนถึง "เหลือหลังหักงบ" ของตารางสรุปรายเดือน
+     ต้องหักด้วยงบ "เต็มงวด" (wkFull) ไม่ใช่ wkAcc ซึ่งนับเฉพาะวันหยุดที่อยู่ในกรอบที่วาดบนแกน
+     ไม่งั้นตัวเลขปิดท้ายของสองหน้าจะไม่มีทางตรงกัน — ส่วน "จบช่วงเหลือ" บนกราฟยังคงเป็นของช่วงที่วาด
+     เพราะเป็นปลายเส้นจำลองจริงๆ จึงตอบคนละคำถามกัน */
+  if(wkb>0){
+    const leftFull=(tlEnd+diff)-wkFull;
+    unHtml+=`<div class="li"><span>− งบใช้จ่ายวันหยุดทั้งงวด <span class="flow-rec-ref">${wkFullD} วันหยุด × ${tlAmt(wkb)} · ทั้งงวด ไม่ใช่เฉพาะช่วงที่วาด</span></span><span class="vad">−${fmt(wkFull)}</span></div>
+    <div class="li flow-un-tot"><span>= เหลือหลังหักงบวันหยุด <span class="flow-rec-ref">= คอลัมน์ “เหลือหลังหักงบ” ในตารางสรุปรายเดือน</span></span><span${leftFull<0?' class="vad"':''}>${fmt(leftFull)}</span></div>`;
+  }
+  unHtml+=`</div>`;
 
   box.innerHTML=`<div class="card flow-card">
     <div class="ch cbl">🧭 ไทม์ไลน์กระแสเงิน${perTag}
