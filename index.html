@@ -2538,16 +2538,24 @@ function renderFlowTimeline(c,opts){
   const payShow=inWin(dSer(pay))?pay:payDate(c.ym);
 
   const sPay=dSer(payShow);
+  /* วันเงินเดือนออกของงวดถัดไป = เส้นแบ่งงวด ลากแกนไปให้ถึงเสมอ ถึงจะเห็นภาพครบทั้งงวด
+     (เดิมแกนจบที่รายการสุดท้าย ซึ่งมักอยู่แค่ไม่กี่วันหลังเงินเดือนออก จึงเห็นแค่ต้นงวด)
+     ผลพลอยได้: ช่วงที่วาดครอบคลุมวันหยุดของงวดครบ wkAcc จึงเท่ากับงบเต็มงวดพอดี */
+  const sPayNext=dSer(payDate(ymNext(c.ym))||'')||sPay+30;
   const sAll=dated.map(e=>dSer(e.dt));
   let s0=Math.min(sPay,...sAll)-1;
-  let s1=Math.max(sPay,...sAll)+1;
+  let s1=Math.max(sPay,sPayNext,...sAll)+1;
   /* ช่วงสั้นเกินไป (เช่นเดือนที่มีแต่รายการวันเงินเดือนออก) กราฟจะแคบจนป้ายคำอธิบาย
      กับป้ายปลายเส้นทับกัน — ขยายช่วงให้กว้างพออ่านได้ */
   const MIN_D=9;
   while(s1-s0+1<MIN_D){s1++;if(s1-s0+1<MIN_D)s0--;}
   const nD=s1-s0+1;
-  const X=s=>TL.PADL+(s-s0)*TL.DAY;
-  const W=TL.PADL+(nD-1)*TL.DAY+TL.PADR;
+  /* เต็มงวด ~33 วัน ที่ 44px/วัน = SVG กว้างกว่า 1,500px เลื่อนอ่านยากมากบนมือถือ
+     ย่อความกว้างต่อวันลงตามความยาวช่วง — ป้ายที่ชนกันจะถูก packLanes() ดันไปเลนถัดไปเอง
+     (ใช้ตัวแปรเฉพาะการวาดครั้งนี้ ห้ามแก้ TL.DAY เพราะเป็น const ที่ใช้ร่วมทุกครั้งที่วาด) */
+  const DAY=nD>26?30:nD>18?36:TL.DAY;
+  const X=s=>TL.PADL+(s-s0)*DAY;
+  const W=TL.PADL+(nD-1)*DAY+TL.PADR;
 
   /* ── จัดกลุ่มตามวัน + ทิศทาง ── */
   const byDay={};
@@ -2559,7 +2567,7 @@ function renderFlowTimeline(c,opts){
   const totLabel=(dir,t)=>`${dir==='in'?'+':'−'}${tlAmt(t)}`;
   const chips={in:[],out:[]},tots={in:[],out:[]};
   days.forEach(s=>{
-    const x=TL.PADL+(s-s0)*TL.DAY;
+    const x=TL.PADL+(s-s0)*DAY;
     ['in','out'].forEach(dir=>{
       const list=byDay[s][dir];if(!list.length)return;
       /* อ่านจากบนลงล่าง = มากไปน้อย ทั้งสองฝั่ง
@@ -2596,19 +2604,28 @@ function renderFlowTimeline(c,opts){
   for(let i=0;i<nD;i++){
     const s=s0+i,dt=serDt(s),[yy,mm,dd]=dt.split('-').map(Number);
     const dow=new Date(yy,mm-1,dd).getDay();
-    if(dow===0||dow===6)g+=`<rect x="${X(s)-TL.DAY/2}" y="${TL.PADT}" width="${TL.DAY}" height="${yAxis+TL.AXIS_H+DN_H-TL.PADT}" fill="#f7fafc"/>`;
-    if(dd===1&&i>0)g+=`<line x1="${X(s)-TL.DAY/2}" y1="${TL.PADT}" x2="${X(s)-TL.DAY/2}" y2="${yAxis+TL.AXIS_H+DN_H}" stroke="#cbd5e0" stroke-width="1" stroke-dasharray="3,3"/>`;
+    if(dow===0||dow===6)g+=`<rect x="${X(s)-DAY/2}" y="${TL.PADT}" width="${DAY}" height="${yAxis+TL.AXIS_H+DN_H-TL.PADT}" fill="#f7fafc"/>`;
+    if(dd===1&&i>0)g+=`<line x1="${X(s)-DAY/2}" y1="${TL.PADT}" x2="${X(s)-DAY/2}" y2="${yAxis+TL.AXIS_H+DN_H}" stroke="#cbd5e0" stroke-width="1" stroke-dasharray="3,3"/>`;
+    /* เส้นแบ่งงวด — ทุกอย่างขวาเส้นนี้เป็นของงวดถัดไปแล้ว */
+    if(s===sPayNext)g+=`<rect x="${X(s)-DAY/2}" y="${TL.PADT}" width="${(nD-i)*DAY}" height="${yAxis+TL.AXIS_H+DN_H-TL.PADT}" fill="#f0fff4" opacity=".7"/>`
+      +`<line x1="${X(s)-DAY/2}" y1="${TL.PADT}" x2="${X(s)-DAY/2}" y2="${balTop+TL.BAL_H}" stroke="#38a169" stroke-width="1.5" stroke-dasharray="5,3"/>`;
   }
 
   /* ── แถบแกนวันที่ ── */
-  g+=`<rect x="${TL.PADL-TL.DAY/2}" y="${yAxis}" width="${nD*TL.DAY}" height="${TL.AXIS_H}" fill="#edf2f7"/>`;
-  g+=`<line x1="${TL.PADL-TL.DAY/2}" y1="${yAxis}" x2="${TL.PADL+(nD-1)*TL.DAY+TL.DAY/2}" y2="${yAxis}" stroke="${COL.axis}" stroke-width="1.5"/>`;
-  g+=`<line x1="${TL.PADL-TL.DAY/2}" y1="${yAxis+TL.AXIS_H}" x2="${TL.PADL+(nD-1)*TL.DAY+TL.DAY/2}" y2="${yAxis+TL.AXIS_H}" stroke="${COL.axis}" stroke-width="1.5"/>`;
+  g+=`<rect x="${TL.PADL-DAY/2}" y="${yAxis}" width="${nD*DAY}" height="${TL.AXIS_H}" fill="#edf2f7"/>`;
+  g+=`<line x1="${TL.PADL-DAY/2}" y1="${yAxis}" x2="${TL.PADL+(nD-1)*DAY+DAY/2}" y2="${yAxis}" stroke="${COL.axis}" stroke-width="1.5"/>`;
+  g+=`<line x1="${TL.PADL-DAY/2}" y1="${yAxis+TL.AXIS_H}" x2="${TL.PADL+(nD-1)*DAY+DAY/2}" y2="${yAxis+TL.AXIS_H}" stroke="${COL.axis}" stroke-width="1.5"/>`;
   for(let i=0;i<nD;i++){
     const s=s0+i,dt=serDt(s),[yy,mm,dd]=dt.split('-').map(Number);
     const dow=new Date(yy,mm-1,dd).getDay(),wk=dow===0||dow===6;
     const isPay=s===sPay;
-    if(isPay)g+=`<rect x="${X(s)-TL.DAY/2+1}" y="${yAxis+1}" width="${TL.DAY-2}" height="${TL.AXIS_H-2}" fill="#bee3f8" rx="3"/>`;
+    if(isPay)g+=`<rect x="${X(s)-DAY/2+1}" y="${yAxis+1}" width="${DAY-2}" height="${TL.AXIS_H-2}" fill="#bee3f8" rx="3"/>`;
+    if(s===sPayNext){
+      g+=`<rect x="${X(s)-DAY/2+1}" y="${yAxis+1}" width="${DAY-2}" height="${TL.AXIS_H-2}" fill="#c6f6d5" rx="3"/>`;
+      /* วางป้ายชิดซ้ายของเส้น (text-anchor=end) — เส้นแบ่งงวดมักอยู่ใกล้ขอบขวาของแกน
+         ถ้าเขียนไล่ไปทางขวาจะยื่นเลยความกว้าง SVG แล้วโดนตัดขอบ */
+      g+=`<text x="${X(s)-DAY/2-4}" y="${TL.PADT+9}" text-anchor="end" font-size="9" font-weight="700" fill="#276749">งวดถัดไป · เงินเดือนออก ▶</text>`;
+    }
     g+=`<text x="${X(s)}" y="${yAxis+14}" text-anchor="middle" font-size="10.5" font-weight="${dd===1||isPay?700:600}" fill="${wk?'#c53030':COL.txt}">${dd}</text>`;
     g+=`<text x="${X(s)}" y="${yAxis+26}" text-anchor="middle" font-size="8.5" fill="${wk?'#e53e3e':COL.mut}">${DTH[dow]}</text>`;
     /* เดิมวาดชื่อเดือนเฉพาะวันที่ 1 แต่ช่วงแกนปกติคือราววันที่ 4–19 รอบวันเงินเดือนออก
@@ -2670,7 +2687,9 @@ function renderFlowTimeline(c,opts){
      ถ้าหักด้วย เส้นจำลองจะจมลงตั้งแต่ยังไม่มีเงิน แล้วอ่านผิดว่าใช้ตามงบนี้ไม่ไหว
      (วันเงินเดือนออกเองนับด้วย ถ้าวันนั้นตรงกับเสาร์หรืออาทิตย์ — เงินเข้าวันเดียวกันแล้ว) */
   const isWkbDay=s=>{
-    if(s<sPay)return false;
+    /* ขอบบน: วันเงินเดือนออกงวดถัดไปเป็นของงวดใหม่แล้ว ไม่นับเข้างบงวดนี้
+       ทำให้ wkAcc = wkDaysIn(ym) พอดี ยอดบนกราฟกับคอลัมน์ "งบวันหยุด" จึงตรงกันเสมอ */
+    if(s<sPay||s>=sPayNext)return false;
     const[qy,qm,qd]=serDt(s).split('-').map(Number);
     const dw=new Date(qy,qm-1,qd).getDay();
     return dw===0||dw===6;
@@ -2681,7 +2700,8 @@ function renderFlowTimeline(c,opts){
     const dw=new Date(qy,qm-1,qd).getDay();
     if(wkb>0){
       if(isWkbDay(s)){wkAcc+=wkb;wkDays++;}
-      else if(dw===0||dw===6)wkSkip++;                /* วันหยุดก่อนเงินเดือนออก — ยังไม่เริ่มนับ */
+      else if((dw===0||dw===6)&&s<sPay)wkSkip++;      /* วันหยุดก่อนเงินเดือนออก — ยังไม่เริ่มนับ
+                                                        (วันหยุดของงวดถัดไปไม่นับเป็น "ข้าม" เพราะเป็นคนละงวด) */
     }
     plan.push(bal[i]-wkAcc);
   }
@@ -2694,22 +2714,22 @@ function renderFlowTimeline(c,opts){
   const YB=v=>balTop+TL.BAL_H-((v-lo)/span)*TL.BAL_H;
   let path='',area='';
   for(let i=0;i<nD;i++){
-    const x1=X(s0+i)-TL.DAY/2,x2=X(s0+i)+TL.DAY/2,y=YB(bal[i]);
+    const x1=X(s0+i)-DAY/2,x2=X(s0+i)+DAY/2,y=YB(bal[i]);
     path+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
   }
-  area=path+`L${(X(s1)+TL.DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}L${(TL.PADL-TL.DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}Z`;
+  area=path+`L${(X(s1)+DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}L${(TL.PADL-DAY/2).toFixed(1)},${YB(Math.max(lo,0)).toFixed(1)}Z`;
   /* เส้นจำลอง — ใช้สเกลเดียวกับเส้นยอดคงเหลือ จะได้เทียบกันได้ตรงๆ */
   let pPath='';
   if(wkb>0){
     for(let i=0;i<nD;i++){
-      const x1=X(s0+i)-TL.DAY/2,x2=X(s0+i)+TL.DAY/2,y=YB(plan[i]);
+      const x1=X(s0+i)-DAY/2,x2=X(s0+i)+DAY/2,y=YB(plan[i]);
       pPath+=`${i?'L':'M'}${x1.toFixed(1)},${y.toFixed(1)}L${x2.toFixed(1)},${y.toFixed(1)}`;
     }
   }
-  g+=`<text x="${TL.PADL-TL.DAY/2}" y="${balTop-5}" font-size="10" font-weight="700" fill="#2b6cb0">💧 ยอดคงเหลือสะสม</text>`;
-  if(wkb>0)g+=`<text x="${TL.PADL-TL.DAY/2+118}" y="${balTop-5}" font-size="10" font-weight="700" fill="#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</text>`;
+  g+=`<text x="${TL.PADL-DAY/2}" y="${balTop-5}" font-size="10" font-weight="700" fill="#2b6cb0">💧 ยอดคงเหลือสะสม</text>`;
+  if(wkb>0)g+=`<text x="${TL.PADL-DAY/2+118}" y="${balTop-5}" font-size="10" font-weight="700" fill="#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</text>`;
   g+=`<path d="${area}" fill="rgba(43,108,176,.12)"/>`;
-  g+=`<line x1="${TL.PADL-TL.DAY/2}" y1="${YB(0)}" x2="${X(s1)+TL.DAY/2}" y2="${YB(0)}" stroke="#a0aec0" stroke-width="1" stroke-dasharray="4,3"/>`;
+  g+=`<line x1="${TL.PADL-DAY/2}" y1="${YB(0)}" x2="${X(s1)+DAY/2}" y2="${YB(0)}" stroke="#a0aec0" stroke-width="1" stroke-dasharray="4,3"/>`;
   if(wkb>0)g+=`<path d="${pPath}" fill="none" stroke="#805ad5" stroke-width="2" stroke-dasharray="2,3"/>`;
   g+=`<path d="${path}" fill="none" stroke="#2b6cb0" stroke-width="2"/>`;
   /* จุดบนวันเสาร์/อาทิตย์ = วันที่งบถูกใช้ */
@@ -2810,8 +2830,8 @@ function renderFlowTimeline(c,opts){
           : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 เฉพาะเดือนนี้</span>`
             +`<button class="wkb-btn" onclick="setWkbDefault()">⭐ จำเป็นค่าเริ่มต้นตลอด</button>`
             +`<button class="wkb-btn gh" onclick="resetWkbToDefault()">↩︎ กลับไปใช้ ${_wkbDef?tlAmt(nf(_wkbDef)):'(ว่าง)'}</button>`}
-        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุดตั้งแต่ ${tlThDate(payShow)} × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong>${wkSkip?` · <span class="wkb-skip">ข้าม ${wkSkip} วันหยุดก่อนเงินเดือนออก</span>`:''} · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}
-          <span class="wkb-full">↔ ทั้งงวด ${wkFullD} วันหยุด = <strong>${tlAmt(wkFull)}</strong> = คอลัมน์ “งบวันหยุด” ในตารางสรุปรายเดือน (ตัวเลขข้างบนนับเฉพาะช่วงที่วาดบนแกน)</span></span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
+        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุดทั้งงวด (${tlThDate(payShow)} → ก่อน ${tlThDate(serDt(sPayNext))}) × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong>${wkSkip?` · <span class="wkb-skip">ข้าม ${wkSkip} วันหยุดก่อนเงินเดือนออก</span>`:''}
+          <span class="wkb-full">${wkAcc===wkFull?`✓ ตรงกับคอลัมน์ “งบวันหยุด” ในตารางสรุปรายเดือน`:`↔ ทั้งงวด ${wkFullD} วันหยุด = <strong>${tlAmt(wkFull)}</strong> = คอลัมน์ “งบวันหยุด” ในตาราง`} · เหลือปลายงวด <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}</span></span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
       </div>`:''}
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
       <div class="flow-scroll"><div class="flow-inner"><svg class="fx-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip fx-tip"></div></div></div>
@@ -2819,7 +2839,8 @@ function renderFlowTimeline(c,opts){
         <strong>💧 ยอดคงเหลือสะสม</strong> — เริ่มนับที่ 0 ของงวดนี้ รายการที่ถูกตัดก่อนวันเงินเดือนออก (${tlThDate(payShow)}) จึงติดลบชั่วคราวได้ตามปกติ<br>
         <strong style="color:#805ad5">🗓️ ถ้าใช้ตามงบวันหยุด</strong> — เส้นจำลอง: ยอดคงเหลือ หัก<strong>งบที่ตั้งไว้ทุกวันเสาร์และอาทิตย์ โดยเริ่มนับตั้งแต่วันเงินเดือนออก (${tlThDate(payShow)}) เป็นต้นไป</strong> วันหยุดที่อยู่ก่อนหน้านั้นยังไม่ถูกหัก เพราะเงินยังไม่เข้า (จุดกลมบนเส้น = วันที่งบถูกใช้) ถ้าเส้นนี้ยังอยู่เหนือ 0 ตลอด แปลว่าใช้ตามงบนี้ได้โดยไม่ติดขัด<br>
         ${ckAllEv.length?`<strong>✓ ป้ายที่ถูกขีดฆ่า</strong> — รายการที่ติ๊ก <strong>☑ จัดการแล้ว</strong> ไว้ในตาราง${interactive?'ด้านบน':''} (โอน/จ่าย/เงินเข้าเรียบร้อยแล้ว) ยอดยังถูกนับในเส้นยอดคงเหลือและทุกการคำนวณตามเดิม<br>`:''}
-        <span style="color:#a0aec0">เส้นจำลองไม่กระทบตัวเลขจริงที่คำนวณไว้ · ครอบคลุมเฉพาะช่วงที่แสดงบนไทม์ไลน์ <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
+        <strong style="color:#276749">▶ เส้นประเขียว</strong> — วันเงินเดือนออกของ<strong>งวดถัดไป</strong> คือเส้นแบ่งงวด แกนลากมาถึงตรงนี้เสมอเพื่อให้เห็นภาพครบทั้งงวด พื้นที่ขวาเส้นเป็นของงวดใหม่ (งบวันหยุดหยุดนับที่เส้นนี้)<br>
+        <span style="color:#a0aec0">เส้นจำลองไม่กระทบตัวเลขจริงที่คำนวณไว้ · <strong>ไม่รวมบิลของงวดถัดไป</strong></span>
       </div>
       ${unHtml}
     </div></div>`;
@@ -2832,7 +2853,7 @@ function renderFlowTimeline(c,opts){
   const _every=dated.concat(undated,offRange);
   const statAll=_every.filter(e=>STAT_KIND[e.kind]).reduce((a,e)=>a+e.v,0);
   const incAll=_every.filter(e=>e.dir==='in').reduce((a,e)=>a+e.v,0);
-  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:TL.DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay:payShow,statAll,incAll};
+  svg._fx={s0,nD,bal,plan,wkb,byDay,W,H,DAY:DAY,PADL:TL.PADL,balTop,BAL_H:TL.BAL_H,lo,span,pay:payShow,statAll,incAll};
   svg._fxPin=false;
   /* เมาส์/ปากกาเท่านั้น — บนมือถือการลากคือการเลื่อนจอ ไม่ควรเด้ง tooltip */
   svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')flowHover(e);});
