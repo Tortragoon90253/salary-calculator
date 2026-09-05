@@ -189,6 +189,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .sdx{color:#6b46c1;font-weight:600}
 .sdw{color:#805ad5;font-weight:600}
 .nd{color:#a0aec0;font-style:italic;text-align:center!important}
+.stbl-note{margin-top:10px;padding:9px 11px;background:#f7fafc;border-left:3px solid #cbd5e0;border-radius:0 5px 5px 0;font-size:.72rem;line-height:1.75;color:#4a5568}
+.stbl-note strong{color:#2d3748}
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 @media(max-width:700px){.cg{grid-template-columns:1fr}}
 .cbx{background:white;border-radius:10px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
@@ -360,6 +362,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .flow-ctl input,.flow-ctl .fx-wkb{width:96px;padding:4px 7px;border:1px solid #d6bcfa;border-radius:6px;font-size:.8rem;text-align:right;background:#fff}
 .flow-ctl-sum{font-weight:600;color:#718096;font-size:.74rem}
 .wkb-skip{color:#a0aec0;font-weight:600}
+.wkb-full{display:block;margin-top:3px;color:#805ad5;font-weight:600;font-size:.72rem}
+.wkb-full strong{color:#6b46c1}
 .wkb-tag{font-size:.66rem;font-weight:700;border-radius:8px;padding:2px 7px;white-space:nowrap}
 .wkb-def{background:#e9d8fd;color:#553c9a}
 .wkb-ovr{background:#feebc8;color:#c05621}
@@ -701,6 +705,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         <thead><tr><th>เดือน</th><th>เงินเดือนฐาน</th><th>ค่าเพิ่มเติม</th><th>OT รวม</th><th>รายได้อื่นๆ</th><th>รายได้รวม</th><th>แบ่งลงทุน</th><th>ภาษี</th><th>หักรวม</th><th>รายได้รับจริง</th><th>ใช้จริง</th><th>งบวันหยุด</th><th>เหลือหลังหักงบ</th></tr></thead>
         <tbody id="sBody"></tbody>
       </table>
+    </div>
+    <div class="stbl-note">
+      <strong>อ่านตารางนี้อย่างไร</strong><br>
+      • <strong>ภาษี</strong> เป็นส่วนหนึ่งของ <strong>หักรวม</strong> อยู่แล้ว (หักรวม = ประกันสังคม + กองทุนฯ + รายการหักทั้งหมด รวมภาษี) — อย่านำสองคอลัมน์นี้มาบวกกัน<br>
+      • <strong>ใช้จริง</strong> = รายได้รวม − หักรวม − แบ่งลงทุน · ส่วน <strong>รายได้รับจริง</strong> ยังไม่ได้หักรายการหักอื่นและเงินลงทุน<br>
+      • <strong>งบวันหยุด</strong> = งบต่อวัน × เสาร์–อาทิตย์ของงวดนั้น นับตั้งแต่<strong>วันเงินเดือนออก</strong>ถึงก่อนวันเงินเดือนออกของงวดถัดไป (นิยามเดียวกับเส้นจำลองบนไทม์ไลน์)<br>
+      • ตัวเลข <strong>“จบช่วงเหลือ”</strong> บนไทม์ไลน์คิดเฉพาะช่วงวันที่วาดบนแกน และไม่รวมรายการที่ยังไม่ระบุวันที่/วันที่อยู่นอกช่วง จึง<strong>ไม่เท่ากับ “เหลือหลังหักงบ”</strong> ในตารางนี้ ซึ่งคิดเต็มทั้งงวด
     </div></div>
   </div>
   <div class="card">
@@ -2674,6 +2685,9 @@ function renderFlowTimeline(c,opts){
     plan.push(bal[i]-wkAcc);
   }
   if(wkb>0)plan.forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);});   /* สเกลแกน y ต้องครอบทั้งสองเส้น */
+  /* wkAcc ข้างบนนับเฉพาะวันหยุดที่ "อยู่ในกรอบที่วาด" ซึ่งสั้นกว่างวดจริงมาก
+     ตารางสรุปรายเดือนคิดเต็มงวด จึงต้องโชว์ยอดเต็มงวดคู่กันไว้ ไม่งั้นสองหน้าดูเหมือนขัดกันเอง */
+  const wkFullD=wkDaysIn(c.ym),wkFull=wkFullD*wkb;
 
   const span=(hi-lo)||1;
   const YB=v=>balTop+TL.BAL_H-((v-lo)/span)*TL.BAL_H;
@@ -2786,7 +2800,8 @@ function renderFlowTimeline(c,opts){
           : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 เฉพาะเดือนนี้</span>`
             +`<button class="wkb-btn" onclick="setWkbDefault()">⭐ จำเป็นค่าเริ่มต้นตลอด</button>`
             +`<button class="wkb-btn gh" onclick="resetWkbToDefault()">↩︎ กลับไปใช้ ${_wkbDef?tlAmt(nf(_wkbDef)):'(ว่าง)'}</button>`}
-        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุดตั้งแต่ ${tlThDate(payShow)} × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong>${wkSkip?` · <span class="wkb-skip">ข้าม ${wkSkip} วันหยุดก่อนเงินเดือนออก</span>`:''} · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}</span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
+        ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุดตั้งแต่ ${tlThDate(payShow)} × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong>${wkSkip?` · <span class="wkb-skip">ข้าม ${wkSkip} วันหยุดก่อนเงินเดือนออก</span>`:''} · จบช่วงเหลือ <strong style="color:${plan[nD-1]<0?'#c53030':'#805ad5'}">${tlAmt(plan[nD-1])}</strong>${plan[nD-1]<0?' ⚠️ เกินกำลัง':''}
+          <span class="wkb-full">↔ ทั้งงวด ${wkFullD} วันหยุด = <strong>${tlAmt(wkFull)}</strong> = คอลัมน์ “งบวันหยุด” ในตารางสรุปรายเดือน (ตัวเลขข้างบนนับเฉพาะช่วงที่วาดบนแกน)</span></span>`:'<span class="flow-ctl-sum">ใส่ตัวเลขเพื่อดูเส้นจำลอง</span>'}
       </div>`:''}
       <div class="flow-hint">← เลื่อนซ้าย-ขวาเพื่อดูทั้งช่วง →</div>
       <div class="flow-scroll"><div class="flow-inner"><svg class="fx-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"></svg><div class="flow-tip fx-tip"></div></div></div>
@@ -3428,10 +3443,25 @@ function buildPmYear(){
   return{per,tot,grand:PM_ORDER.reduce((s,k)=>s+tot[k],0)};
 }
 
-/* นับวันเสาร์/อาทิตย์จริงของเดือนนั้น — ใช้คำนวณงบวันหยุดรายปี */
+/* งวดถัดไปของ ym — งบวันหยุดของงวดหนึ่งสิ้นสุดก่อนวันเงินเดือนออกของงวดถัดไป */
+function ymNext(ym){
+  const[y,m]=String(ym||'').split('-').map(Number);
+  if(!y||!m)return'';
+  return m===12?`${y+1}-01`:`${y}-${p2(m+1)}`;
+}
+/* นับวันเสาร์/อาทิตย์ของ "งวด" นั้น — ตั้งแต่วันเงินเดือนออกของงวด ไปจนถึงก่อนวันเงินเดือนออกของงวดถัดไป
+   ต้องใช้นิยามเดียวกับเส้น "ถ้าใช้ตามงบวันหยุด" บนไทม์ไลน์ (isWkbDay: เสาร์/อาทิตย์ตั้งแต่วันเงินเดือนออก)
+   เดิมนับเสาร์/อาทิตย์ตามเดือนปฏิทินของงวด ซึ่งเป็นคนละช่วงกันทั้งช่วง เพราะ payDate() คือวันที่ 5
+   ของเดือน "ถัดไป" — งวด ม.ค. เคยนับเสาร์อาทิตย์ของ 1–31 ม.ค. ส่วนไทม์ไลน์นับจาก 5 ก.พ. เป็นต้นไป */
 function wkDaysIn(ym){
-  const[y,m]=ym.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
-  let n=0;for(let d=1;d<=cnt;d++){const dw=new Date(y,m-1,d).getDay();if(dw===0||dw===6)n++;}
+  const nx=ymNext(ym);if(!nx)return 0;
+  const a=dSer(payDate(ym)),b=dSer(payDate(nx))-1;
+  let n=0;
+  for(let s=a;s<=b;s++){
+    const[y,m,d]=serDt(s).split('-').map(Number);
+    const dw=new Date(y,m-1,d).getDay();
+    if(dw===0||dw===6)n++;
+  }
   return n;
 }
 
@@ -3528,18 +3558,21 @@ function renderSum(){
     if(t){
       tb+=t.base;ta+=t.totA;tot+=t.totOT;to+=t.totO;ti+=t.totInc;tiv+=t.totInv;td+=t.totDed;tth+=t.takeHome;tf+=t.final;ttx+=t.taxDed;
       run+=t.totInv;
-      /* งบใช้จ่ายวันหยุดของเดือนนี้ = งบต่อวัน × จำนวนวันเสาร์/อาทิตย์จริง (สูตรเดียวกับกล่องสรุปรายปี) */
+      /* งบใช้จ่ายวันหยุดของงวดนี้ = งบต่อวัน × วันเสาร์/อาทิตย์ของงวด (นับตั้งแต่วันเงินเดือนออก)
+         wkDaysIn() เป็นตัวเดียวกับที่กล่องสรุปรายปีใช้ และตรงนิยามกับเส้นจำลองบนไทม์ไลน์ */
       const wkd=nf((DB[ymk(i)]||{}).wkb||_wkbDef),wkm=wkd>0?wkd*wkDaysIn(ymk(i)):0,lft=t.final-wkm;
+      /* เดือนที่ไม่ได้ตั้งงบ = ไม่มีอะไรถูกหัก "เหลือหลังหักงบ" จึงเท่ากับเงินใช้จริง และต้องแสดงตัวเลขนั้น
+         ไม่ใช่ '—' ไม่งั้นบวกทั้งคอลัมน์แล้วจะไม่เท่าแถวรวมทั้งปี (tlf บวก lft ของทุกเดือนอยู่แล้ว) */
       twk+=wkm;tlf+=lft;
       dInc.push(+t.totInc.toFixed(2));dTH.push(+t.takeHome.toFixed(2));dFin.push(+t.final.toFixed(2));dDed.push(+t.totDed.toFixed(2));
       dH15.push(+t.h15.toFixed(2));dH20.push(+t.h20.toFixed(2));dH30.push(+t.h30.toFixed(2));dAcc.push(+run.toFixed(2));
-      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td><td class="sdw">${wkm?fN(wkm):'—'}</td><td class="${lft<0?'sdd':'sdn'}">${wkm?fN(lft):'—'}</td></tr>`;
+      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td><td class="sdw">${wkm?fN(wkm):'—'}</td><td class="${lft<0?'sdd':'sdn'}"${wkm?'':' title="เดือนนี้ยังไม่ได้ตั้งงบวันหยุด — จึงเท่ากับเงินใช้จริง"'}>${fN(lft)}</td></tr>`;
     }else{
       [dInc,dTH,dFin,dDed,dH15,dH20,dH30].forEach(a=>a.push(0));dAcc.push(+run.toFixed(2));
       html+=`<tr><td>${MF[i]}</td><td class="nd" colspan="12">— ยังไม่มีข้อมูล —</td></tr>`;
     }
   }
-  html+=`<tr class="stot"><td>รวมทั้งปี</td><td>${fN(tb)}</td><td>${fN(ta)}</td><td>${fN(tot)}</td><td>${fN(to)}</td><td>${fN(ti)}</td><td>${fN(tiv)}</td><td>${fN(ttx)}</td><td>${fN(td)}</td><td>${fN(tth)}</td><td>${fN(tf)}</td><td>${twk?fN(twk):'—'}</td><td>${twk?fN(tlf):'—'}</td></tr>`;
+  html+=`<tr class="stot"><td>รวมทั้งปี</td><td>${fN(tb)}</td><td>${fN(ta)}</td><td>${fN(tot)}</td><td>${fN(to)}</td><td>${fN(ti)}</td><td>${fN(tiv)}</td><td>${fN(ttx)}</td><td>${fN(td)}</td><td>${fN(tth)}</td><td>${fN(tf)}</td><td>${twk?fN(twk):'—'}</td><td>${fN(tlf)}</td></tr>`;
   ge('sBody').innerHTML=html;
   const filled=[];for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)filled.push({mi:i,amt:t.totInv});}
   const last=filled.length?filled[filled.length-1]:null;
