@@ -852,7 +852,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 <div id="copyYearModal" class="modal-overlay" onclick="if(event.target===this)closeCopyYear()">
   <div class="modal-box" style="max-width:480px">
     <div class="modal-title">📋 ลอกรายการจากปีก่อน</div>
-    <div class="modal-sub">ลอก<strong>โครงสร้างรายการ</strong>ทั้งปี (ชื่อรายการ · ประเภท %/฿ · วิธีจ่าย · ลำดับ · เงินเดือนฐาน) มาลงปีปัจจุบันแบบเดือนตรงเดือน</div>
+    <div class="modal-sub">ลอกรายการทั้งปี (ชื่อรายการ · ประเภท %/฿ · วิธีจ่าย · ลำดับ · เงินเดือนฐาน) มาลงปีปัจจุบันแบบเดือนตรงเดือน — เลือกได้ว่าจะเอา<strong>จำนวนเงิน</strong>มาด้วยหรือไม่</div>
 
     <!-- ── ขั้น 1: เลือกปีต้นทาง ── -->
     <div id="cpyStep1">
@@ -863,10 +863,19 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         <span style="font-size:.83rem;font-weight:700;color:#553c9a" id="cpyDstYr"></span>
       </div>
 
+      <label id="cpyAmtRow" style="display:flex;align-items:flex-start;gap:8px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+        <input type="checkbox" id="cpyAmt" checked onchange="renderCopyPreview()" style="width:auto;margin:2px 0 0;flex:none;cursor:pointer">
+        <span style="font-size:.8rem;color:#276749;line-height:1.55">
+          <strong>ลอกจำนวนเงินมาด้วย</strong><br>
+          <span style="font-size:.73rem;color:#4a5568">ค่าเพิ่มเติม / เบี้ยต่างๆ · รายได้อื่นๆ · รายการหัก · แบ่งเงินลงทุน · ประกันสังคม · กองทุนฯ — ติ๊กออกถ้าอยากได้แต่โครงสร้างเปล่าไว้กรอกเอง</span>
+        </span>
+      </label>
+
       <div id="cpyPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
 
       <div style="font-size:.73rem;color:#718096;margin-bottom:16px;line-height:1.7">
-        • ลอกเฉพาะ<strong>โครงสร้าง</strong> — จำนวนเงิน, ประกันสังคม, PVD และตาราง OT รายวัน <strong>ปล่อยว่าง</strong>ให้กรอกเอง<br>
+        <span id="cpyNote1"></span><br>
+        • ตาราง <strong>OT รายวัน</strong> และเครื่องหมาย ☑ จัดการแล้ว / ✓ ยืนยัน <strong>ไม่ถูกลอก</strong> — เป็นของจริงรายเดือน<br>
         • เดือนที่<strong>กรอกจำนวนเงินไว้แล้วจะถูกข้าม</strong> ไม่ถูกเขียนทับ<br>
         • เดือนต้นทางที่ว่าง จะใช้เดือนที่มีข้อมูลใกล้ที่สุดในปีนั้นแทน<br>
         • เงินเดือนฐานที่คุณตั้งไว้เองในปีนี้ จะไม่ถูกทับด้วยของปีก่อน
@@ -2186,8 +2195,10 @@ function recHasUserData(rec){
   return nf(rec.sso)>0||nf(rec.pvd)>0||recHasEntries(rec);
 }
 
-/* clone รายการโดยล้างจำนวนเงิน + สถานะยืนยัน/checkpoint ออก */
-function blankItems(arr){return dedupeIds((arr||[]).map(x=>({...x,v:'',ok:false,dn:false})));}
+/* clone รายการ — ล้างสถานะยืนยัน/checkpoint เสมอ (เป็นของเดือนนั้นๆ ไม่ใช่ของต้นแบบ)
+   keepAmt=false → เอาแต่โครงสร้าง (ชื่อ · ประเภท %/฿ · วิธีจ่าย · ลำดับ) จำนวนเงินว่าง
+   keepAmt=true  → ลอกจำนวนเงินของต้นแบบมาด้วย */
+function blankItems(arr,keepAmt){return dedupeIds((arr||[]).map(x=>({...x,v:keepAmt?(x.v||''):'',ok:false,dn:false})));}
 
 /* จัดวันที่ของรายการให้เข้ากับงวดปลายทาง
    - มีวันที่อยู่แล้ว → เลื่อนตามระยะเดือน (คงเลขวันเดิมของรอบ) ไม่ค้างวันที่เดือนเก่า
@@ -2240,14 +2251,18 @@ function copyYearPlan(srcYr){
 }
 
 /* สร้าง record ใหม่จากต้นแบบ — โครงสร้างล้วน ไม่เอาจำนวนเงิน/OT */
-function buildCopyRec(src,mi,srcYm){
+function buildCopyRec(src,mi,srcYm,keepAmt){
   const dst=DB[ymk(mi)],dstYm=ymk(mi);
-  const anc=(arr,payday)=>anchorDates(blankItems(arr),srcYm||dstYm,dstYm,payday);
+  const anc=(arr,payday)=>anchorDates(blankItems(arr,keepAmt),srcYm||dstYm,dstYm,payday);
+  /* ค่าโบนัส/ภาษีโบนัสของต้นแบบ — ใช้ต่อเมื่อลอกจำนวนเงินและเดือนปลายทางเป็นเดือนโบนัส */
+  const srcV=(arr,id)=>keepAmt?(((arr||[]).find(x=>x.id===id)||{}).v||''):'';
   const rec={
     /* เดือนปลายทางเคยตั้งเงินเดือนฐานไว้แล้ว — เก็บของเดิม อย่าทับด้วยของปีก่อน */
     base:(dst&&nf(dst.base)>0)?dst.base:(src.base||''),
     baseDt:(dst&&dst.baseDt!==undefined)?dst.baseDt:payDate(dstYm),
-    sso:'',pvd:'',ssoDt:payDate(dstYm),pvdDt:payDate(dstYm),wkb:(src.wkb||''),wkbDef:_wkbDef,
+    /* ประกันสังคม/กองทุนฯ ว่าง = ให้ระบบคำนวณอัตโนมัติ — ลอกมาเฉพาะตอนที่ต้นแบบกรอกเองไว้ */
+    sso:keepAmt?(src.sso||''):'',pvd:keepAmt?(src.pvd||''):'',
+    ssoDt:payDate(dstYm),pvdDt:payDate(dstYm),wkb:(src.wkb||''),wkbDef:_wkbDef,
     a:anc((src.a||defA()).filter(x=>x.id!==BONUS_ID),true),
     d:anc((src.d||defD()).filter(x=>x.id!==BONUS_TAX_ID),true),
     i:anc(src.i||defI(),false),
@@ -2256,8 +2271,8 @@ function buildCopyRec(src,mi,srcYm){
   };
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
   if(BONUS_MONTHS.includes(mi)){
-    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false,dt:payDate(dstYm)});
-    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false,dt:payDate(dstYm)});
+    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),ok:false,dn:false,dt:payDate(dstYm)});
+    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ok:false,dn:false,dt:payDate(dstYm)});
   }
   return rec;
 }
@@ -2298,15 +2313,23 @@ function cpyToConfirm(){
   if(!p.copy.length){renderCopyPreview();toast('ไม่มีเดือนที่ต้องลอก');return;}
   ge('cpyCfmHead').innerHTML=`ลอกจากปี ${srcYr} &nbsp;➜&nbsp; ${CY}`;
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
-  let h=`<div style="font-weight:700;color:#276749">✅ จะเขียนโครงสร้างรายการลง ${p.copy.length} เดือน</div>`+mlist(p.copy.map(c=>c.mi));
+  const what=cpyKeepAmt()?'รายการ + จำนวนเงิน':'โครงสร้างรายการ';
+  let h=`<div style="font-weight:700;color:#276749">✅ จะเขียน${what}ลง ${p.copy.length} เดือน</div>`+mlist(p.copy.map(c=>c.mi));
   if(p.skip.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ข้าม ${p.skip.length} เดือนที่กรอกเงินไว้แล้ว — ไม่ถูกแตะ</div>`+mlist(p.skip);
   if(p.none.length)h+=`<div style="font-weight:700;color:#718096;margin-top:10px">— ไม่มีต้นแบบ ${p.none.length} เดือน</div>`+mlist(p.none);
   ge('cpyCfmBody').innerHTML=h;
   cpyStep(2);
 }
 
+/* ผู้ใช้เลือกลอกจำนวนเงินมาด้วยไหม */
+function cpyKeepAmt(){return !!ge('cpyAmt')?.checked;}
+
 function renderCopyPreview(){
   const el=ge('cpyPreview'),sel=ge('cpySrcYr'),go=ge('cpyGo');
+  const note=ge('cpyNote1');
+  if(note)note.innerHTML=cpyKeepAmt()
+    ?'• ลอก<strong>โครงสร้าง + จำนวนเงิน</strong> — ตัวเลขของปีต้นทางจะถูกเติมลงให้เลย แก้ทีหลังได้'
+    :'• ลอกเฉพาะ<strong>โครงสร้าง</strong> — จำนวนเงิน, ประกันสังคม, กองทุนฯ <strong>ปล่อยว่าง</strong>ให้กรอกเอง';
   if(!sel.options.length){
     el.innerHTML='<div style="color:#c53030;font-weight:700">ยังไม่มีข้อมูลปีอื่นให้ลอก</div>';
     go.disabled=true;return;
@@ -2327,17 +2350,18 @@ async function doCopyYear(){
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   const sel=ge('cpySrcYr');if(!sel.options.length)return;
   const srcYr=parseInt(sel.value,10);if(!srcYr)return;
+  const keepAmt=cpyKeepAmt();
   const go=ge('cpyConfirm');go.disabled=true;
 
   const p=copyYearPlan(srcYr);              /* ฟอร์มถูก save ไปแล้วตอน openCopyYear() */
   if(!p.copy.length){go.disabled=false;renderCopyPreview();cpyStep(1);toast('ไม่มีเดือนที่ต้องลอก');return;}
 
-  p.copy.forEach(c=>{DB[ymk(c.mi)]=buildCopyRec(c.rec,c.mi,c.srcYm);});
+  p.copy.forEach(c=>{DB[ymk(c.mi)]=buildCopyRec(c.rec,c.mi,c.srcYm,keepAmt);});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   updateDots();
   closeCopyYear();
   if(CT===12)renderSum();else switchTab(CT,true);
-  toast(`✅ ลอก ${p.copy.length} เดือนจากปี ${srcYr} แล้ว`+(p.skip.length?` (ข้าม ${p.skip.length} เดือนที่มีข้อมูลอยู่)`:''));
+  toast(`✅ ลอก ${p.copy.length} เดือนจากปี ${srcYr} แล้ว${keepAmt?' พร้อมจำนวนเงิน':''}`+(p.skip.length?` (ข้าม ${p.skip.length} เดือนที่มีข้อมูลอยู่)`:''));
 
   /* sync ขึ้น cloud ทีละเดือน — แบบเดียวกับ basePropYes() */
   if(fbDb||gsUrl){
