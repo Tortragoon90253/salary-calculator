@@ -327,7 +327,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .flow-card{page-break-inside:avoid}
 }
 /* Payment Method */
-.drd{grid-template-columns:20px 18px 1fr 134px 88px 95px 28px 28px!important}
+.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px!important}
+/* ประเภทต้นทุน: คงที่ (Fixed) / ผันแปร (Variable) — หน้าตาเดียวกับ .pmsel */
+.ctsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
+/* แถวภาษีไม่เข้าสูตรคงที่/ผันแปร (หักไปแล้วในยอดรายได้รับจริง) — หรี่ไว้ให้เห็นว่าไม่มีผล */
+.ctsel.ct-na{opacity:.4}
+.ct-fix{font-size:.68rem;background:#ebf4ff;color:#434190;border-radius:9px;padding:1px 7px;white-space:nowrap}
+.ct-var{font-size:.68rem;background:#fffaf0;color:#c05621;border-radius:9px;padding:1px 7px;white-space:nowrap}
 /* แถวโบนัส — เป็นคลาสแทน inline style เพื่อให้ media query ปรับคอลัมน์บนจอแคบได้ */
 .dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px 28px;grid-template-rows:auto auto}
 .bm-disp{grid-column:3/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem}
@@ -336,7 +342,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .dr{grid-template-columns:20px 18px 1fr 130px 28px 28px;grid-template-rows:auto auto;row-gap:4px}
   .dr>.dtin{grid-column:3/-1;grid-row:2}
   .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
-  .drd>.dtin{grid-column:3/-1;grid-row:2}
+  .drd>.dtin{grid-column:3/5;grid-row:2}
+  .drd>.ctsel{grid-column:5/-1;grid-row:2}
   .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto auto}
   .dr.drb>.dtin{grid-column:3/-1;grid-row:2}
   .dr.drb>.bm-disp{grid-column:3/-1;grid-row:3}
@@ -347,6 +354,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   /* จอแคบ: บีบคอลัมน์ตัวเลข/ปุ่ม เพื่อให้ช่องชื่อยังกว้างพอพิมพ์ได้หลังเพิ่มคอลัมน์ checkpoint */
   .dr{grid-template-columns:18px 18px 1fr 100px 26px 26px;gap:4px;row-gap:4px}
   .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px 26px!important;gap:4px;row-gap:4px}
+  .drd>.dtin{grid-column:3/5;grid-row:2}
+  .drd>.ctsel{grid-column:5/-1;grid-row:2}
   .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px 26px}
   .cfbtn,.delbtn{width:24px;height:24px}
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
@@ -731,7 +740,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       </div>
       <div class="bb pln" id="rPlnBox"><h3>💳 ผ่อน &amp; ประกัน</h3><div id="rPlnL"></div><div class="tline"><span>รวมผ่อน/ประกันเดือนนี้</span><span class="vad" id="rTPlan">฿0</span></div></div>
       <div class="bb inv"><h3>📈 แบ่งลงทุน</h3><div id="rInvL"></div><div class="tline"><span>รวมลงทุน</span><span class="vat" id="rTInv">฿0</span></div></div>
-      <div class="bb ded"><h3>❌ รายการหัก</h3><div id="rDedL"></div><div class="tline"><span>รวมหัก</span><span class="vad" id="rTDed">฿0</span></div></div>
+      <div class="bb ded"><h3>❌ รายการหัก</h3><div id="rDedL"></div><div class="tline"><span>รวมหัก</span><span class="vad" id="rTDed">฿0</span></div><div id="rDedSplit"></div></div>
     </div>
     <div id="rPaySum"></div>
     <div id="ckSum"></div>
@@ -748,7 +757,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       </div>
       <div class="fcfbox" id="rFCFBox">
         <div>
-          <div class="fcf-t">🟢 Free Cash Flow &mdash; เงินที่ใช้จ่ายกินอยู่ / ลงทุนได้จริง</div>
+          <div class="fcf-t">🟢 Free Cash Flow &mdash; เงินที่เหลือใช้จ่ายกินอยู่จริง</div>
           <div class="fcf-s" id="rFCFSub">ยอดรายได้รับจริง &minus; ยอดผ่อน/ประกันเดือนนี้</div>
         </div>
         <div class="fcf-v" id="rFCF">฿0</div>
@@ -1154,7 +1163,7 @@ const defA=()=>[
   {id:'a3',n:'ค่าบ้าน',v:'',ok:false,dn:false},{id:'a4',n:'ค่าภาษาญี่ปุ่น',v:'',ok:false,dn:false},
   {id:'a5',n:'ค่าภาษาอังกฤษ',v:'',ok:false,dn:false},{id:'a6',n:'ค่า Skill',v:'',ok:false,dn:false}
 ];
-const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ok:false,dn:false}];
+const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ct:'fix',ok:false,dn:false}];
 const defI=()=>[];
 const defO=()=>[];
 const defP=()=>[];
@@ -1707,7 +1716,7 @@ function rA(){
   updCkBars();
 }
 function rD(){
-  D.forEach(d=>{const nEl=ge(`dn_${d.id}`);const vEl=ge(`dv_${d.id}`);const pEl=ge(`dp_${d.id}`);const tEl=ge(`ddt_${d.id}`);if(nEl)d.n=nEl.value;if(vEl)d.v=vEl.value;if(pEl)d.pm=pEl.value;if(tEl)d.dt=tEl.value;});
+  D.forEach(d=>{const nEl=ge(`dn_${d.id}`);const vEl=ge(`dv_${d.id}`);const pEl=ge(`dp_${d.id}`);const tEl=ge(`ddt_${d.id}`);const cEl=ge(`dc_${d.id}`);if(nEl)d.n=nEl.value;if(vEl)d.v=vEl.value;if(pEl)d.pm=pEl.value;if(tEl)d.dt=tEl.value;if(cEl)d.ct=cEl.value;});
   if(!D.length){ge('dList').innerHTML='<div class="empty-hint">ยังไม่มีรายการหัก<br>กด ＋ เพิ่มรายการหัก ด้านล่าง</div>';updPaySummary();updCkBars();return;}
   ge('dList').innerHTML=D.map(d=>{
     const isBTax=d.id===BONUS_TAX_ID;
@@ -1721,6 +1730,10 @@ function rD(){
         <option value="bank" ${(d.pm||'bank')==='bank'?'selected':''}>🏦 บัญชี</option>
         <option value="cash" ${d.pm==='cash'?'selected':''}>💵 เงินสด</option>
         <option value="credit" ${d.pm==='credit'?'selected':''}>💳 บัตรเครดิต</option>
+      </select>
+      <select id="dc_${d.id}" class="ctsel${(d.n||'').includes('ภาษี')?' ct-na':''}" onchange="dirtD('${d.id}');updInv()" title="${CT_TITLE}">
+        <option value="fix" ${costTy(d.ct)==='fix'?'selected':''}>🔒 คงที่</option>
+        <option value="var" ${costTy(d.ct)==='var'?'selected':''}>🔄 ผันแปร</option>
       </select>
       <input type="number" id="dv_${d.id}" value="${esc(d.v)}" placeholder="0.00" min="0" oninput="dirtD('${d.id}');updInv()">
       <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
@@ -1822,13 +1835,17 @@ function rP(){
 /* กล่องสรุปหัวการ์ด — ยอดรวมภาระเดือนนี้ + FCF สด (เห็นทันทีที่เปิดการ์ด ไม่ต้องกดคำนวณ) */
 function updPlan(){
   const el=ge('pInfo');if(!el)return;
-  const arr=colP(),tot=planTotal(arr),net=calcBase(),fcf=net-tot;
+  const arr=colP(),tot=planTotal(arr),net=calcBase();
+  const{fix:fixDed,vari:varDed}=liveDedSplit();
+  const inv=liveInvTot();
+  const fcf=net-tot-fixDed-inv;
   const nIns=arr.filter(x=>planTy(x.type)==='installment'&&planAmt(x)>0).length;
   const nRec=arr.filter(x=>planTy(x.type)==='recurring'&&planAmt(x)>0).length;
   const cnt=[nIns?`ผ่อน ${nIns} รายการ`:'',nRec?`ประกัน/สะสม ${nRec} รายการ`:''].filter(Boolean).join(' · ');
   el.innerHTML=`ภาระผูกพันคงที่เดือนนี้ = <strong class="pln-total-val">${fmt(tot)}</strong>${cnt?` &nbsp;|&nbsp; ${cnt}`:''}`
     +`<br><strong>เงินเหลือใช้จริง (Free Cash Flow)</strong> = <strong class="pln-fcf-val${fcf<0?' neg':''}">${fmt(fcf)}</strong>`
-    +` &nbsp;<span style="font-size:.7rem">= ยอดรายได้รับจริง ${fmt(net)} − ผ่อน/ประกัน ${fmt(tot)}</span>`;
+    +`<br><span style="font-size:.7rem">= รับจริง ${fmt(net)} − ผ่อน/ประกัน ${fmt(tot)} − หักคงที่ 🔒 ${fmt(fixDed)} − แบ่งลงทุน ${fmt(inv)}`
+    +(varDed>0?` &nbsp;(ยังไม่หักผันแปร 🔄 ${fmt(varDed)} ซึ่งจ่ายจากก้อนนี้)`:'')+`</span>`;
 }
 
 /* ── Drag & Drop reorder ── */
@@ -1881,7 +1898,15 @@ function cfD(id){const it=D.find(x=>x.id===id);if(!it)return;it.n=gv(`dn_${id}`)
 function cfO(id){const it=O.find(x=>x.id===id);if(!it)return;it.n=gv(`on_${id}`);it.v=gv(`ov_${id}`);it.dt=gdt(`odt_${id}`,it.dt);it.ok=true;rO();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
 /* dirt* เคลียร์เฉพาะ ok (= "กรอกข้อมูลเสร็จ") — ห้ามแตะ dn (= "จัดการจริงแล้ว") ซึ่งต้องคงอยู่แม้แก้ตัวเลข */
 function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
-function dirtD(id){const it=D.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
+function dirtD(id){
+  const it=D.find(x=>x.id===id);
+  if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}
+  /* ชื่อแถวเป็นตัวตัดสินว่าเป็นแถวภาษีหรือไม่ — สลับสถานะ "ไม่เกี่ยว" ของ dropdown ในที่
+     (toggle คลาสแทนการวาดใหม่ เพราะผู้ใช้กำลังพิมพ์ชื่ออยู่) */
+  const cEl=ge(`dc_${id}`);
+  if(cEl)cEl.classList.toggle('ct-na',(gv(`dn_${id}`)||'').includes('ภาษี'));
+  updPlan();updCkBars();
+}
 function dirtO(id){const it=O.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ro_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
 
 /* ════════════════════════════════════════════════════
@@ -1983,7 +2008,7 @@ function renderCkSum(){
 /* ── Add / Del ── */
 function addA(){A.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:payDate(gv('fPrd'))});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
 function delA(id){A=A.filter(x=>x.id!==id);rA();}
-function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ok:false,dn:false,dt:payDate(gv('fPrd'))});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
+function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(gv('fPrd'))});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
 function delD(id){D=D.filter(x=>x.id!==id);rD();}
 function addO(){O.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:''});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
 function delO(id){O=O.filter(x=>x.id!==id);rO();updInv();}
@@ -2031,7 +2056,7 @@ function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv
 
 /* ── Collect DOM ── */
 function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,dt:gdt(`adt_${a.id}`,a.dt),ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
-function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn}));}
+function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ct:costTy(gv(`dc_${d.id}`)||d.ct),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn}));}
 function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v,dt:gdt(`idt_${i.id}`,i.dt),dn:!!i.dn}));}
 function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.id}`)||o.v,dt:gdt(`odt_${o.id}`,o.dt),ok:o.ok,dn:!!o.dn}));}
 function colP(){return P.map(x=>({
@@ -2053,6 +2078,19 @@ function getPvd(){const v=gv('fPvd');return v!==''?nf(v):num('fBase')*.07;}
 /* แถวที่ผูกกับวันเงินเดือนออกโดยธรรมชาติ — ใช้กติกาชื่อเดียวกับ getTaxFromD() */
 const isTaxRow=x=>!!x&&(x.id===BONUS_TAX_ID||(x.n||'').includes('ภาษี'));
 function getTaxFromD(arr){return arr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s+nf(x.v):s,0);}
+/* แยกรายการหัก (ที่ไม่ใช่ภาษี) เป็นคงที่ / ผันแปร
+   ต้องใช้กติกาชื่อเดียวกับ getTaxFromD() เพราะภาษีถูกหักไปแล้วใน takeHome
+   ถ้านับซ้ำที่นี่จะหักสองรอบ — และ fix+var ต้องเท่ากับ "รายการหักอื่นๆ" เป๊ะเสมอ
+   จึงให้ otherDed มาจากผลบวกของสองตัวนี้ตัวเดียว ไม่คำนวณแยกทาง */
+function dedSplit(arr){
+  let fix=0,vari=0;
+  (arr||[]).forEach(x=>{
+    if((x.n||'').includes('ภาษี'))return;
+    const v=nf(x.v);
+    if(costTy(x.ct)==='var')vari+=v;else fix+=v;
+  });
+  return{fix,vari,other:fix+vari};
+}
 function getOTs(){
   const pv=gv('fPrd');if(!pv)return{h15:0,h20:0,h30:0};
   const[y,m]=pv.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
@@ -2079,12 +2117,17 @@ function calcBase(){
 function updOth(){
   const el=ge('oTotal');if(el)el.textContent=fmt(getOth());
 }
+/* ยอดแบ่งลงทุนของแถวเดียว / ทั้งหมด จากฟอร์มสด — FCF ต้องหักเงินลงทุนออกด้วย
+   จึงต้องอ่านได้จากการ์ดผ่อน/ประกันโดยไม่ต้องรอกดคำนวณ */
+const liveInvRow=(inv,base)=>{const v=nf(ge(`iv_${inv.id}`)?.value??inv.v);return inv.t==='%'?(base*v/100):v;};
+const liveInvTot=()=>{const b=calcBase();return I.reduce((s,inv)=>s+liveInvRow(inv,b),0);};
+/* รายการหักจากฟอร์มสด แยกคงที่/ผันแปร */
+const liveDedSplit=()=>dedSplit(D.map(d=>({n:gv(`dn_${d.id}`)||d.n,v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,ct:gv(`dc_${d.id}`)||d.ct})));
 function updInv(){
   updOth();
   const base=calcBase();let tot=0;
   I.forEach(inv=>{
-    const v=nf(ge(`iv_${inv.id}`)?.value);
-    const amt=inv.t==='%'?(base*v/100):v;tot+=amt;
+    const amt=liveInvRow(inv,base);tot+=amt;
     const el=ge(`ic_${inv.id}`);
     if(el)el.textContent=inv.t==='%'&&base>0?` = ${fmt(amt)}`:inv.t==='%'?' = ฿0.00':'';
   });
@@ -2362,7 +2405,7 @@ function loadM(mi){
   }
   if(BONUS_MONTHS.includes(mi)){
     if(!A.find(x=>x.id===BONUS_ID))A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false,dt:payDate(ym)});
-    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ok:false,dn:false,dt:payDate(ym)});
+    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(ym)});
   }else{
     A=A.filter(x=>x.id!==BONUS_ID);
     D=D.filter(x=>x.id!==BONUS_TAX_ID);
@@ -2529,7 +2572,7 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
   if(BONUS_MONTHS.includes(mi)){
     rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),ok:false,dn:false,dt:payDate(dstYm)});
-    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ok:false,dn:false,dt:payDate(dstYm)});
+    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(dstYm)});
   }
   return rec;
 }
@@ -2756,15 +2799,17 @@ function doCalc(){
   const totInv=iArr.reduce((s,x)=>{const v=nf(x.v);return s+(x.t==='%'?(invBase*v/100):v);},0);
   const custDed=dArr.reduce((s,x)=>s+nf(x.v),0);
   const totDed=sso+pvd+custDed;
-  const takeHome=totInc-sso-pvd-taxAmt;          /* = Net Income ตามสเปก */
-  const otherDed=dArr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s:s+nf(x.v),0);
+  const takeHome=totInc-sso-pvd-taxAmt;          /* = Net Income */
+  /* รายการหัก (ไม่รวมภาษี) แยกคงที่/ผันแปร — otherDed มาจากผลบวกของสองตัวนี้
+     จึงไม่มีทางที่ fix+var จะไม่เท่ากับยอดหักอื่นๆ ทั้งก้อน */
+  const{fix:fixDed,vari:varDed,other:otherDed}=dedSplit(dArr);
   /* ภาระผูกพันคงที่ (Fixed Obligations) = ยอดผ่อน + เงินที่กันไว้จ่ายประกัน ของเดือนนี้ */
   const pArr=colP();
   const totPlan=planTotal(pArr);
-  /* Free Cash Flow = Net Income − Fixed Obligations
-     "เงินที่เอาไปใช้จ่ายกินอยู่หรือลงทุนได้จริง" — ยังไม่หักแบ่งลงทุน/รายการหักอื่น */
-  const fcf=takeHome-totPlan;
-  const finalCash=fcf-totInv-otherDed;
+  /* Free Cash Flow = รับจริง − ผ่อน/ประกัน − รายการหักคงที่ − แบ่งลงทุน
+     = เงินที่เหลือไว้ใช้จ่ายผันแปร/กินอยู่จริง หลังกันทุกอย่างที่เลี่ยงไม่ได้ออกไปแล้ว */
+  const fcf=takeHome-totPlan-fixDed-totInv;
+  const finalCash=fcf-varDed;                    /* = สูตรเดิมเป๊ะ: takeHome−totPlan−totInv−otherDed */
   const pv=gv('fPrd');
   const pt=pv?new Date(pv+'-01').toLocaleDateString('th-TH',{year:'numeric',month:'long'}):'—';
   const[_py,_pm]=pv?pv.split('-').map(Number):[0,0];
@@ -2781,11 +2826,14 @@ function doCalc(){
   const fcfEl=ge('rFCF');
   fcfEl.textContent=fmt(fcf);
   fcfEl.classList.toggle('neg',fcf<0);
-  ge('rFCFSub').innerHTML=`ยอดรายได้รับจริง ${fmt(takeHome)} &minus; ผ่อน/ประกัน ${fmt(totPlan)}`
-    +(fcf<0?' &nbsp;⚠️ ภาระผ่อนเกินรายได้ที่รับจริง':'');
-  /* ช่องผ่อน/ประกัน + กล่อง FCF โผล่เฉพาะเดือนที่มีภาระจริง
-     เดือนที่ไม่มีภาระ FCF จะเท่ากับยอดรายได้รับจริงพอดี — ซ่อนไว้ ไม่ต้องโชว์เลขซ้ำ */
-  ['rPlanCell','rPlnBox','rFCFBox'].forEach(id=>{const el=ge(id);if(el)el.style.display=totPlan>0?'':'none';});
+  ge('rFCFSub').innerHTML=`${fmt(takeHome)} &minus; ผ่อน/ประกัน ${fmt(totPlan)} &minus; หักคงที่ ${fmt(fixDed)} &minus; แบ่งลงทุน ${fmt(totInv)}`
+    +(varDed>0?` &nbsp;·&nbsp; ยังไม่หักรายการผันแปร ${fmt(varDed)} (จ่ายจากก้อนนี้)`:'')
+    +(fcf<0?' &nbsp;⚠️ ภาระที่เลี่ยงไม่ได้เกินรายได้ที่รับจริง':'');
+  /* ช่องผ่อน/ประกันโผล่เฉพาะเดือนที่มีภาระผ่อน · กล่อง FCF โผล่เมื่อมีอะไรให้หักก่อนจริง
+     (ถ้าไม่มีอะไรถูกหักเลย FCF จะเท่ากับยอดรายได้รับจริงพอดี — ซ่อนไว้ ไม่ต้องโชว์เลขซ้ำ) */
+  ['rPlanCell','rPlnBox'].forEach(id=>{const el=ge(id);if(el)el.style.display=totPlan>0?'':'none';});
+  const fcfBox=ge('rFCFBox');
+  if(fcfBox)fcfBox.style.display=(totPlan+fixDed+totInv)>0?'':'none';
   const plnRows=pArr.filter(x=>planAmt(x)>0).map(x=>{
     const ty=planTy(x.type);
     const cur=planTerm(x.current_term),tot=planTerm(x.total_term);
@@ -2821,8 +2869,15 @@ function doCalc(){
     :'<div class="li" style="color:#a0aec0;font-style:italic">— ไม่มีแผนลงทุน —</div>';
   const pmBadge=p=>{const m=PM_META[p]||PM_META.bank;return `<span class="${m.cls}" style="margin-left:5px" title="${m.label}">${m.icon}</span>`;};
   const dedRows=[['ประกันสังคม (5%)',sso,'bank'],['กองทุนสำรองเลี้ยงชีพ (7%)',pvd,'bank']];
-  dArr.forEach(x=>{if(x.n&&nf(x.v))dedRows.push([x.n,nf(x.v),x.pm||'bank']);});
-  ge('rDedL').innerHTML=dedRows.map(([l,a,p])=>`<div class="li"><span>${l}${pmBadge(p)}</span><span class="vad">${fmt(a)}</span></div>`).join('');
+  dArr.forEach(x=>{if(x.n&&nf(x.v))dedRows.push([x.n,nf(x.v),x.pm||'bank',(x.n||'').includes('ภาษี')?null:costTy(x.ct)]);});
+  ge('rDedL').innerHTML=dedRows.map(([l,a,p,c])=>`<div class="li"><span>${l}${pmBadge(p)}${c?` <span class="${CT_META[c].cls}" title="${CT_META[c].full}">${CT_META[c].icon} ${CT_META[c].label}</span>`:''}</span><span class="vad">${fmt(a)}</span></div>`).join('');
+  /* ยอดย่อยคงที่/ผันแปร — ให้ตรวจได้ว่า ภาษี + คงที่ + ผันแปร = รวมหัก พอดี */
+  const dsEl=ge('rDedSplit');
+  if(dsEl)dsEl.innerHTML=(fixDed>0||varDed>0)
+    ?`<div class="li"><span><span class="ct-fix">🔒 คงที่</span> <span class="tl-sub">หักก่อนถึง FCF</span></span><span class="vad">${fmt(fixDed)}</span></div>`
+     +`<div class="li"><span><span class="ct-var">🔄 ผันแปร</span> <span class="tl-sub">จ่ายจาก FCF</span></span><span class="vad">${fmt(varDed)}</span></div>`
+     +`<div class="li"><span>ภาษีหัก ณ ที่จ่าย <span class="tl-sub">หักแล้วในยอดรายได้รับจริง</span></span><span class="vad">${fmt(taxAmt)}</span></div>`
+    :'';
   // สรุปยอดตามวิธีการหักในผลคำนวณ
   let rBank=sso+pvd,rCash=0,rCredit=0;
   dArr.forEach(x=>{const v=nf(x.v);if(x.pm==='cash')rCash+=v;else if(x.pm==='credit')rCredit+=v;else rBank+=v;});
@@ -2868,6 +2923,18 @@ const PM_META={
   inv   :{icon:'📈',label:'แบ่งลงทุน', cls:'pm-inv'}
 };
 const PM_ORDER=['bank','cash','credit','inv'];
+/* ประเภทต้นทุนของรายการหัก — คงที่ (Fixed cost) / ผันแปร (Variable cost)
+   คงที่ = เลี่ยงไม่ได้ในเดือนนั้น ถูกหักออกก่อนถึง Free Cash Flow
+   ผันแปร = จ่ายจาก FCF ตามที่เลือกเอง จึงไม่ถูกหักก่อน
+   เรคคอร์ดเก่าที่ไม่มีฟิลด์ ct → ถือเป็น "คงที่" (ปลอดภัยกว่า ไม่ทำให้เงินเหลือดูเยอะเกินจริง) */
+const CT_META={
+  fix:{icon:'🔒',label:'คงที่',   full:'ค่าใช้จ่ายคงที่ (Fixed cost)',   cls:'ct-fix'},
+  var:{icon:'🔄',label:'ผันแปร',  full:'ค่าใช้จ่ายผันแปร (Variable cost)',cls:'ct-var'}
+};
+const costTy=t=>(t==='var'?'var':'fix');
+const CT_TITLE='🔒 คงที่ = เลี่ยงไม่ได้ในเดือนนั้น ถูกหักก่อนถึง Free Cash Flow&#10;'
+  +'🔄 ผันแปร = จ่ายออกจาก Free Cash Flow ตามที่เลือกเอง&#10;'
+  +'(แถวที่ชื่อมีคำว่า "ภาษี" ไม่เข้าสูตรนี้ เพราะถูกหักไปแล้วในยอดรายได้รับจริง)';
 /* รายการหักตามกฎหมายที่ถูกหักจากเงินได้ก่อนถึงมือ — ชุดเดียวกับสูตร takeHome ในหน้าผลคำนวณ */
 const STAT_KIND={sso:1,pvd:1,tax:1};
 /* kind ที่มาจากตารางซึ่งมีช่องติ๊ก "จัดการแล้ว" (A/O/D/I) — ใช้นับตัวเลขบนหัวการ์ดไทม์ไลน์
@@ -3643,7 +3710,8 @@ function doExport(){
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
       (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
-      (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
+      /* EXTRA5 = วิธีจ่าย — เดิมไม่ถูก export เลย backup/restore แล้ววิธีจ่ายหายกลับเป็น 'บัญชี' ทั้งหมด */
+      (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',costTy(x.ct),x.pm||'bank')));
       (rec.i||[]).forEach(x=>rows.push(cr('I',yr,m,x.id,x.n,x.v,x.t,x.dn?'1':'',x.dt||'')));
       (rec.o||[]).forEach(x=>rows.push(cr('O',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
       /* แผนผ่อน/ประกัน — ใช้คอลัมน์ EXTRA4-7 ต่อท้าย ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
@@ -3682,7 +3750,8 @@ function doImport(input){
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
-        else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
+        /* ct: ไฟล์เก่าไม่มีคอลัมน์นี้ → costTy() คืน 'fix' ให้เองตามค่าเริ่มต้น */
+        else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,ct:costTy(extra4),pm:extra5||'bank',ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='I'||T==='INV'||T==='INVEST')r.i.push({id:key||uid(),n:name,v:val,t:extra||'฿',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='O'||T==='OTHER'||T==='OTHINC')r.o.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='P'||T==='PLAN')r.p.push({id:key||uid(),name,amount:val,type:planTy(extra),
@@ -3763,13 +3832,13 @@ function computeRec(rec,ym){
   const takeHome=totInc-sso-pvd-taxDed;
   const invBase=Math.max(0,totInc-sso-pvd-taxDed);
   const totInv=(rec.i||[]).reduce((s,x)=>{const v=nf(x.v);return s+(x.t==='%'?(invBase*v/100):v);},0);
-  const otherDed=dArr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s:s+nf(x.v),0);
   /* ภาระผูกพันคงที่ + Free Cash Flow — สูตรเดียวกับ doCalc() เป๊ะ ตัวเลขสองหน้าจึงตรงกันเสมอ */
+  const{fix:fixDed,vari:varDed,other:otherDed}=dedSplit(dArr);
   const totPlan=planTotal(rec.p);
-  const fcf=takeHome-totPlan;
-  const final=fcf-totInv-otherDed;
+  const fcf=takeHome-totPlan-fixDed-totInv;
+  const final=fcf-varDed;
   return{base,hr,totA,totO,ot15,ot20,ot30,totOT,totInc,totDed,takeHome,totInv,final,totPlan,fcf,
-    h15,h20,h30,m15,m20,m30,sso,pvd,custDed,taxDed,otherDed,invBase};
+    h15,h20,h30,m15,m20,m30,sso,pvd,custDed,taxDed,otherDed,fixDed,varDed,invBase};
 }
 function compM(ym){
   const rec=DB[ym];if(!rec||!nf(rec.base))return null;
@@ -4055,7 +4124,7 @@ function renderSum(){
       twk+=wkm;tlf+=lft;
       dInc.push(+t.totInc.toFixed(2));dTH.push(+t.takeHome.toFixed(2));dFin.push(+t.final.toFixed(2));dDed.push(+t.totDed.toFixed(2));
       dH15.push(+t.h15.toFixed(2));dH20.push(+t.h20.toFixed(2));dH30.push(+t.h30.toFixed(2));dAcc.push(+run.toFixed(2));
-      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td class="sdp"${t.totPlan?` title="Free Cash Flow = ${fN(t.takeHome-t.totPlan)}"`:''}>${t.totPlan?fN(t.totPlan):'—'}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td><td class="sdw">${wkm?fN(wkm):'—'}</td><td class="${lft<0?'sdd':'sdn'}"${wkm?'':' title="เดือนนี้ยังไม่ได้ตั้งงบวันหยุด — จึงเท่ากับเงินใช้จริง"'}>${fN(lft)}</td></tr>`;
+      html+=`<tr><td>${MF[i]}</td><td>${fN(t.base)}</td><td>${fN(t.totA)}</td><td class="sdo">${fN(t.totOT)}</td><td class="sdx">${fN(t.totO)}</td><td>${fN(t.totInc)}</td><td class="sdi">${fN(t.totInv)}</td><td class="sdd">${fN(t.taxDed)}</td><td class="sdd">${fN(t.totDed)}</td><td class="sdn">${fN(t.takeHome)}</td><td class="sdp"${(t.totPlan||t.fixDed)?` title="Free Cash Flow = ${fN(t.fcf)}  (รับจริง − ผ่อน/ประกัน − หักคงที่ ${fN(t.fixDed)} − แบ่งลงทุน)"`:''}>${t.totPlan?fN(t.totPlan):'—'}</td><td style="color:#2b6cb0;font-weight:600">${fN(t.final)}</td><td class="sdw">${wkm?fN(wkm):'—'}</td><td class="${lft<0?'sdd':'sdn'}"${wkm?'':' title="เดือนนี้ยังไม่ได้ตั้งงบวันหยุด — จึงเท่ากับเงินใช้จริง"'}>${fN(lft)}</td></tr>`;
     }else{
       [dInc,dTH,dFin,dDed,dH15,dH20,dH30].forEach(a=>a.push(0));dAcc.push(+run.toFixed(2));
       html+=`<tr><td>${MF[i]}</td><td class="nd" colspan="13">— ยังไม่มีข้อมูล —</td></tr>`;
@@ -4707,8 +4776,11 @@ init();
   ฐานคิดลงทุน  invBase = max(0, รับจริง)
   ยอดลงทุน     = Σ(รายการ % → invBase×%/100) + Σ(รายการ ฿ → ค่านั้นตรงๆ)
   ผ่อน/ประกัน (totPlan) = Σ ยอดต่อเดือนของทุกรายการใน "แผนผ่อนและประกัน" (ภาระผูกพันคงที่ — Fixed Obligations)
-  Free Cash Flow (fcf) = รับจริง − ผ่อน/ประกัน   ← "เงินที่เอาไปใช้จ่ายกินอยู่หรือลงทุนได้จริง" (ยังไม่หักแบ่งลงทุน/รายการหักอื่น)
-  ใช้จริง (final)  = Free Cash Flow − ยอดลงทุน − รายการหักอื่นๆ(ที่ไม่ใช่ภาษี)
+  รายการหักแบ่ง 3 กลุ่ม: ภาษี (หักไปแล้วใน "รับจริง") · หักคงที่ fixDed 🔒 (Fixed cost) · หักผันแปร varDed 🔄 (Variable cost)
+    → fixDed + varDed = รายการหักอื่นๆ ที่ไม่ใช่ภาษี ทั้งก้อนเสมอ
+  Free Cash Flow (fcf) = รับจริง − ผ่อน/ประกัน − หักคงที่ − ยอดลงทุน
+    ← "เงินที่เหลือไว้ใช้จ่ายกินอยู่จริง" หลังกันทุกอย่างที่เลี่ยงไม่ได้ออกแล้ว · รายการผันแปรถูกจ่ายออกจากก้อนนี้
+  ใช้จริง (final)  = Free Cash Flow − หักผันแปร   (เท่ากับ รับจริง − ผ่อน/ประกัน − ยอดลงทุน − รายการหักอื่นๆที่ไม่ใช่ภาษี)
   ★ แผนผ่อน 2 ประเภท: installment = มีงวด (current_term/total_term) งวดเดินหน้าเองทุกเดือน ผ่อนครบแล้วหลุดออกจากรายการ · recurring = กันเงินไว้ทุกเดือนไม่มีวันหมด (ประกันรายปีแบบ sinking fund)
   ★ แผนผ่อน/ประกันยังแก้ผ่านคำสั่ง json ไม่ได้ — ถ้าผู้ใช้อยากเพิ่ม/แก้/ลบ ให้บอกให้ไปกรอกที่การ์ด "💳 วางแผนการผ่อน & ประกัน" เอง
   ⚠️ ผลกระทบลูกโซ่: OT/รายได้ที่เปลี่ยน → invBase เปลี่ยน → ยอดลงทุนแบบ % เปลี่ยนตาม → "ใช้จริง" ไม่ได้ขยับเท่ารายได้ที่ขยับ ห้ามสรุปแบบเชิงเส้นเด็ดขาด
@@ -4963,7 +5035,7 @@ init();
     const curYm=ymk(monthIdx);
     /* จัดการแล้ว = checkpoint ที่ผู้ใช้ติ๊กว่าลงมือทำจริงแล้ว (ไม่มีผลต่อการคำนวณ) */
     const alls=colA().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
-    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank',วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
+    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank',ประเภทต้นทุน:(x.n||'').includes('ภาษี')?'ภาษี':(costTy(x.ct)==='var'?'ผันแปร':'คงที่'),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
     const invs=colI().filter(x=>x.n).map(x=>({n:x.n,t:x.t,v:nf(x.v),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
     const oths=colO().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
     /* ภาระผูกพันคงที่ — installment มีงวด/วันจบ · recurring กันเงินไว้ทุกเดือนไม่มีวันหมด */
@@ -5022,7 +5094,7 @@ init();
         ประกันสังคม:r(getSso()),กองทุนสำรองเลี้ยงชีพ:r(getPvd()),
         ยอดคำนวณปัจจุบัน:curRec?(()=>{const t=computeRec(curRec,curYm);return{รายได้รวม:r(t.totInc),ค่าOT:r(t.totOT),
           รายได้จากการทำงานก่อนหักภาษี:r(t.totInc-t.totO),รายได้จากการทำงานหลังหักภาษี:r(t.totInc-t.totO-t.taxDed),
-          รายได้อื่นๆไม่คิดภาษี:r(t.totO),หักรวม:r(t.totDed),รับจริง:r(t.takeHome),ผ่อนประกันรวม:r(t.totPlan),FreeCashFlow:r(t.fcf),ฐานคิดลงทุน:r(t.invBase),ยอดลงทุน:r(t.totInv),ใช้จริง:r(t.final)};})():null
+          รายได้อื่นๆไม่คิดภาษี:r(t.totO),หักรวม:r(t.totDed),รับจริง:r(t.takeHome),ผ่อนประกันรวม:r(t.totPlan),หักคงที่:r(t.fixDed),หักผันแปร:r(t.varDed),FreeCashFlow:r(t.fcf),ฐานคิดลงทุน:r(t.invBase),ยอดลงทุน:r(t.totInv),ใช้จริง:r(t.final)};})():null
       },
       สรุปรายเดือนทั้งปี:months,
       รวมทั้งปี:{เดือนที่มีข้อมูล:nFilled,รายได้รวม:r(yInc),รับจริง:r(yTake),ลงทุนรวม:r(yInv),ใช้จริงรวม:r(ySpend),หักรวม:r(yDed),ผ่อนประกันรวม:r(yPlan),OTชม:+yOT.toFixed(1)},
