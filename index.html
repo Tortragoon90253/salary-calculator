@@ -143,6 +143,8 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .addbtn.gn:hover{border-color:#48bb78;color:#276749;background:#f0fff4}
 .addbtn.pu:hover{border-color:#9f7aea;color:#553c9a;background:#faf5ff}
 .addbtn.in:hover{border-color:#667eea;color:#434190;background:#ebf4ff}
+.pfwd-btn{margin-top:6px;width:100%;padding:7px;border:none;border-radius:7px;background:#c3dafe;color:#2c5282;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit}
+.pfwd-btn:hover{background:#a3bffa}
 .sep{border:none;border-top:1px dashed #e2e8f0;margin:8px 0}
 .otw{overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch}
 .otw-hint{display:none;text-align:center;font-size:.75rem;color:#a0aec0;padding:5px 0 2px;letter-spacing:.02em}
@@ -620,6 +622,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div class="ckbar" id="ckbar_P"></div>
       <div id="pList"></div>
       <button class="addbtn in" onclick="addP()">＋ เพิ่มรายการผ่อน / ประกัน</button>
+      <button class="pfwd-btn" id="pFwdBtn" onclick="openPlanFwd()" style="display:none" title="เดือนที่บันทึกไว้แล้วจะไม่ได้แผนนี้อัตโนมัติ — กดเพื่อส่งไปให้">📤 ส่งแผนนี้ไปเดือนถัดๆ ไป</button>
     </div>
   </div>
 
@@ -1007,6 +1010,19 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <button class="mbtn-save" style="background:linear-gradient(135deg,#276749,#48bb78)" onclick="basePropYes()">✅ ใช่ อัปเดตเดือนถัดไปด้วย</button>
       <button class="mbtn-cancel" onclick="basePropNo()">เฉพาะเดือนนี้</button>
       <button class="mbtn-clear" onclick="basePropCancel()">↩︎ ยกเลิก (ไม่เปลี่ยนอะไร)</button>
+    </div>
+  </div>
+</div>
+
+<div id="planFwdModal" class="modal-overlay" onclick="if(event.target===this)planFwdNo()">
+  <div class="modal-box" style="max-width:470px">
+    <div class="modal-title">📤 ส่งแผนผ่อน &amp; ประกันไปเดือนถัดๆ ไป</div>
+    <div id="pfText" class="modal-sub" style="font-size:.86rem;color:#4a5568;line-height:1.7"></div>
+    <div id="pfList" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin:12px 0;font-size:.82rem;font-weight:700;color:#434190;line-height:1.8;max-height:210px;overflow-y:auto"></div>
+    <div style="font-size:.73rem;color:#718096;margin-bottom:16px;line-height:1.6">ส่งไปเฉพาะ<strong>เดือนที่บันทึกไว้แล้ว</strong> เพราะเดือนที่ยังไม่เคยเปิดจะได้แผนนี้อัตโนมัติอยู่แล้ว · รายการเดิมจะถูก<strong>อัปเดตงวด</strong> ไม่สร้างซ้ำ</div>
+    <div class="modal-btns">
+      <button class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="planFwdYes()">✅ ส่งเลย</button>
+      <button class="mbtn-cancel" onclick="planFwdNo()">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -1839,6 +1855,8 @@ function updPlan(){
   const nIns=arr.filter(x=>planTy(x.type)==='installment'&&planAmt(x)>0).length;
   const nRec=arr.filter(x=>planTy(x.type)==='recurring'&&planAmt(x)>0).length;
   const cnt=[nIns?`ผ่อน ${nIns} รายการ`:'',nRec?`ประกัน/สะสม ${nRec} รายการ`:''].filter(Boolean).join(' · ');
+  const fb=ge('pFwdBtn');
+  if(fb)fb.style.display=(tot>0&&CT>=0&&CT<12&&planFwdTargets(ymk(CT)).length)?'':'none';
   el.innerHTML=`ภาระผูกพันคงที่เดือนนี้ = <strong class="pln-total-val">${fmt(tot)}</strong>${cnt?` &nbsp;|&nbsp; ${cnt}`:''}`
     +`<br><strong>เงินเหลือใช้จริง (Free Cash Flow)</strong> = <strong class="pln-fcf-val${fcf<0?' neg':''}">${fmt(fcf)}</strong>`
     +`<br><span style="font-size:.7rem">= รับจริง ${fmt(net)} − ผ่อน/ประกัน ${fmt(tot)} − หักคงที่ 🔒 ${fmt(fixDed)} − แบ่งลงทุน ${fmt(inv)}`
@@ -2506,6 +2524,70 @@ function forwardPlans(arr,srcYm,dstYm){
   /* วันที่ตัดเงินเลื่อนตามระยะเดือน · ช่องที่ยังว่างเติมวันเงินเดือนออกให้ (กติกาเดียวกับรายการหัก) */
   return{list:anchorDates(dedupeIds(keep),srcYm,dstYm,true),done};
 }
+/* รวมรายการเข้าเดือนปลายทาง — จับคู่ด้วย id จึงอัปเดตรายการเดิม ไม่สร้างซ้ำ */
+function mergePlans(dst,inc){
+  const out=(dst||[]).slice();
+  (inc||[]).forEach(x=>{
+    const i=out.findIndex(y=>y&&y.id===x.id);
+    if(i>=0)out[i]={...out[i],...x};else out.push(x);
+  });
+  return dedupeIds(out);
+}
+
+/* ════════════════════════════════════════════════════
+   ส่งแผนผ่อน/ประกันไปเดือนถัดๆ ไป "ที่บันทึกไว้แล้ว"
+   auto-forward ใน loadM() เติมให้เฉพาะเดือนที่ยังไม่เคยบันทึก (หรือ record เก่าที่ไม่มีฟิลด์ p)
+   เพราะต้องเคารพเดือนที่ผู้ใช้ตั้งใจลบแผนทิ้ง — แต่ผลข้างเคียงคือ
+   เดือนที่เคยบันทึกไว้ก่อนจะเพิ่มแผนจะไม่ได้แผนนั้นเลย และยังไปตัดสายส่งต่อของเดือนหลังจากนั้นด้วย
+   (loadM มองย้อนหลังแค่เดือนที่ใกล้ที่สุดที่มีข้อมูล)
+   ปุ่มนี้จึงเป็นทางแก้แบบชัดเจน: ผู้ใช้สั่งเอง เห็นก่อนว่าจะกระทบเดือนไหน
+   ════════════════════════════════════════════════════ */
+let _planFwd=null;
+function planFwdTargets(fromYm){
+  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&recHasData(DB[k])).sort();
+}
+function openPlanFwd(){
+  if(CT<0||CT>=12)return;
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  saveM();                       /* ต้นทางต้องบันทึกก่อน ไม่งั้นส่งของที่ยังไม่ commit */
+  const ym=ymk(CT);
+  const src=((DB[ym]||{}).p||[]).filter(x=>planAmt(x)>0);
+  if(!src.length){toast('ยังไม่มีแผนผ่อน/ประกันที่กรอกยอดไว้ในเดือนนี้','te');return;}
+  const targets=planFwdTargets(ym);
+  if(!targets.length){toast('ไม่มีเดือนถัดไปที่บันทึกไว้ — เดือนใหม่จะได้แผนนี้อัตโนมัติตอนเปิด');return;}
+  const rows=targets.map(t=>{const fw=forwardPlans(src,ym,t);return{ym:t,n:fw.list.length,done:fw.done.length};});
+  _planFwd={ym,src,targets};
+  ge('pfText').innerHTML=`ส่ง <b>${src.length} รายการ</b> จาก <b>${ymLabel(ym)}</b> ไปยัง <b>${targets.length} เดือน</b>ถัดไปที่มีข้อมูลอยู่แล้ว`
+    +`<br>งวดจะเดินหน้าตามระยะเดือนให้เอง และรายการที่ผ่อนครบก่อนถึงเดือนนั้นจะไม่ถูกส่งไป`;
+  ge('pfList').innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px">`
+    +`<span>${ymLabel(r.ym)}</span><span>${r.n?r.n+' รายการ':'<span style="color:#a0aec0">ไม่มีเหลือ</span>'}`
+    +`${r.done?` <span style="color:#c05621;font-weight:400">· ผ่อนครบ ${r.done}</span>`:''}</span></div>`).join('');
+  ge('planFwdModal').classList.add('open');
+}
+function planFwdNo(){ge('planFwdModal').classList.remove('open');_planFwd=null;}
+async function planFwdYes(){
+  const d=_planFwd;ge('planFwdModal').classList.remove('open');_planFwd=null;
+  if(!d)return;
+  d.targets.forEach(t=>{
+    const rec=DB[t];if(!rec)return;
+    const fw=forwardPlans(d.src,d.ym,t);
+    /* รายการที่ผ่อนครบก่อนถึงเดือนนี้ต้องถูกถอดออกด้วย เผื่อเคยส่งไปแล้วรอบก่อน */
+    const doneIds=new Set(fw.done.map(x=>x.id));
+    rec.p=mergePlans((rec.p||[]).filter(x=>x&&!doneIds.has(x.id)),fw.list);
+  });
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  updateDots();
+  for(const ym of d.targets){
+    try{
+      if(fbDb)await fbSaveMonth(ym);
+      else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]});
+    }catch(e){console.warn('plan propagate sync failed',ym,e);}
+  }
+  if(CT===12)renderSum();
+  toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`);
+}
+
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
 function announcePlansDone(done){
   if(!done||!done.length)return;
