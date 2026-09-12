@@ -732,14 +732,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div class="thval" id="rTH">฿0</div>
     </div>
     <div class="bkd">
-      <div class="bb inc"><h3>✅ รายได้ทั้งหมด</h3><div id="rIncL"></div>
-        <div class="tline"><span>รวมรายได้ <span class="tl-sub">ก่อนหักภาษี</span></span><span class="vai" id="rTInc">฿0</span></div>
-        <div class="tline tl2"><span>รวมรายได้ <span class="tl-sub">หลังหักภาษี</span></span><span class="vai" id="rTIncNet">฿0</span></div>
-        <div class="inc-note">* “หลังหักภาษี” = หักภาษีหัก ณ ที่จ่ายแล้ว แต่ยังไม่ได้หักประกันสังคม/กองทุนฯ — ยอดที่หักครบแล้วคือ “ยอดรายได้รับจริง” ด้านบน</div>
+      <div class="bb inc"><h3>✅ รายได้ → เงินที่ถึงมือ</h3><div id="rIncL"></div>
+        <div class="tline"><span>= ยอดรายได้รับจริง <span class="tl-sub">เงินที่ถึงมือ</span></span><span class="vai" id="rTHinc">฿0</span></div>
+        <div class="inc-note" id="rIncNote"></div>
       </div>
       <div class="bb pln" id="rPlnBox"><h3>💳 ผ่อน &amp; ประกัน</h3><div id="rPlnL"></div><div class="tline"><span>รวมผ่อน/ประกันเดือนนี้</span><span class="vad" id="rTPlan">฿0</span></div></div>
       <div class="bb inv"><h3>📈 แบ่งลงทุน</h3><div id="rInvL"></div><div class="tline"><span>รวมลงทุน</span><span class="vat" id="rTInv">฿0</span></div></div>
-      <div class="bb ded"><h3>❌ รายการหัก</h3><div id="rDedL"></div><div class="tline"><span>รวมหัก</span><span class="vad" id="rTDed">฿0</span></div><div id="rDedSplit"></div></div>
+      <div class="bb ded"><h3>❌ รายการหัก</h3><div id="rDedL"></div><div class="tline"><span>รวมหักทั้งหมด</span><span class="vad" id="rTDed">฿0</span></div></div>
     </div>
     <div id="rPaySum"></div>
     <div id="ckSum"></div>
@@ -2835,7 +2834,6 @@ function doCalc(){
   ge('resPer').textContent='ประจำเดือน '+pt+(_py?' · '+ageMonthTxt(_py,_pm-1):'');
   ge('rTH').textContent=fmt(takeHome);
   ge('rTH2').textContent=fmt(takeHome);
-  ge('rTInc').textContent=fmt(totInc);
   ge('rTDed').textContent=fmt(totDed);
   ge('rTInv').textContent=fmt(totInv);
   ge('rInvS').textContent=fmt(totInv);
@@ -2860,8 +2858,9 @@ function doCalc(){
     return`<div class="li"><span>${esc(x.name)||'(ไม่ระบุชื่อ)'} <span class="tl-sub">${PLAN_TYPES[ty].icon} ${meta}</span></span><span class="vad">${fmt(planAmt(x))}</span></div>`;
   });
   ge('rPlnL').innerHTML=plnRows.length?plnRows.join(''):'<div class="li" style="color:#a0aec0;font-style:italic">— ไม่มีภาระผ่อน/ประกัน —</div>';
-  /* กล่อง "รายได้ทั้งหมด" แยก 2 กลุ่ม: รายได้จากการทำงาน (เข้าฐานภาษี — โชว์ทั้งก่อน/หลังหักภาษี)
-     กับ รายได้อื่นๆ (ไม่เข้าฐานภาษี จึงไม่มีก่อน/หลัง) */
+  /* กล่องรายได้ = สายเดียวจบ: รายได้จากการทำงาน + รายได้อื่นๆ → หักภาษี/ประกันสังคม/กองทุนฯ
+     → ยอดรายได้รับจริง  (เดิมโชว์ "หลังหักภาษี" ของเฉพาะกลุ่มทำงาน ซึ่งอ่านสับสน
+     เพราะไม่รวมรายได้อื่นๆ และยังไม่หักประกันสังคม/กองทุนฯ แต่ชื่อไม่ได้บอกขอบเขตไว้) */
   const workRows=[['เงินเดือนฐาน',base]];
   aArr.forEach(x=>{if(x.n&&nf(x.v))workRows.push([esc(x.n),nf(x.v)]);});
   if(h15>0)workRows.push([`OT ×1.5 (${h15.toFixed(2)} ชม.)`,ot15]);
@@ -2869,34 +2868,55 @@ function doCalc(){
   if(h30>0)workRows.push([`OT ×3.0 (${h30.toFixed(2)} ชม.)`,ot30]);
   const totWork=base+totA+totOT;
   const liRow=([l,a])=>`<div class="li"><span>${l}</span><span class="vai">${fmt(a)}</span></div>`;
-  let incHtml=`<div class="grp-h">💼 รายได้จากการทำงาน + เบี้ยต่างๆ <span class="grp-tag">คิดภาษี</span></div>`
+  const subIn=(l,a)=>`<div class="li sub"><span>${l}</span><span class="vai">${fmt(a)}</span></div>`;
+  const outIn=(l,a)=>`<div class="li"><span>− ${l}</span><span class="vad">−${fmt(a)}</span></div>`;
+  const grpH=(t,tag,cls)=>`<div class="grp-h">${t}${tag?` <span class="${cls||'grp-tag'}">${tag}</span>`:''}</div>`;
+  let incHtml=grpH('💼 รายได้จากการทำงาน + เบี้ยต่างๆ','คิดภาษี')
     +workRows.map(liRow).join('')
-    +`<div class="li sub"><span>รวมก่อนหักภาษี</span><span class="vai">${fmt(totWork)}</span></div>`
-    +`<div class="li"><span>− ภาษีหัก ณ ที่จ่าย</span><span class="vad">−${fmt(taxAmt)}</span></div>`
-    +`<div class="li sub"><span>= หลังหักภาษี</span><span class="vai">${fmt(totWork-taxAmt)}</span></div>`;
-  const othRows=oArr.filter(x=>x.n&&nf(x.v)).map(x=>[esc(x.n),nf(x.v)]);
+    +subIn('รวมรายได้จากการทำงาน',totWork);
+  const othRows=oArr.filter(x=>nf(x.v)).map(x=>[esc(x.n)||'(ไม่ระบุชื่อ)',nf(x.v)]);
   if(othRows.length){
-    incHtml+=`<div class="grp-h">💰 รายได้อื่นๆ <span class="no-tax-tag">ไม่คิดภาษี</span></div>`
+    incHtml+=grpH('💰 รายได้อื่นๆ','ไม่คิดภาษี','no-tax-tag')
       +othRows.map(liRow).join('')
-      +`<div class="li sub"><span>รวมรายได้อื่นๆ</span><span class="vai">${fmt(totO)}</span></div>`;
+      +subIn('รวมรายได้อื่นๆ',totO);
   }
+  /* สายหักก่อนเงินถึงมือ — ประกันสังคม/กองทุนฯ ย้ายมาอยู่ที่นี่ ต่อจากภาษี
+     จะได้ไล่จาก "รวมรายได้" ถึง "ยอดรายได้รับจริง" ได้ครบในกล่องเดียว ไม่ต้องข้ามไปดูกล่องอื่น */
+  incHtml+=grpH('🧾 หักก่อนเงินถึงมือ','ตามกฎหมาย')
+    +subIn('รวมรายได้ทั้งหมด',totInc)
+    +outIn('ภาษีหัก ณ ที่จ่าย',taxAmt)
+    +subIn('= หลังหักภาษี',totInc-taxAmt)
+    +outIn('ประกันสังคม (5%)',sso)
+    +outIn('กองทุนสำรองเลี้ยงชีพ (7%)',pvd);
   ge('rIncL').innerHTML=incHtml;
-  ge('rTIncNet').textContent=fmt(totInc-taxAmt);
+  ge('rTHinc').textContent=fmt(takeHome);
+  ge('rIncNote').innerHTML='* ไล่จากบนลงล่างได้เลย — ยอดล่างสุดตรงกับเลขใหญ่ด้านบนของหน้านี้เสมอ'
+    +'<br>* สามรายการที่หัก “ก่อนเงินถึงมือ” ยังถูกนับใน “รวมหักทั้งหมด” ของกล่องรายการหักด้วย (คนละมุมของเงินก้อนเดียวกัน ไม่ได้หักซ้ำ)'
+    +'<br>* รายการหักที่เหลือ (คงที่/ผันแปร) · ผ่อน & ประกัน · แบ่งลงทุน จ่ายออกจากยอดรายได้รับจริงนี้';
   const invD=iArr.map(x=>{const v=nf(x.v);const a=x.t==='%'?(invBase*v/100):v;return x.n?[`${x.n}${x.t==='%'?` (${v}%)`:''}`,a]:null;}).filter(Boolean);
   ge('rInvL').innerHTML=invD.length
     ?invD.map(([l,a])=>`<div class="li"><span>${l}</span><span class="vat">${fmt(a)}</span></div>`).join('')
     :'<div class="li" style="color:#a0aec0;font-style:italic">— ไม่มีแผนลงทุน —</div>';
   const pmBadge=p=>{const m=PM_META[p]||PM_META.bank;return `<span class="${m.cls}" style="margin-left:5px" title="${m.label}">${m.icon}</span>`;};
-  const dedRows=[['ประกันสังคม (5%)',sso,'bank'],['กองทุนสำรองเลี้ยงชีพ (7%)',pvd,'bank']];
-  dArr.forEach(x=>{if(x.n&&nf(x.v))dedRows.push([x.n,nf(x.v),x.pm||'bank',dedCt(x)]);});
-  ge('rDedL').innerHTML=dedRows.map(([l,a,p,c])=>`<div class="li"><span>${l}${pmBadge(p)}${c?` <span class="${CT_META[c].cls}" title="${CT_META[c].full}">${CT_META[c].icon} ${CT_META[c].label}</span>`:''}</span><span class="vad">${fmt(a)}</span></div>`).join('');
-  /* ยอดย่อยคงที่/ผันแปร — ให้ตรวจได้ว่า ภาษี + คงที่ + ผันแปร = รวมหัก พอดี */
-  const dsEl=ge('rDedSplit');
-  if(dsEl)dsEl.innerHTML=(fixDed>0||varDed>0)
-    ?`<div class="li"><span><span class="ct-fix">🔒 คงที่</span> <span class="tl-sub">หักก่อนถึง FCF</span></span><span class="vad">${fmt(fixDed)}</span></div>`
-     +`<div class="li"><span><span class="ct-var">🔄 ผันแปร</span> <span class="tl-sub">จ่ายจาก FCF</span></span><span class="vad">${fmt(varDed)}</span></div>`
-     +`<div class="li"><span>ภาษีหัก ณ ที่จ่าย <span class="tl-sub">หักแล้วในยอดรายได้รับจริง</span></span><span class="vad">${fmt(taxAmt)}</span></div>`
-    :'';
+  /* กล่องรายการหัก จัดกลุ่มตาม "จังหวะที่เงินออก" ไม่ใช่เรียงตามลำดับที่กรอก
+       🧾 หักก่อนเงินถึงมือ  = ภาษี + ประกันสังคม + กองทุนฯ (ไม่เคยผ่านมือเรา)
+       🔒 คงที่             = หักก่อนถึง Free Cash Flow
+       🔄 ผันแปร            = จ่ายออกจาก Free Cash Flow
+     กรองด้วยยอด (ไม่ใช่ชื่อ) และเติมชื่อสำรองให้แถวที่ยังไม่ตั้งชื่อ — ยอดย่อยจึงบวกได้ครบเสมอ
+     เกณฑ์กลุ่มใช้ isTaxRow()/dedCt() ตัวเดียวกับ getTaxFromD()/dedSplit() ยอดจึงตรงกันแน่นอน */
+  const dRow=(l,a,pm)=>`<div class="li"><span>${l}${pm?pmBadge(pm):''}</span><span class="vad">${fmt(a)}</span></div>`;
+  const subD=(l,a)=>`<div class="li sub"><span>${l}</span><span class="vad">${fmt(a)}</span></div>`;
+  const rowsOfCt=c=>dArr.filter(x=>nf(x.v)&&!isTaxRow(x)&&dedCt(x)===c);
+  const mapRows=arr=>arr.map(x=>dRow(esc(x.n)||'(ไม่ระบุชื่อ)',nf(x.v),x.pm||'bank')).join('');
+  let dedHtml=grpH('🧾 หักก่อนเงินถึงมือ','แสดงในกล่องรายได้แล้ว')
+    +mapRows(dArr.filter(x=>nf(x.v)&&isTaxRow(x)))
+    +dRow('ประกันสังคม (5%)',sso,'bank')
+    +dRow('กองทุนสำรองเลี้ยงชีพ (7%)',pvd,'bank')
+    +subD('รวมหักก่อนถึงมือ',taxAmt+sso+pvd);
+  const fixR=rowsOfCt('fix'),varR=rowsOfCt('var');
+  if(fixR.length)dedHtml+=grpH('🔒 ค่าใช้จ่ายคงที่','หักก่อนถึง FCF')+mapRows(fixR)+subD('รวมคงที่',fixDed);
+  if(varR.length)dedHtml+=grpH('🔄 ค่าใช้จ่ายผันแปร','จ่ายจาก FCF')+mapRows(varR)+subD('รวมผันแปร',varDed);
+  ge('rDedL').innerHTML=dedHtml;
   // สรุปยอดตามวิธีการหักในผลคำนวณ
   let rBank=sso+pvd,rCash=0,rCredit=0;
   dArr.forEach(x=>{const v=nf(x.v);if(x.pm==='cash')rCash+=v;else if(x.pm==='credit')rCredit+=v;else rBank+=v;});
