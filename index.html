@@ -21,6 +21,9 @@ header h1{font-size:1.1rem;font-weight:700;flex:1}
 #ySel{padding:5px 10px;border-radius:6px;border:none;font-size:.85rem;font-weight:700;color:#2d3748;width:110px}
 .cpybtn{padding:5px 12px;border-radius:7px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#553c9a,#805ad5);color:white}
 .cpybtn:disabled{opacity:.5;cursor:not-allowed}
+.clrbtn{padding:5px 12px;border-radius:7px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#9b2c2c,#e53e3e);color:white}
+.clrbtn:disabled{opacity:.5;cursor:not-allowed}
+#ageBdg{font-size:.78rem;font-weight:700;color:#fbd38d;background:rgba(255,255,255,.1);padding:3px 10px;border-radius:10px;white-space:nowrap}
 #bdg{font-size:.78rem;color:#68d391;margin-left:auto}
 #syncSt{font-size:.76rem;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.1);white-space:nowrap}
 .tabs{background:#1a202c;display:flex;overflow-x:auto;gap:2px;padding:0 8px;scrollbar-width:none}
@@ -441,6 +444,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .nl-grn{color:#276749}.nl-teal{color:#234e52}.nl-blue{color:#2b6cb0}
 .nfml-exc{color:#c53030}
 .sum-sub{font-size:.75rem;opacity:.75;margin-bottom:4px}
+.sum-age{font-size:.82rem;font-weight:700;color:#fbd38d;margin-top:5px}
 .chart-filter-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
 .ml-6{margin-left:6px}
 .ics-btn-inc{background:rgba(66,153,225,.12);border-color:#4299e1;color:#2b6cb0}
@@ -487,6 +491,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <label>ปี (ค.ศ.):</label>
   <select id="ySel" onchange="onYrChange()"></select>
   <button class="cpybtn" onclick="openCopyYear()">📋 ลอกจากปีก่อน</button>
+  <button class="clrbtn" onclick="openClearYear()">🗑️ ล้างข้อมูลทั้งปี</button>
+  <span id="ageBdg">—</span>
   <span id="bdg">⏳ กำลังโหลด...</span>
   <span id="syncSt"></span>
 </div>
@@ -694,7 +700,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 <!-- ── Summary View ── -->
 <div id="sv" class="wrap">
   <div class="sumhdr">
-    <div><div class="sum-sub">สรุปรายได้ประจำปี</div><h2 id="sTitle">—</h2></div>
+    <div><div class="sum-sub">สรุปรายได้ประจำปี</div><h2 id="sTitle">—</h2><div class="sum-age" id="sAge"></div></div>
     <div class="yb" id="sYr">—</div>
   </div>
   <button class="pdfbtn" onclick="window.print()">🖨️ Export รายงาน PDF</button>
@@ -891,6 +897,27 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 </div>
 
+<!-- ── Modal: ล้างข้อมูลทั้งปี (ถามยืนยันทุกครั้ง) ── -->
+<div id="clearYearModal" class="modal-overlay" onclick="if(event.target===this)closeClearYear()">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-title">🗑️ ล้างข้อมูลทั้งปี</div>
+    <div class="modal-sub">ลบข้อมูล<strong>ทุกเดือน</strong>ของปีนี้ — เงินเดือนฐาน · ค่าเพิ่มเติม · รายการหัก · แบ่งลงทุน · ตาราง OT รายวัน</div>
+
+    <div id="clrHead" style="text-align:center;font-size:1rem;font-weight:700;color:#c53030;background:#fff5f5;border:1px solid #feb2b2;border-radius:8px;padding:12px;margin-bottom:14px"></div>
+
+    <div id="clrBody" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+    <div style="background:#fff5f5;border:1px solid #feb2b2;border-radius:8px;padding:11px 12px;margin-bottom:16px;font-size:.76rem;color:#9b2c2c;line-height:1.7">
+      ⚠️ ต้องการลบใช่หรือไม่? ข้อมูลปีนี้จะถูกลบ<strong>ทั้งหมด</strong> ทั้งในเครื่องและบน cloud และ<strong>ย้อนกลับไม่ได้</strong>
+    </div>
+
+    <div class="modal-btns">
+      <button id="clrConfirm" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="doClearYear()">🗑️ ใช่ ลบเลย</button>
+      <button class="mbtn-cancel" onclick="closeClearYear()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div id="basePropModal" class="modal-overlay" onclick="if(event.target===this)basePropNo()">
   <div class="modal-box" style="max-width:440px">
     <div class="modal-title">📈 อัปเดตเงินเดือนเดือนถัดไปด้วยไหม?</div>
@@ -962,6 +989,47 @@ function payDate(ym){
   if(!y||!m)return'';
   return m===12?`${y+1}-01-05`:`${y}-${p2(m+1)}-05`;
 }
+/* ── อายุผู้ใช้ ── วันเกิด 7 กันยายน 2534 (ค.ศ. 1991) */
+const BIRTH_DT='1991-09-07';
+const BIRTH_TXT='7 กันยายน 2534';
+/* อายุเต็ม ณ วันที่ dt ('YYYY-MM-DD') → {y,m} ปี/เดือน (null ถ้าก่อนวันเกิด) */
+function ageOn(dt){
+  const[by,bm,bd]=BIRTH_DT.split('-').map(Number);
+  const[y,m,d]=String(dt||'').split('-').map(Number);
+  if(!y||!m||!d)return null;
+  let yy=y-by,mm=m-bm;
+  if(d<bd)mm--;
+  if(mm<0){yy--;mm+=12;}
+  return yy<0?null:{y:yy,m:mm};
+}
+const ageTxt=a=>a?(a.m?`${a.y} ปี ${a.m} เดือน`:`${a.y} ปี`):'—';
+/* อายุ "ในเดือนนั้น" = อายุ ณ วันสุดท้ายของเดือน — เดือนเกิดบอกไว้ด้วยว่าอายุขยับกลางเดือน */
+function ageMonthTxt(y,mi){
+  if(!(mi>=0&&mi<=11))return'—';
+  const lastD=new Date(y,mi+1,0).getDate();
+  const a=ageOn(`${y}-${p2(mi+1)}-${p2(lastD)}`);
+  if(!a)return'—';
+  const bm=+BIRTH_DT.slice(5,7),bd=+BIRTH_DT.slice(8,10);
+  if(mi===bm-1&&y>+BIRTH_DT.slice(0,4))return `🎉 เดือนเกิด — ${bd} ${MF[mi]} ครบ ${a.y} ปี`;
+  return `🎂 อายุ ${ageTxt(a)}`;
+}
+/* อายุตลอดปี — ปีที่มีวันเกิดจะแสดงเป็นช่วง เช่น 34 → 35 ปี */
+function ageYearTxt(y){
+  const a1=ageOn(`${y}-01-01`),a2=ageOn(`${y}-12-31`);
+  if(!a2)return'—';
+  return (a1&&a1.y!==a2.y)?`🎂 อายุ ${a1.y} → ${a2.y} ปี`:`🎂 อายุ ${a2.y} ปี`;
+}
+/* ป้ายอายุบนแถบปี — เดือนไหน/ปีไหนที่ดูอยู่ ก็บอกอายุของช่วงนั้น */
+function updAge(){
+  const el=ge('ageBdg');
+  if(el){
+    el.textContent=CT===12?`${ageYearTxt(CY)} (ทั้งปี ${CY})`:ageMonthTxt(CY,CT);
+    el.title=`วันเกิด ${BIRTH_TXT}`;
+  }
+  const sa=ge('sAge');
+  if(sa)sa.textContent=`${ageYearTxt(CY)} — วันเกิด ${BIRTH_TXT}`;
+}
+
 /* ระยะห่างเป็นจำนวนเดือน a → b */
 function ymDelta(a,b){
   if(!a||!b)return 0;
@@ -1923,11 +1991,12 @@ function switchTab(idx,skipSave=false){
   for(let i=0;i<=12;i++){const t=ge(`tb_${i}`);if(t)t.classList.toggle('on',i===idx);}
   if(idx===12){ge('mv').style.display='none';ge('sv').style.display='block';renderSum();}
   else{ge('mv').style.display='block';ge('sv').style.display='none';loadM(idx);}
+  updAge();
   ge(`tb_${idx}`)?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
 function onYrChange(){
   if(CT!==12)saveM();
-  CY=parseInt(gv('ySel'));buildTabs();
+  CY=parseInt(gv('ySel'));buildTabs();updAge();
   if(CT===12)renderSum();else switchTab(CT,true);
 }
 function ymk(mi){return `${CY}-${p2(mi+1)}`;}
@@ -2287,6 +2356,71 @@ async function doCopyYear(){
   go.disabled=false;
 }
 
+/* ── ล้างข้อมูลทั้งปี ── */
+/* เดือนของปี y ที่มี record อยู่จริง — ใช้ทั้งตอน preview และตอนลบ */
+function yearMonthsStored(y){
+  const out=[];
+  for(let i=0;i<12;i++)if(DB[`${y}-${p2(i+1)}`])out.push(i);
+  return out;
+}
+
+function openClearYear(){
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  /* บันทึกสิ่งที่ค้างในฟอร์มก่อน — รายการที่จะลบจะได้ตรงกับที่เห็นบนจอ */
+  if(CT!==12&&formDirty)saveM();
+  const ms=yearMonthsStored(CY);
+  ge('clrHead').innerHTML=`ล้างข้อมูลปี ${CY} (พ.ศ. ${CY+543})`;
+  const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
+  const btn=ge('clrConfirm');
+  if(!ms.length){
+    ge('clrBody').innerHTML='<div style="font-weight:700;color:#718096">ปีนี้ยังไม่มีข้อมูลให้ลบ</div>';
+    btn.disabled=true;
+  }else{
+    const filled=ms.filter(mi=>recHasData(DB[`${CY}-${p2(mi+1)}`]));
+    let h=`<div style="font-weight:700;color:#c53030">🗑️ จะลบ ${ms.length} เดือน</div>`+mlist(ms);
+    if(filled.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⚠️ ในนั้นมี ${filled.length} เดือนที่กรอกจำนวนเงินไว้แล้ว</div>`+mlist(filled);
+    ge('clrBody').innerHTML=h;
+    btn.disabled=false;
+  }
+  ge('clearYearModal').classList.add('open');
+}
+function closeClearYear(){ge('clearYearModal').classList.remove('open');}
+
+async function doClearYear(){
+  /* กัน race แบบเดียวกับ saveM() — cloud ยังโหลดไม่เสร็จ ห้ามลบทับ */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  const btn=ge('clrConfirm');btn.disabled=true;
+  const yr=CY,ms=yearMonthsStored(yr);
+  if(!ms.length){closeClearYear();toast('ปีนี้ยังไม่มีข้อมูลให้ลบ');btn.disabled=false;return;}
+  const yms=ms.map(mi=>`${yr}-${p2(mi+1)}`);
+
+  yms.forEach(ym=>{delete DB[ym];});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  updateDots();
+  closeClearYear();
+  /* ล้างหน้าจอให้ตรงกับข้อมูลที่เพิ่งลบ — เดือนที่เปิดอยู่จะกลับเป็นฟอร์มเปล่า */
+  if(CT===12)renderSum();else switchTab(CT,true);
+  formDirty=false;
+  toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
+
+  /* sync การลบขึ้น cloud ทีละเดือน — แบบเดียวกับ doCopyYear() */
+  if(fbDb||gsUrl){
+    setSyncSt(fbDb?'fb_saving':'saving');
+    let fail=0,lastTs=null;
+    for(const ym of yms){
+      try{
+        if(fbDb)lastTs=(await fbDeleteMonth(ym))||lastTs;
+        else await gsPost({action:'deleteMonth',ym});
+      }catch(e){fail++;console.warn('clearYear sync failed',ym,e);}
+    }
+    if(fail)setSyncSt(fbDb?'fb_error':'error',`ลบไม่สำเร็จ ${fail} เดือน`);
+    else{setSyncSt(fbDb?'fb_ok':'ok');if(fbDb&&lastTs)setBadge(lastTs,'fb');}
+  }
+  btn.disabled=false;
+}
+
 /* ── OT Table ── */
 function buildOT(){
   const pv=gv('fPrd');if(!pv)return;
@@ -2346,7 +2480,8 @@ function doCalc(){
   const finalCash=takeHome-totInv-otherDed;
   const pv=gv('fPrd');
   const pt=pv?new Date(pv+'-01').toLocaleDateString('th-TH',{year:'numeric',month:'long'}):'—';
-  ge('resPer').textContent='ประจำเดือน '+pt;
+  const[_py,_pm]=pv?pv.split('-').map(Number):[0,0];
+  ge('resPer').textContent='ประจำเดือน '+pt+(_py?' · '+ageMonthTxt(_py,_pm-1):'');
   ge('rTH').textContent=fmt(takeHome);
   ge('rTH2').textContent=fmt(takeHome);
   ge('rTInc').textContent=fmt(totInc);
@@ -3581,7 +3716,7 @@ function fillTlMonSel(){
 }
 
 function renderSum(){
-  ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;
+  ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;updAge();
   let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0,ttx=0,twk=0,tlf=0;
   let lbs=[],dInc=[],dTH=[],dFin=[],dDed=[],dH15=[],dH20=[],dH30=[],dAcc=[],run=0;let html='';
   for(let i=0;i<12;i++){
