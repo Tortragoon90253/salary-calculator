@@ -802,13 +802,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     </div>
   </div>
   <div class="card">
-    <div class="ch cpu">💸 สรุปรายการหัก + เงินลงทุน แยกตามหมวดหมู่</div>
+    <div class="ch cpu">💸 สรุปรายการหัก + ผ่อน/ประกัน + เงินลงทุน แยกตามหมวดหมู่</div>
     <div class="cb">
       <div class="ded-flt-wrap"><span class="ded-flt-lbl">กรองหมวด:</span><div id="dedFlt" style="display:contents"></div></div>
       <div id="dedCatStat" class="ded-stat-grid"></div>
       <div class="ded-charts-wrap">
-        <div class="cbx"><h3>📊 รายการหัก + ลงทุน รายเดือน (แยกหมวดหมู่)</h3><canvas id="cDedBar" height="180"></canvas></div>
-        <div class="cbx"><h3>🥧 สัดส่วนรายการหัก + ลงทุนทั้งปี</h3><canvas id="cDedPie" height="180"></canvas></div>
+        <div class="cbx"><h3>📊 รายการหัก + ผ่อน/ประกัน + ลงทุน รายเดือน (แยกหมวดหมู่)</h3><canvas id="cDedBar" height="180"></canvas></div>
+        <div class="cbx"><h3>🥧 สัดส่วนเงินออกทั้งปี แยกหมวดหมู่</h3><canvas id="cDedPie" height="180"></canvas></div>
       </div>
     </div>
   </div>
@@ -1044,7 +1044,7 @@ const gv=id=>(ge(id)?.value||'');
 const sv=(id,v)=>{const e=ge(id);if(e)e.value=(v??'');};
 const nf=v=>parseFloat(v)||0;
 const num=id=>nf(gv(id));
-const fmt=n=>'฿'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const fmt=n=>(n<0?'−฿':'฿')+Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const fN=n=>n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let _uid=0;const uid=()=>'u'+Date.now().toString(36)+(++_uid).toString(36)+Math.random().toString(36).slice(2,6);
@@ -1835,7 +1835,7 @@ function rP(){
 /* กล่องสรุปหัวการ์ด — ยอดรวมภาระเดือนนี้ + FCF สด (เห็นทันทีที่เปิดการ์ด ไม่ต้องกดคำนวณ) */
 function updPlan(){
   const el=ge('pInfo');if(!el)return;
-  const arr=colP(),tot=planTotal(arr),net=calcBase();
+  const arr=colP(),tot=planTotal(arr),net=liveTakeHome();
   const{fix:fixDed,vari:varDed}=liveDedSplit();
   const inv=liveInvTot();
   const fcf=net-tot-fixDed-inv;
@@ -2104,7 +2104,9 @@ function getOTs(){
 }
 /* ยอดรวมรายได้อื่นๆ (ไม่คิดภาษี) จากฟอร์มสด */
 function getOth(){return O.reduce((s,o)=>s+nf(ge(`ov_${o.id}`)?.value??o.v),0);}
-function calcBase(){
+/* ยอดรายได้รับจริงจากฟอร์มสด — สูตรเดียวกับ takeHome ใน doCalc() และ "ไม่ตัดที่ 0"
+   เดือนที่หัก/ภาษีมากกว่ารายได้ต้องติดลบได้ ไม่งั้นการ์ดกับหน้าผลคำนวณจะโชว์ไม่ตรงกัน */
+function liveTakeHome(){
   const base=num('fBase');if(!base)return 0;
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const ot=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
@@ -2112,8 +2114,11 @@ function calcBase(){
   const to=getOth();
   const sso=getSso(),pvd=getPvd();
   const taxD=getTaxFromD(D.map(d=>({n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`)})));
-  return Math.max(0,base+ta+ot+to-sso-pvd-taxD);
+  return base+ta+ot+to-sso-pvd-taxD;
 }
+/* ฐานคิดลงทุน — ตัวเดียวกันแต่ตัดที่ 0 เพราะแบ่งลงทุนแบบ % จากยอดติดลบไม่มีความหมาย
+   (ตรงกับ invBase ใน computeRec() เป๊ะ) */
+function calcBase(){return Math.max(0,liveTakeHome());}
 function updOth(){
   const el=ge('oTotal');if(el)el.textContent=fmt(getOth());
 }
@@ -3866,6 +3871,14 @@ function buildDedCats(){
       const v=nf(d.v);if(!v)return;
       const nm=d.n||'(ไม่ระบุชื่อ)';
       add('d_'+nm,nm,i,v);
+    });
+    /* ผ่อน/ประกัน — เป็นเงินออกก้อนใหญ่ ถ้าไม่นับที่นี่ ผลรวมหมวดจะน้อยกว่าเงินออกจริง
+       แยกเป็นหมวดต่อรายการเหมือนรายการหัก เพื่อให้เห็นว่าก้อนไหนกินเท่าไหร่
+       คีย์ใช้ 'p_' กันชนกับรายการหักที่อาจตั้งชื่อเหมือนกัน */
+    (rec.p||[]).forEach(x=>{
+      const v=planAmt(x);if(!v)return;
+      const nm=(x.name||'').trim()||'(ไม่ระบุชื่อ)';
+      add('p_'+nm,`${PLAN_TYPES[planTy(x.type)].icon} ${nm}`,i,v);
     });
     /* แบ่งเงินลงทุน — ใช้ยอดที่ compM() คำนวณไว้แล้ว ไม่คำนวณซ้ำ จะได้เป็นแหล่งเดียวกัน */
     const t=compM(ymk(i));
