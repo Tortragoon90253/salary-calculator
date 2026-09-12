@@ -2375,7 +2375,11 @@ function loadM(mi){
 }
 /* หาเดือนก่อนหน้าเพื่อใช้เป็นต้นแบบ — ในปีเดียวกันก่อน ถ้าไม่เจอค่อยถอยข้ามปี */
 function getPrev(mi){
-  for(let i=mi-1;i>=0;i--){const ym=ymk(i),r=DB[ym];if(r)return{ym,rec:r};}
+  /* ต้องกรอง recHasData เหมือน fallback ข้ามปีข้างล่าง ไม่ใช่ "เจอ record อะไรก็เอา"
+     เพราะแอปบันทึกเดือนที่เปิดค้างไว้ให้อัตโนมัติตอนสลับแท็บ (switchTab→saveM)
+     เดือนเปล่านั้นเคยมาตัดสายส่งต่อ: เงินเดือนฐาน/โครงรายการ/แผนผ่อน ของเดือนถัดไป
+     กลายเป็นว่าง ทั้งที่เดือนก่อนหน้ามีข้อมูลครบ — แผนผ่อนที่ยังผ่อนอยู่หายเงียบๆ */
+  for(let i=mi-1;i>=0;i--){const ym=ymk(i),r=DB[ym];if(recHasData(r))return{ym,rec:r};}
   const cur=ymk(mi);
   const keys=Object.keys(DB).filter(k=>k<cur&&recHasData(DB[k])).sort();
   if(!keys.length)return null;
@@ -2397,10 +2401,11 @@ function recHasEntries(rec){
   });
 }
 
-/* ใช้เดือนนี้เป็นต้นแบบได้ไหม — มีแค่เงินเดือนฐานก็พอแล้ว */
+/* ใช้เดือนนี้เป็นต้นแบบได้ไหม — มีแค่เงินเดือนฐานก็พอแล้ว
+   นับแผนผ่อน/ประกันด้วย เดือนที่มีแต่ภาระผูกพันจึงไม่ถูกมองว่าเป็นเดือนเปล่า */
 function recHasData(rec){
   if(!rec||typeof rec!=='object')return false;
-  return nf(rec.base)>0||recHasEntries(rec);
+  return nf(rec.base)>0||planTotal(rec.p)>0||recHasEntries(rec);
 }
 
 /* ผู้ใช้ลงมือกรอกเดือนนี้จริงหรือยัง — ใช้ตัดสิน "ข้ามไม่เขียนทับ"
