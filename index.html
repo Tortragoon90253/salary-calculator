@@ -330,8 +330,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px!important}
 /* ประเภทต้นทุน: คงที่ (Fixed) / ผันแปร (Variable) — หน้าตาเดียวกับ .pmsel */
 .ctsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
-/* แถวภาษีไม่เข้าสูตรคงที่/ผันแปร (หักไปแล้วในยอดรายได้รับจริง) — หรี่ไว้ให้เห็นว่าไม่มีผล */
-.ctsel.ct-na{opacity:.4}
+.ct-tax{font-size:.68rem;background:#fff5f5;color:#c53030;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-fix{font-size:.68rem;background:#ebf4ff;color:#434190;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-var{font-size:.68rem;background:#fffaf0;color:#c05621;border-radius:9px;padding:1px 7px;white-space:nowrap}
 /* แถวโบนัส — เป็นคลาสแทน inline style เพื่อให้ media query ปรับคอลัมน์บนจอแคบได้ */
@@ -1163,7 +1162,7 @@ const defA=()=>[
   {id:'a3',n:'ค่าบ้าน',v:'',ok:false,dn:false},{id:'a4',n:'ค่าภาษาญี่ปุ่น',v:'',ok:false,dn:false},
   {id:'a5',n:'ค่าภาษาอังกฤษ',v:'',ok:false,dn:false},{id:'a6',n:'ค่า Skill',v:'',ok:false,dn:false}
 ];
-const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ct:'fix',ok:false,dn:false}];
+const defD=()=>[{id:'d1',n:'ภาษีหัก ณ ที่จ่าย',v:'',pm:'bank',ct:'tax',ok:false,dn:false}];
 const defI=()=>[];
 const defO=()=>[];
 const defP=()=>[];
@@ -1731,9 +1730,8 @@ function rD(){
         <option value="cash" ${d.pm==='cash'?'selected':''}>💵 เงินสด</option>
         <option value="credit" ${d.pm==='credit'?'selected':''}>💳 บัตรเครดิต</option>
       </select>
-      <select id="dc_${d.id}" class="ctsel${(d.n||'').includes('ภาษี')?' ct-na':''}" onchange="dirtD('${d.id}');updInv()" title="${CT_TITLE}">
-        <option value="fix" ${costTy(d.ct)==='fix'?'selected':''}>🔒 คงที่</option>
-        <option value="var" ${costTy(d.ct)==='var'?'selected':''}>🔄 ผันแปร</option>
+      <select id="dc_${d.id}" class="ctsel" onchange="dirtD('${d.id}');updInv()" title="${CT_TITLE}">
+        ${CT_ORDER.map(k=>`<option value="${k}"${dedCt(d)===k?' selected':''}>${CT_META[k].icon} ${CT_META[k].label}</option>`).join('')}
       </select>
       <input type="number" id="dv_${d.id}" value="${esc(d.v)}" placeholder="0.00" min="0" oninput="dirtD('${d.id}');updInv()">
       <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
@@ -1901,10 +1899,6 @@ function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const
 function dirtD(id){
   const it=D.find(x=>x.id===id);
   if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}
-  /* ชื่อแถวเป็นตัวตัดสินว่าเป็นแถวภาษีหรือไม่ — สลับสถานะ "ไม่เกี่ยว" ของ dropdown ในที่
-     (toggle คลาสแทนการวาดใหม่ เพราะผู้ใช้กำลังพิมพ์ชื่ออยู่) */
-  const cEl=ge(`dc_${id}`);
-  if(cEl)cEl.classList.toggle('ct-na',(gv(`dn_${id}`)||'').includes('ภาษี'));
   updPlan();updCkBars();
 }
 function dirtO(id){const it=O.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ro_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
@@ -2056,7 +2050,7 @@ function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv
 
 /* ── Collect DOM ── */
 function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,dt:gdt(`adt_${a.id}`,a.dt),ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
-function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ct:costTy(gv(`dc_${d.id}`)||d.ct),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn}));}
+function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ct:dedCt({id:d.id,n:gv(`dn_${d.id}`)||d.n,ct:gv(`dc_${d.id}`)||d.ct}),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn}));}
 function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v,dt:gdt(`idt_${i.id}`,i.dt),dn:!!i.dn}));}
 function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.id}`)||o.v,dt:gdt(`odt_${o.id}`,o.dt),ok:o.ok,dn:!!o.dn}));}
 function colP(){return P.map(x=>({
@@ -2075,19 +2069,39 @@ function colP(){return P.map(x=>({
 /* ── Derived ── */
 function getSso(){const v=gv('fSso');return v!==''?nf(v):Math.min(num('fBase')*.05,875);}
 function getPvd(){const v=gv('fPvd');return v!==''?nf(v):num('fBase')*.07;}
-/* แถวที่ผูกกับวันเงินเดือนออกโดยธรรมชาติ — ใช้กติกาชื่อเดียวกับ getTaxFromD() */
-const isTaxRow=x=>!!x&&(x.id===BONUS_TAX_ID||(x.n||'').includes('ภาษี'));
-function getTaxFromD(arr){return arr.reduce((s,x)=>(x.n||'').includes('ภาษี')?s+nf(x.v):s,0);}
+/* ประเภทต้นทุนของรายการหัก — คงที่ (Fixed cost) / ผันแปร (Variable cost)
+   คงที่ = เลี่ยงไม่ได้ในเดือนนั้น ถูกหักออกก่อนถึง Free Cash Flow
+   ผันแปร = จ่ายจาก FCF ตามที่เลือกเอง จึงไม่ถูกหักก่อน
+   เรคคอร์ดเก่าที่ไม่มีฟิลด์ ct → ถือเป็น "คงที่" (ปลอดภัยกว่า ไม่ทำให้เงินเหลือดูเยอะเกินจริง) */
+const CT_META={
+  tax:{icon:'🧾',label:'ภาษี',    full:'ภาษีหัก ณ ที่จ่าย — หักก่อนถึงยอดรายได้รับจริง',cls:'ct-tax'},
+  fix:{icon:'🔒',label:'คงที่',   full:'ค่าใช้จ่ายคงที่ (Fixed cost)',   cls:'ct-fix'},
+  var:{icon:'🔄',label:'ผันแปร',  full:'ค่าใช้จ่ายผันแปร (Variable cost)',cls:'ct-var'}
+};
+const CT_ORDER=['tax','fix','var'];
+const costTy=t=>(t==='tax'?'tax':t==='var'?'var':'fix');
+/* ประเภทต้นทุนที่ใช้จริงของแถวหนึ่ง — ธงในข้อมูลมาก่อนเสมอ
+   ถ้ายังไม่มีธง (เรคคอร์ดเก่า / แถวที่ผู้ช่วย AI สร้างจากชื่อ) จึงค่อยเดาจากชื่อครั้งเดียว
+   พอผู้ใช้กดบันทึก colD() จะเขียนค่าที่ตกลงแล้วลงไป ธงจึงชัดเจนขึ้นเองโดยไม่ต้อง migrate
+   ผลคือ: เปิดข้อมูลเก่ามาได้เลขเท่าเดิมทุกตัว แต่จากนี้ "เปลี่ยนชื่อแถวไม่เปลี่ยนคณิตศาสตร์" */
+const dedCt=x=>(x&&x.ct)?costTy(x.ct):((((x&&x.n)||'')).includes('ภาษี')?'tax':'fix');
+const CT_TITLE='🧾 ภาษี = ภาษีหัก ณ ที่จ่าย หักก่อนถึง "ยอดรายได้รับจริง"&#10;'
+  +'🔒 คงที่ = เลี่ยงไม่ได้ในเดือนนั้น หักก่อนถึง Free Cash Flow&#10;'
+  +'🔄 ผันแปร = จ่ายออกจาก Free Cash Flow ตามที่เลือกเอง';
+
+/* แถวที่ผูกกับวันเงินเดือนออกโดยธรรมชาติ — ใช้เกณฑ์เดียวกับ getTaxFromD() */
+const isTaxRow=x=>!!x&&(x.id===BONUS_TAX_ID||dedCt(x)==='tax');
+function getTaxFromD(arr){return (arr||[]).reduce((s,x)=>isTaxRow(x)?s+nf(x.v):s,0);}
 /* แยกรายการหัก (ที่ไม่ใช่ภาษี) เป็นคงที่ / ผันแปร
-   ต้องใช้กติกาชื่อเดียวกับ getTaxFromD() เพราะภาษีถูกหักไปแล้วใน takeHome
+   ต้องใช้เกณฑ์ตัวเดียวกับ getTaxFromD() เพราะภาษีถูกหักไปแล้วใน takeHome
    ถ้านับซ้ำที่นี่จะหักสองรอบ — และ fix+var ต้องเท่ากับ "รายการหักอื่นๆ" เป๊ะเสมอ
    จึงให้ otherDed มาจากผลบวกของสองตัวนี้ตัวเดียว ไม่คำนวณแยกทาง */
 function dedSplit(arr){
   let fix=0,vari=0;
   (arr||[]).forEach(x=>{
-    if((x.n||'').includes('ภาษี'))return;
+    if(isTaxRow(x))return;
     const v=nf(x.v);
-    if(costTy(x.ct)==='var')vari+=v;else fix+=v;
+    if(dedCt(x)==='var')vari+=v;else fix+=v;
   });
   return{fix,vari,other:fix+vari};
 }
@@ -2113,7 +2127,7 @@ function liveTakeHome(){
   const ta=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value),0);
   const to=getOth();
   const sso=getSso(),pvd=getPvd();
-  const taxD=getTaxFromD(D.map(d=>({n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`)})));
+  const taxD=getTaxFromD(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),ct:gv(`dc_${d.id}`)||d.ct})));
   return base+ta+ot+to-sso-pvd-taxD;
 }
 /* ฐานคิดลงทุน — ตัวเดียวกันแต่ตัดที่ 0 เพราะแบ่งลงทุนแบบ % จากยอดติดลบไม่มีความหมาย
@@ -2127,7 +2141,7 @@ function updOth(){
 const liveInvRow=(inv,base)=>{const v=nf(ge(`iv_${inv.id}`)?.value??inv.v);return inv.t==='%'?(base*v/100):v;};
 const liveInvTot=()=>{const b=calcBase();return I.reduce((s,inv)=>s+liveInvRow(inv,b),0);};
 /* รายการหักจากฟอร์มสด แยกคงที่/ผันแปร */
-const liveDedSplit=()=>dedSplit(D.map(d=>({n:gv(`dn_${d.id}`)||d.n,v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,ct:gv(`dc_${d.id}`)||d.ct})));
+const liveDedSplit=()=>dedSplit(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,ct:gv(`dc_${d.id}`)||d.ct})));
 function updInv(){
   updOth();
   const base=calcBase();let tot=0;
@@ -2410,7 +2424,7 @@ function loadM(mi){
   }
   if(BONUS_MONTHS.includes(mi)){
     if(!A.find(x=>x.id===BONUS_ID))A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false,dt:payDate(ym)});
-    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(ym)});
+    if(!D.find(x=>x.id===BONUS_TAX_ID))D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ct:'tax',ok:false,dn:false,dt:payDate(ym)});
   }else{
     A=A.filter(x=>x.id!==BONUS_ID);
     D=D.filter(x=>x.id!==BONUS_TAX_ID);
@@ -2577,7 +2591,7 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
   if(BONUS_MONTHS.includes(mi)){
     rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),ok:false,dn:false,dt:payDate(dstYm)});
-    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(dstYm)});
+    rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ct:'tax',ok:false,dn:false,dt:payDate(dstYm)});
   }
   return rec;
 }
@@ -2874,7 +2888,7 @@ function doCalc(){
     :'<div class="li" style="color:#a0aec0;font-style:italic">— ไม่มีแผนลงทุน —</div>';
   const pmBadge=p=>{const m=PM_META[p]||PM_META.bank;return `<span class="${m.cls}" style="margin-left:5px" title="${m.label}">${m.icon}</span>`;};
   const dedRows=[['ประกันสังคม (5%)',sso,'bank'],['กองทุนสำรองเลี้ยงชีพ (7%)',pvd,'bank']];
-  dArr.forEach(x=>{if(x.n&&nf(x.v))dedRows.push([x.n,nf(x.v),x.pm||'bank',(x.n||'').includes('ภาษี')?null:costTy(x.ct)]);});
+  dArr.forEach(x=>{if(x.n&&nf(x.v))dedRows.push([x.n,nf(x.v),x.pm||'bank',dedCt(x)]);});
   ge('rDedL').innerHTML=dedRows.map(([l,a,p,c])=>`<div class="li"><span>${l}${pmBadge(p)}${c?` <span class="${CT_META[c].cls}" title="${CT_META[c].full}">${CT_META[c].icon} ${CT_META[c].label}</span>`:''}</span><span class="vad">${fmt(a)}</span></div>`).join('');
   /* ยอดย่อยคงที่/ผันแปร — ให้ตรวจได้ว่า ภาษี + คงที่ + ผันแปร = รวมหัก พอดี */
   const dsEl=ge('rDedSplit');
@@ -2928,18 +2942,6 @@ const PM_META={
   inv   :{icon:'📈',label:'แบ่งลงทุน', cls:'pm-inv'}
 };
 const PM_ORDER=['bank','cash','credit','inv'];
-/* ประเภทต้นทุนของรายการหัก — คงที่ (Fixed cost) / ผันแปร (Variable cost)
-   คงที่ = เลี่ยงไม่ได้ในเดือนนั้น ถูกหักออกก่อนถึง Free Cash Flow
-   ผันแปร = จ่ายจาก FCF ตามที่เลือกเอง จึงไม่ถูกหักก่อน
-   เรคคอร์ดเก่าที่ไม่มีฟิลด์ ct → ถือเป็น "คงที่" (ปลอดภัยกว่า ไม่ทำให้เงินเหลือดูเยอะเกินจริง) */
-const CT_META={
-  fix:{icon:'🔒',label:'คงที่',   full:'ค่าใช้จ่ายคงที่ (Fixed cost)',   cls:'ct-fix'},
-  var:{icon:'🔄',label:'ผันแปร',  full:'ค่าใช้จ่ายผันแปร (Variable cost)',cls:'ct-var'}
-};
-const costTy=t=>(t==='var'?'var':'fix');
-const CT_TITLE='🔒 คงที่ = เลี่ยงไม่ได้ในเดือนนั้น ถูกหักก่อนถึง Free Cash Flow&#10;'
-  +'🔄 ผันแปร = จ่ายออกจาก Free Cash Flow ตามที่เลือกเอง&#10;'
-  +'(แถวที่ชื่อมีคำว่า "ภาษี" ไม่เข้าสูตรนี้ เพราะถูกหักไปแล้วในยอดรายได้รับจริง)';
 /* รายการหักตามกฎหมายที่ถูกหักจากเงินได้ก่อนถึงมือ — ชุดเดียวกับสูตร takeHome ในหน้าผลคำนวณ */
 const STAT_KIND={sso:1,pvd:1,tax:1};
 /* kind ที่มาจากตารางซึ่งมีช่องติ๊ก "จัดการแล้ว" (A/O/D/I) — ใช้นับตัวเลขบนหัวการ์ดไทม์ไลน์
@@ -3666,9 +3668,11 @@ function calcTax(){
 }
 function applyTax(){
   if(lastTax===undefined){alert('กรุณากดคำนวณก่อนครับ');return;}
-  const it=D.find(x=>(x.n||gv(`dn_${x.id}`)||'').includes('ภาษี'));
-  if(it){it.v=lastTax.toFixed(2);it.ok=true;rD();setTimeout(()=>{const e=ge(`dv_${it.id}`);if(e)e.value=lastTax.toFixed(2);},50);}
-  else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),ok:true,dn:false});rD();}
+  /* หาจากธงประเภทต้นทุน ไม่ใช่จากชื่อ — เดิมแถวชื่อ "ภาษีโรงเรือน" ถูกเขียนทับยอดหายได้
+     และต้องข้ามแถวภาษีโบนัส ซึ่งมีปุ่มคำนวณของตัวเองอยู่แล้ว (applyBonusTax) */
+  const it=D.find(x=>x.id!==BONUS_TAX_ID&&dedCt({id:x.id,n:gv(`dn_${x.id}`)||x.n,ct:gv(`dc_${x.id}`)||x.ct})==='tax');
+  if(it){it.v=lastTax.toFixed(2);it.ok=true;it.ct='tax';rD();setTimeout(()=>{const e=ge(`dv_${it.id}`);if(e)e.value=lastTax.toFixed(2);},50);}
+  else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),pm:'bank',ct:'tax',ok:true,dn:false,dt:payDate(gv('fPrd'))});rD();}
   updInv();toast(`✓ บันทึกภาษี ฿${lastTax.toFixed(2)}/เดือน`);
 }
 function applyBonusTax(){
@@ -3676,7 +3680,7 @@ function applyBonusTax(){
   const existing=D.find(x=>x.id===BONUS_TAX_ID);
   if(bt>0){
     if(existing){existing.v=bt.toFixed(2);existing.ok=true;}
-    else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ok:true,dn:false});
+    else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ct:'tax',ok:true,dn:false});
     rD();setTimeout(()=>{const e=ge(`dv_${BONUS_TAX_ID}`);if(e)e.value=bt.toFixed(2);},50);
     toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
   }else if(existing){D=D.filter(x=>x.id!==BONUS_TAX_ID);rD();}
@@ -3716,7 +3720,7 @@ function doExport(){
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
       (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
       /* EXTRA5 = วิธีจ่าย — เดิมไม่ถูก export เลย backup/restore แล้ววิธีจ่ายหายกลับเป็น 'บัญชี' ทั้งหมด */
-      (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',costTy(x.ct),x.pm||'bank')));
+      (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',dedCt(x),x.pm||'bank')));
       (rec.i||[]).forEach(x=>rows.push(cr('I',yr,m,x.id,x.n,x.v,x.t,x.dn?'1':'',x.dt||'')));
       (rec.o||[]).forEach(x=>rows.push(cr('O',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
       /* แผนผ่อน/ประกัน — ใช้คอลัมน์ EXTRA4-7 ต่อท้าย ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
@@ -3755,8 +3759,9 @@ function doImport(input){
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
-        /* ct: ไฟล์เก่าไม่มีคอลัมน์นี้ → costTy() คืน 'fix' ให้เองตามค่าเริ่มต้น */
-        else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,ct:costTy(extra4),pm:extra5||'bank',ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
+        /* ct: ไฟล์เก่าไม่มีคอลัมน์นี้ → ห้ามยัด 'fix' ให้ ไม่งั้นแถวภาษีจะเลิกเป็นภาษี
+           ปล่อยว่างไว้ให้ dedCt() เดาจากชื่อเอง (ผลลัพธ์เท่ากับก่อนมีฟีเจอร์นี้เป๊ะ) */
+        else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,pm:extra5||'bank',ok:extra==='1',dn:extra2==='1',...(extra4?{ct:costTy(extra4)}:{}),...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='I'||T==='INV'||T==='INVEST')r.i.push({id:key||uid(),n:name,v:val,t:extra||'฿',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='O'||T==='OTHER'||T==='OTHINC')r.o.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
         else if(T==='P'||T==='PLAN')r.p.push({id:key||uid(),name,amount:val,type:planTy(extra),
@@ -4789,8 +4794,10 @@ init();
   ฐานคิดลงทุน  invBase = max(0, รับจริง)
   ยอดลงทุน     = Σ(รายการ % → invBase×%/100) + Σ(รายการ ฿ → ค่านั้นตรงๆ)
   ผ่อน/ประกัน (totPlan) = Σ ยอดต่อเดือนของทุกรายการใน "แผนผ่อนและประกัน" (ภาระผูกพันคงที่ — Fixed Obligations)
-  รายการหักแบ่ง 3 กลุ่ม: ภาษี (หักไปแล้วใน "รับจริง") · หักคงที่ fixDed 🔒 (Fixed cost) · หักผันแปร varDed 🔄 (Variable cost)
-    → fixDed + varDed = รายการหักอื่นๆ ที่ไม่ใช่ภาษี ทั้งก้อนเสมอ
+  รายการหักแบ่ง 3 กลุ่มตามช่อง "ประเภทต้นทุน" (ct) ของแต่ละแถว:
+    ct='tax' 🧾 ภาษีหัก ณ ที่จ่าย — หักก่อนถึง "รับจริง" · ct='fix' 🔒 คงที่ · ct='var' 🔄 ผันแปร
+    → fixDed + varDed = รายการหักที่ไม่ใช่ภาษี ทั้งก้อนเสมอ
+    ★ แถวที่ยังไม่มี ct ระบบจะเดาจากชื่อครั้งเดียว (ชื่อมีคำว่า "ภาษี" → tax, ไม่มี → fix)
   Free Cash Flow (fcf) = รับจริง − ผ่อน/ประกัน − หักคงที่ − ยอดลงทุน
     ← "เงินที่เหลือไว้ใช้จ่ายกินอยู่จริง" หลังกันทุกอย่างที่เลี่ยงไม่ได้ออกแล้ว · รายการผันแปรถูกจ่ายออกจากก้อนนี้
   ใช้จริง (final)  = Free Cash Flow − หักผันแปร   (เท่ากับ รับจริง − ผ่อน/ประกัน − ยอดลงทุน − รายการหักอื่นๆที่ไม่ใช่ภาษี)
@@ -4813,6 +4820,7 @@ init();
 \`\`\`
 - ใส่เฉพาะฟิลด์ที่มั่นใจ ตัดฟิลด์ที่ไม่เกี่ยวออกทั้งหมด ถ้าเป็นแค่คำถาม/วิเคราะห์ "ห้าม" ใส่บล็อค json เด็ดขาด
 - allowances/otherIncomes/deductions/investments = เพิ่มใหม่ หรือแก้ค่าเดิม (จับคู่ด้วยชื่อ "n")
+- deductions รับ "ct" เพิ่มได้ (ใส่หรือไม่ก็ได้): "tax" = ภาษีหัก ณ ที่จ่าย · "fix" = ค่าใช้จ่ายคงที่ · "var" = ค่าใช้จ่ายผันแปร; ใส่เมื่อผู้ใช้บอกชัดว่ารายการนั้นเป็นค่าใช้จ่ายที่เลี่ยงได้/ปรับได้ (เช่น ค่ากินข้าว ค่าเที่ยว ช้อปปิ้ง = var) ไม่แน่ใจให้ตัดทิ้ง
 - "dt" = วันที่เงินเข้า/เงินออกของรายการนั้น รูปแบบ "YYYY-MM-DD" (ไม่แน่ใจให้ตัดทิ้ง อย่าเดา); เงินเดือน/ค่าเพิ่มเติมปกติเข้าวันที่ 5 ของเดือนถัดจากงวด
 - ★ otherIncomes = ตาราง "💰 รายได้อื่นๆ (ไม่คิดภาษี)" ใช้เมื่อผู้ใช้บอกชัดว่ารายได้ก้อนนั้น "ไม่ถูกคิดภาษี / ไม่เข้าฐานภาษี" (เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ เงินคืนต่างๆ); ถ้าเป็นเบี้ย/ค่าตำแหน่งปกติที่ถูกคิดภาษี ให้ใช้ allowances เหมือนเดิม — ไม่แน่ใจให้ถามผู้ใช้ก่อน
 - removeAllowances/removeDeductions/removeInvestments/removeOtherIncomes = ลบรายการตามชื่อ
@@ -5048,7 +5056,7 @@ init();
     const curYm=ymk(monthIdx);
     /* จัดการแล้ว = checkpoint ที่ผู้ใช้ติ๊กว่าลงมือทำจริงแล้ว (ไม่มีผลต่อการคำนวณ) */
     const alls=colA().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
-    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank',ประเภทต้นทุน:(x.n||'').includes('ภาษี')?'ภาษี':(costTy(x.ct)==='var'?'ผันแปร':'คงที่'),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
+    const deds=colD().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),pm:x.pm||'bank',ประเภทต้นทุน:CT_META[dedCt(x)].label,วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
     const invs=colI().filter(x=>x.n).map(x=>({n:x.n,t:x.t,v:nf(x.v),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
     const oths=colO().filter(x=>nf(x.v)).map(x=>({n:x.n,v:r(nf(x.v)),วันที่:x.dt||null,จัดการแล้ว:!!x.dn}));
     /* ภาระผูกพันคงที่ — installment มีงวด/วันจบ · recurring กันเงินไว้ทุกเดือนไม่มีวันหมด */
@@ -5626,7 +5634,9 @@ init();
     const _pd=payDate(ymk(CT));
     (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=findByName(A.filter(x=>x.id!=='bonus'),a.n);if(ex){ex.v=String(r(a.v));ex.ok=true;_fdt(ex,a);}else A.push(_fdt({id:uid(),n:a.n,v:String(r(a.v)),ok:true,dt:_pd},a));});
     (f.otherIncomes||[]).forEach(o=>{if(!o||!o.n)return;const ex=findByName(O,o.n);if(ex){ex.v=String(r(o.v));ex.ok=true;_fdt(ex,o);}else O.push(_fdt({id:uid(),n:o.n,v:String(r(o.v)),ok:true,dt:''},o));});
-    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(D,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;_fdt(ex,d);}else D.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true,dt:_pd},d));});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(D,d.n);
+      if(ex){ex.v=String(r(d.v));ex.pm=pm;ex.ok=true;if(d.ct)ex.ct=costTy(d.ct);_fdt(ex,d);}
+      else D.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,...(d.ct?{ct:costTy(d.ct)}:{}),ok:true,dt:_pd},d));});
     (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=findByName(I,iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));_fdt(ex,iv);}else I.push(_fdt({id:uid(),n:iv.n,t,v:String(nf(iv.v)),dt:''},iv));});
     /* คูณสเกล (เช่น ลดค่าใช้จ่ายทุกรายการ 10%) */
     applyScale(A.filter(x=>x.id!=='bonus'),f.scaleAllowances,true);
@@ -5662,7 +5672,9 @@ init();
     const _pd=payDate(ym);
     (f.allowances||[]).forEach(a=>{if(!a||!a.n)return;const ex=findByName(rec.a.filter(x=>x.id!=='bonus'),a.n);if(ex){ex.v=String(r(a.v));_fdt(ex,a);}else rec.a.push(_fdt({id:uid(),n:a.n,v:String(r(a.v)),ok:true,dt:_pd},a));});
     (f.otherIncomes||[]).forEach(o=>{if(!o||!o.n)return;const ex=findByName(rec.o,o.n);if(ex){ex.v=String(r(o.v));_fdt(ex,o);}else rec.o.push(_fdt({id:uid(),n:o.n,v:String(r(o.v)),ok:true,dt:''},o));});
-    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(rec.d,d.n);if(ex){ex.v=String(r(d.v));ex.pm=pm;_fdt(ex,d);}else rec.d.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,ok:true,dt:_pd},d));});
+    (f.deductions||[]).forEach(d=>{if(!d||!d.n)return;const pm=(d.pm==='cash'||d.pm==='credit')?d.pm:'bank';const ex=findByName(rec.d,d.n);
+      if(ex){ex.v=String(r(d.v));ex.pm=pm;if(d.ct)ex.ct=costTy(d.ct);_fdt(ex,d);}
+      else rec.d.push(_fdt({id:uid(),n:d.n,v:String(r(d.v)),pm,...(d.ct?{ct:costTy(d.ct)}:{}),ok:true,dt:_pd},d));});
     (f.investments||[]).forEach(iv=>{if(!iv||!iv.n)return;const t=iv.t==='%'?'%':'฿';const ex=findByName(rec.i,iv.n);if(ex){ex.t=t;ex.v=String(nf(iv.v));_fdt(ex,iv);}else rec.i.push(_fdt({id:uid(),n:iv.n,t,v:String(nf(iv.v)),dt:''},iv));});
     applyScale(rec.a.filter(x=>x.id!=='bonus'),f.scaleAllowances,true);
     applyScale(rec.d,f.scaleDeductions,true);applyScale(rec.i,f.scaleInvestments,false);
