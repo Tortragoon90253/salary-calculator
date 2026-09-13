@@ -61,6 +61,8 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .cfbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e9d8fd;color:#553c9a;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cfbtn.ck{background:#c6f6d5;color:#276749}
 .delbtn{width:26px;height:26px;border:none;border-radius:50%;background:#fed7d7;color:#c53030;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fwdbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e6f0fb;color:#2c5282;cursor:pointer;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fwdbtn:disabled{opacity:.3;cursor:default}
 /* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" (แยกจากปุ่ม ✓ ยืนยันข้อมูล) ── */
 .ckpt{width:17px;height:17px;cursor:pointer;accent-color:#38a169;margin:0;justify-self:center;flex-shrink:0}
 .dr.done,.ir.done{opacity:.72}
@@ -329,7 +331,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .flow-card{page-break-inside:avoid}
 }
 /* Payment Method */
-.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px!important}
+.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px 28px!important}
 /* ประเภทต้นทุน: คงที่ (Fixed) / ผันแปร (Variable) — หน้าตาเดียวกับ .pmsel */
 .ctsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
 .ct-tax{font-size:.68rem;background:#fff5f5;color:#c53030;border-radius:9px;padding:1px 7px;white-space:nowrap}
@@ -342,7 +344,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 @media(max-width:640px){
   .dr{grid-template-columns:20px 18px 1fr 130px 28px 28px;grid-template-rows:auto auto;row-gap:4px}
   .dr>.dtin{grid-column:3/-1;grid-row:2}
-  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
+  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   .drd>.ctsel{grid-column:5/-1;grid-row:2}
   .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto auto}
@@ -356,9 +358,12 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .dr{grid-template-columns:18px 18px 1fr 100px 26px 26px;gap:4px;row-gap:4px}
   .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px 26px!important;gap:4px;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
-  .drd>.ctsel{grid-column:5/-1;grid-row:2}
+  /* จอแคบสุด: ปุ่ม 📤 ลงไปอยู่ท้ายบรรทัด 2 แทนการกินคอลัมน์บรรทัดแรก
+     ช่องชื่อรายการจึงกว้างเท่าเดิมก่อนมีปุ่มนี้ */
+  .drd>.ctsel{grid-column:5/7;grid-row:2}
+  .drd>.fwdbtn{grid-column:7/-1;grid-row:2}
   .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px 26px}
-  .cfbtn,.delbtn{width:24px;height:24px}
+  .cfbtn,.delbtn,.fwdbtn{width:24px;height:24px}
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
   .ir{grid-template-columns:18px 72px 1fr auto 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
   .ir>.ckpt{grid-column:1;grid-row:1}
@@ -1025,6 +1030,42 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="modal-btns">
       <button class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="planFwdYes()">✅ ส่งเลย</button>
       <button class="mbtn-cancel" onclick="planFwdNo()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: ส่งรายการหักรายตัวไปเดือนถัดๆ ไป ── -->
+<div id="dedFwdModal" class="modal-overlay" onclick="if(event.target===this)dedFwdNo()">
+  <div class="modal-box" style="max-width:470px">
+    <div class="modal-title">📤 ส่งรายการหักนี้ไปเดือนถัดๆ ไป</div>
+
+    <div id="dfHead" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+
+    <label id="dfRowYear" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+      <input type="radio" name="dfMode" id="dfModeYear" checked onchange="dedFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748"><strong id="dfYearTxt">ทุกเดือนที่เหลือของปีนี้</strong></span>
+    </label>
+
+    <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+      <input type="radio" name="dfMode" id="dfModeN" onchange="dedFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <strong>ระบุเอง</strong>
+        <input type="number" id="dfN" min="1" max="60" step="1" value="3" onfocus="ge('dfModeN').checked=true;dedFwdPreview()" oninput="ge('dfModeN').checked=true;dedFwdPreview()" style="width:74px;text-align:right">
+        <span>เดือนถัดไป</span>
+      </span>
+    </label>
+
+    <div id="dfPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+    <div style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
+      • ส่ง<strong>ชื่อ · ยอดเงิน · วิธีจ่าย · ประเภทต้นทุน</strong> ไปให้ · วันที่ตัดเงินเลื่อนตามเดือนให้เอง<br>
+      • รายการเดิมที่ id ตรงกันจะถูก<strong>อัปเดต ไม่สร้างซ้ำ</strong><br>
+      • เครื่องหมาย ☑ จัดการแล้ว / ✓ ยืนยัน <strong>ไม่ถูกส่งไป</strong> — เป็นของจริงรายเดือน
+    </div>
+
+    <div class="modal-btns">
+      <button id="dfGo" class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="dedFwdYes()">✅ ส่งเลย</button>
+      <button class="mbtn-cancel" onclick="dedFwdNo()">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -1751,6 +1792,9 @@ function rD(){
         ${CT_ORDER.map(k=>`<option value="${k}"${dedCt(d)===k?' selected':''}>${CT_META[k].icon} ${CT_META[k].label}</option>`).join('')}
       </select>
       <input type="number" id="dv_${d.id}" value="${esc(d.v)}" placeholder="0.00" min="0" oninput="dirtD('${d.id}');updInv()">
+      ${isBTax
+        ?`<button class="fwdbtn" disabled title="ภาษีโบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>`
+        :`<button class="fwdbtn" onclick="openDedFwd('${d.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>`}
       <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
     </div>`;
@@ -2590,6 +2634,126 @@ async function planFwdYes(){
   }
   if(CT===12)renderSum();
   toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`);
+}
+
+/* ════════════════════════════════════════════════════
+   ส่ง "รายการหัก" ทีละรายการไปเดือนถัดๆ ไป
+   ต่างจากปุ่มส่งแผนผ่อน/ประกันตรงที่ผู้ใช้เลือกช่วงเองได้ — ที่เหลือของปี หรือ n เดือน
+   ปลายทาง = เดือนที่ "บันทึกไว้แล้ว" เท่านั้น กติกาเดียวกับ planFwdTargets()/basePropYes()
+   เพราะเดือนที่ยังไม่เคยเปิดจะได้โครงรายการนี้เองตอนเปิด (loadM → blankItems)
+   ต่างกันแค่ยอดเงินที่ยังว่าง — modal จึงบอกไว้ชัดๆ ไม่ปล่อยให้เงียบ
+   ════════════════════════════════════════════════════ */
+let _dedFwd=null;
+
+/* ym ที่ห่างออกไป n เดือน — ข้ามปีได้ ผู้ใช้จึงส่งจาก ธ.ค. ไปต้นปีหน้าได้ */
+function ymAdd(ym,n){
+  const[y,m]=String(ym||'').split('-').map(Number);
+  if(!y||!m)return'';
+  const t=y*12+(m-1)+(parseInt(n,10)||0);
+  return `${Math.floor(t/12)}-${p2(t%12+1)}`;
+}
+
+/* จำนวนเดือนที่เลือกอยู่ — โหมด "ที่เหลือของปี" นับจากเดือนปัจจุบันถึง ธ.ค. */
+function dedFwdSpan(){
+  if(!_dedFwd)return 0;
+  if(ge('dfModeN')?.checked)return Math.max(1,Math.min(60,parseInt(gv('dfN'),10)||1));
+  return 11-_dedFwd.mi;
+}
+
+/* แยกเดือนในช่วง (ym, ym+span] เป็นเดือนที่เขียนได้ กับเดือนที่ยังไม่เคยเปิด */
+function dedFwdScan(ym,span){
+  const hit=[],miss=[];
+  for(let k=1;k<=span;k++){
+    const t=ymAdd(ym,k);
+    (recHasData(DB[t])?hit:miss).push(t);
+  }
+  return{hit,miss};
+}
+
+/* วางรายการลงเดือนปลายทาง — จับคู่ด้วย id จึงอัปเดตของเดิม ไม่สร้างซ้ำ
+   ☑ จัดการแล้ว / ✓ ยืนยัน เป็นของจริงรายเดือน จึงล้างเสมอ
+   วันที่ตัดเงินเลื่อนตามระยะเดือน · ว่างอยู่ก็เติมวันเงินเดือนออกให้ (กติกาเดียวกับ anchorDates) */
+function dedPut(arr,item,srcYm,dstYm){
+  const n=ymDelta(srcYm,dstYm);
+  const it={...item,ok:false,dn:false,ct:dedCt(item),pm:PM_META[item.pm]?item.pm:'bank'};
+  it.dt=item.dt?shiftDt(item.dt,n):payDate(dstYm);
+  const out=(arr||[]).slice();
+  const i=out.findIndex(x=>x&&x.id===it.id);
+  if(i>=0)out[i]={...out[i],...it};else out.push(it);
+  return dedupeIds(out);
+}
+
+function openDedFwd(id){
+  if(CT<0||CT>=12)return;
+  if(id===BONUS_TAX_ID){toast('ภาษีโบนัสมีเฉพาะเดือนโบนัส — ส่งต่อไม่ได้','te');return;}
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  saveM();                        /* commit ค่าที่ยังค้างในฟอร์ม — ส่งของที่เห็นบนจอจริงๆ */
+  const ym=ymk(CT);
+  const it=((DB[ym]||{}).d||[]).find(x=>x&&x.id===id);
+  if(!it){toast('ไม่พบรายการนี้','te');return;}
+  if(!String(it.n||'').trim()){toast('ตั้งชื่อรายการก่อน แล้วค่อยส่งไปเดือนอื่น','te');return;}
+  _dedFwd={mi:CT,ym,item:JSON.parse(JSON.stringify(it))};
+
+  const ct=CT_META[dedCt(it)],pm=PM_META[it.pm]||PM_META.bank;
+  const amt=nf(it.v)>0?`<b>${fmt(nf(it.v))}</b>`:'<span style="color:#c05621">ยังไม่ได้กรอกยอด</span>';
+  ge('dfHead').innerHTML=`<b>${esc(it.n)}</b>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${amt} · ${pm.icon} ${pm.label} · ${ct.icon} ${ct.label}</div>`
+    +`<div style="font-size:.73rem;color:#718096;margin-top:2px">จาก ${ymLabel(ym)}</div>`;
+
+  /* ธ.ค. ไม่มีเดือนเหลือในปีแล้ว — ปิดตัวเลือกแรก แล้วเด้งไปโหมดระบุจำนวนเดือนแทน */
+  const restOfYear=11-CT;
+  const rYear=ge('dfModeYear'),rowYear=ge('dfRowYear');
+  rYear.disabled=restOfYear<1;
+  rowYear.style.opacity=restOfYear<1?'.45':'';
+  rowYear.style.cursor=restOfYear<1?'default':'pointer';
+  ge('dfYearTxt').textContent=restOfYear<1
+    ?`ไม่มีเดือนเหลือในปี ${CY} แล้ว`
+    :`ทุกเดือนที่เหลือของปี ${CY} — ${MS[CT+1]} ถึง ธ.ค. (${restOfYear} เดือน)`;
+  if(restOfYear<1)ge('dfModeN').checked=true;else rYear.checked=true;
+  sv('dfN',String(Math.max(1,restOfYear||3)));
+
+  dedFwdPreview();
+  ge('dedFwdModal').classList.add('open');
+}
+
+function dedFwdPreview(){
+  const d=_dedFwd;if(!d)return;
+  const el=ge('dfPreview'),go=ge('dfGo');
+  const span=dedFwdSpan();
+  if(span<1){
+    el.innerHTML='<div style="color:#c53030;font-weight:700">ไม่มีเดือนถัดไปในปีนี้ — เลือก "ระบุเอง" เพื่อส่งข้ามปี</div>';
+    go.disabled=true;return;
+  }
+  const sc=dedFwdScan(d.ym,span);
+  const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(ymLabel).join(' · ')}</div>`;
+  let h=`<div style="font-weight:700;color:#276749">✅ เขียนลง ${sc.hit.length} เดือน</div>`;
+  if(sc.hit.length)h+=mlist(sc.hit);
+  if(sc.miss.length){
+    h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ยังไม่เคยเปิด ${sc.miss.length} เดือน</div>`+mlist(sc.miss)
+      +`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">เดือนพวกนี้จะได้ชื่อ · วิธีจ่าย · ประเภทต้นทุน ของรายการนี้เองตอนเปิด แต่<strong>ยอดเงินต้องกรอกเอง</strong> — เปิดแล้วกดปุ่มนี้ซ้ำก็ได้ยอดครบ</div>`;
+  }
+  el.innerHTML=h;
+  go.disabled=!sc.hit.length;
+}
+
+function dedFwdNo(){ge('dedFwdModal').classList.remove('open');_dedFwd=null;}
+
+async function dedFwdYes(){
+  const d=_dedFwd;if(!d)return;
+  const sc=dedFwdScan(d.ym,dedFwdSpan());
+  ge('dedFwdModal').classList.remove('open');_dedFwd=null;
+  if(!sc.hit.length)return;
+  sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec.d=dedPut(rec.d,d.item,d.ym,t);});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  for(const t of sc.hit){
+    try{
+      if(fbDb)await fbSaveMonth(t);
+      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
+    }catch(e){console.warn('ded propagate sync failed',t,e);}
+  }
+  if(CT===12)renderSum();
+  toast(`✅ ส่ง "${d.item.n}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`);
 }
 
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
