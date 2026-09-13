@@ -1071,43 +1071,47 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 </div>
 
-<!-- ── Modal: ลบรายการหัก (ถามก่อนเสมอ · ลบข้ามเดือนได้ถ้ารายการเดียวกันอยู่หลายเดือน) ── -->
-<div id="dedDelModal" class="modal-overlay" onclick="if(event.target===this)dedDelNo()">
-  <div class="modal-box" style="max-width:470px">
-    <div class="modal-title">🗑️ ลบรายการหัก</div>
+<!-- ── Modal: ลบรายการ (ใช้ร่วมกันทุกกล่อง) · ถามก่อนเสมอ · ลบข้ามเดือนได้ ── -->
+<div id="rowDelModal" class="modal-overlay" onclick="if(event.target===this)rowDelNo()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-title" id="xdTitle">🗑️ ลบรายการ</div>
 
-    <div id="ddHead" style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+    <div id="xdHead" style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
 
     <!-- หน้า A: รายการนี้มีอยู่แค่เดือนนี้ -->
-    <div id="ddOnly" style="font-size:.85rem;color:#4a5568;line-height:1.75;margin-bottom:16px">
-      ตรวจแล้ว — รายการนี้มีอยู่<strong>แค่เดือนนี้เดือนเดียว</strong> ไม่พบในเดือนอื่น<br>
-      ต้องการลบใช่หรือไม่?
+    <div id="xdOnly" style="font-size:.85rem;color:#4a5568;line-height:1.75;margin-bottom:16px">
+      <span id="xdOnlyTxt"></span>
     </div>
 
     <!-- หน้า B: เจอรายการเดียวกันในเดือนอื่นด้วย -->
-    <div id="ddMulti" style="display:none">
-      <div id="ddFound" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.82rem;color:#975a16;line-height:1.7"></div>
+    <div id="xdMulti" style="display:none">
+      <div id="xdFound" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.82rem;color:#975a16;line-height:1.7"></div>
 
-      <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
-        <input type="radio" name="ddMode" id="ddModeOne" checked onchange="dedDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
-        <span style="font-size:.85rem;color:#2d3748"><strong>เฉพาะเดือนนี้</strong> <span id="ddThisM" style="color:#718096;font-weight:400"></span></span>
+      <label id="xdRow1" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode1" checked onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong>เฉพาะเดือนนี้</strong> <span id="xdThisM" style="color:#718096;font-weight:400"></span></span>
       </label>
 
-      <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
-        <input type="radio" name="ddMode" id="ddModeN" onchange="dedDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <label id="xdRow2" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode2" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
         <span style="font-size:.85rem;color:#2d3748;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
           <strong>เดือนนี้ + อีก</strong>
-          <input type="number" id="ddN" min="1" max="60" step="1" value="3" onfocus="ge('ddModeN').checked=true;dedDelPreview()" oninput="ge('ddModeN').checked=true;dedDelPreview()" style="width:74px;text-align:right">
+          <input type="number" id="xdN" min="1" max="60" step="1" value="3" onfocus="ge('xdMode2').checked=true;rowDelPreview()" oninput="ge('xdMode2').checked=true;rowDelPreview()" style="width:74px;text-align:right">
           <span>เดือนถัดไป</span>
         </span>
       </label>
 
-      <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
-        <input type="radio" name="ddMode" id="ddModeYear" onchange="dedDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
-        <span style="font-size:.85rem;color:#2d3748"><strong id="ddYearTxt">ตลอดทั้งปีนี้</strong> <span style="color:#718096;font-weight:400">(รวมเดือนก่อนหน้าด้วย)</span></span>
+      <label id="xdRow3" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode3" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="xdRestTxt">เดือนนี้เป็นต้นไปจนจบปี</strong> <span id="xdRestSub" style="color:#718096;font-weight:400"></span></span>
       </label>
 
-      <div id="ddPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+      <label id="xdRow4" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode4" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="xdYearTxt">ตลอดทั้งปีนี้</strong> <span style="color:#718096;font-weight:400">(รวมเดือนก่อนหน้าด้วย)</span></span>
+      </label>
+
+      <div id="xdPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
 
       <div style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
         • ลบหลายเดือนจะ<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — ลบเฉพาะเดือนนี้จะรอคุณกดบันทึกเหมือนเดิม<br>
@@ -1116,8 +1120,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     </div>
 
     <div class="modal-btns">
-      <button id="ddGo" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="dedDelYes()">🗑️ ลบ</button>
-      <button class="mbtn-cancel" onclick="dedDelNo()">ยกเลิก</button>
+      <button id="xdGo" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="rowDelYes()">🗑️ ลบ</button>
+      <button class="mbtn-cancel" onclick="rowDelNo()">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -2125,24 +2129,22 @@ function renderCkSum(){
 
 /* ── Add / Del ── */
 function addA(){A.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:payDate(gv('fPrd'))});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
-function delA(id){A=A.filter(x=>x.id!==id);rA();}
+function delA(id){openRowDel('a',id);}
 function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(gv('fPrd'))});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
-/* ลบรายการหัก — ถามก่อนเสมอ ไม่ลบทันทีเหมือนเดิม
-   ถ้ารายการเดียวกันไปโผล่เดือนอื่นด้วย ให้เลือกได้ว่าจะลบแค่เดือนนี้ / n เดือน / ทั้งปี
-   (ตัวจัดการอยู่ในบล็อก "ลบรายการหักข้ามเดือน" ด้านล่าง) */
-function delD(id){openDedDel(id);}
-/* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
-function delDNow(id){D=D.filter(x=>x&&x.id!==id);rD();}
+/* ปุ่ม ✕ ทุกกล่องถามก่อนเสมอ ไม่ลบทันทีเหมือนเดิม — ถ้ารายการเดียวกันไปโผล่เดือนอื่นด้วย
+   จะให้เลือกได้ว่าจะลบแค่เดือนนี้ / n เดือน / จนจบปี / ทั้งปี
+   (ตัวจัดการอยู่ในบล็อก "ลบรายการข้ามเดือน" ด้านล่าง) */
+function delD(id){openRowDel('d',id);}
 function addO(){O.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:''});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
-function delO(id){O=O.filter(x=>x.id!==id);rO();updInv();}
+function delO(id){openRowDel('o',id);}
 function addI(){I.push({id:uid(),n:'',t:'%',v:'',dn:false,dt:''});rI();setTimeout(()=>ge(`in_${I[I.length-1].id}`)?.focus(),50);}
-function delI(id){I=I.filter(x=>x.id!==id);rI();}
+function delI(id){openRowDel('i',id);}
 function addP(){
   P.push({id:uid(),name:'',amount:'',current_term:1,total_term:12,type:'installment',note:'',
           pm:'bank',dn:false,dt:payDate(gv('fPrd'))});
   rP();setTimeout(()=>ge(`pn_${P[P.length-1].id}`)?.focus(),50);
 }
-function delP(id){P=P.filter(x=>x.id!==id);rP();}
+function delP(id){openRowDel('p',id);}
 /* สลับประเภท = ต้องวาดใหม่ เพราะแถบงวดมีเฉพาะ installment */
 function setPTy(id,t){const it=P.find(x=>x.id===id);if(!it)return;it.type=planTy(t);rP();}
 function dirtP(id){
@@ -2705,101 +2707,154 @@ async function planFwdYes(){
 }
 
 /* ════════════════════════════════════════════════════
-   ลบรายการหักข้ามเดือน
-   "รายการเดียวกัน" = id ตรงกัน — รายการที่ไหลข้ามเดือน (loadM → blankItems)
+   ลบรายการข้ามเดือน — กลไกกลาง ใช้ร่วมกันทุกกล่อง
+   (ค่าเพิ่มเติม · รายการหัก · รายได้อื่นๆ · แผนลงทุน · แผนผ่อน&ประกัน)
+   ปุ่ม ✕ ทุกใบจึงทำงานเหมือนกันหมด ไม่ต้องมี modal ห้าชุด
+
+   "รายการเดียวกัน" = id ตรงกัน — รายการที่ไหลข้ามเดือน (loadM → blankItems / forwardPlans)
    หรือถูกส่งด้วยปุ่ม 📤 เก็บ id เดิมไว้เสมอ จึงเชื่อ id ได้
    หรือชื่อตรงกันเป๊ะ — ผู้ใช้ที่พิมพ์รายการเดิมซ้ำเองในเดือนอื่นไม่รู้จัก id
    ทุกเดือนที่จะโดนลบถูกโชว์เป็นรายชื่อก่อนเสมอ การจับคู่ด้วยชื่อจึงไม่ลบอะไรแบบเงียบๆ
    ════════════════════════════════════════════════════ */
-let _dedDel=null;
+/* nf/vf = ชื่อฟิลด์ที่ต่างกันระหว่างกล่อง (แผนผ่อนใช้ name/amount ที่เหลือใช้ n/v)
+   lock  = แถวที่ผูกกับเดือนโดยตรง ลบข้ามเดือนไม่ได้ เพราะ loadM() เติมกลับให้เองทุกครั้ง */
+const LIST_META={
+  a:{key:'a',label:'ค่าเพิ่มเติม',      icon:'➕',nf:'n',   vf:'v',     np:'an_',get:()=>A,set:v=>{A=v;},re:()=>rA(),        lock:[BONUS_ID]},
+  d:{key:'d',label:'รายการหัก',         icon:'➖',nf:'n',   vf:'v',     np:'dn_',get:()=>D,set:v=>{D=v;},re:()=>rD(),        lock:[BONUS_TAX_ID]},
+  o:{key:'o',label:'รายได้อื่นๆ',        icon:'💰',nf:'n',   vf:'v',     np:'on_',get:()=>O,set:v=>{O=v;},re:()=>{rO();updInv();},lock:[]},
+  i:{key:'i',label:'แผนลงทุน',          icon:'📈',nf:'n',   vf:'v',     np:'in_',get:()=>I,set:v=>{I=v;},re:()=>rI(),        lock:[]},
+  p:{key:'p',label:'แผนผ่อน & ประกัน',  icon:'💳',nf:'name',vf:'amount',np:'pn_',get:()=>P,set:v=>{P=v;},re:()=>rP(),        lock:[]}
+};
+let _rowDel=null;
 
-const dedName=x=>String((x&&x.n)||'').trim();
-function dedSame(x,id,name){
+const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
+function rowSame(m,x,id,name){
   if(!x)return false;
   if(x.id===id)return true;
-  return !!name&&dedName(x)===name;
+  return !!name&&rowName(m,x)===name;
 }
 /* เดือนอื่นทั้งหมดใน DB ที่มีรายการเดียวกัน (ข้ามปีด้วย — ผู้ใช้ควรเห็นภาพจริง) */
-function dedDelFind(id,name,skipYm){
+function rowDelFind(m,id,name,skipYm){
   return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k!==skipYm
-    &&(((DB[k]||{}).d)||[]).some(x=>dedSame(x,id,name))).sort();
+    &&(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,id,name))).sort();
 }
+/* บรรทัดรายละเอียดใต้ชื่อ — แต่ละกล่องมีของที่ควรเห็นก่อนตัดสินใจลบไม่เหมือนกัน */
+function rowDelInfo(m,it){
+  const bits=[];
+  if(m.key==='i'&&it.t==='%')bits.push(`${nf(it.v)}% ของฐาน`);
+  else{const amt=nf(it[m.vf]);bits.push(amt>0?fmt(amt):'ยังไม่ได้กรอกยอด');}
+  if(m.key==='d'){
+    const c=CT_META[dedCt(it)],pm=PM_META[it.pm]||PM_META.bank;
+    bits.push(`${pm.icon} ${pm.label}`,`${c.icon} ${c.label}`);
+  }
+  if(m.key==='p'){
+    const ty=planTy(it.type);bits.push(`${PLAN_TYPES[ty].icon} ${PLAN_TYPES[ty].short}`);
+    if(ty==='installment')bits.push(`งวด ${planTerm(it.current_term)}/${planTerm(it.total_term)}`);
+  }
+  return bits.join(' · ');
+}
+/* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
+function rowDelNow(m,id){m.set(m.get().filter(x=>x&&x.id!==id));m.re();}
 
-function openDedDel(id){
-  const it=D.find(x=>x&&x.id===id);
-  if(!it||CT<0||CT>=12){delDNow(id);return;}        /* หลุดกรณีแปลกๆ — ลบตรงๆ แบบเดิม */
-  const name=dedName({n:gv(`dn_${id}`)||it.n});     /* ชื่อล่าสุดบนจอ ไม่ใช่ค่าที่ยังไม่ sync */
+function openRowDel(kind,id){
+  const m=LIST_META[kind];if(!m)return;
+  const it=m.get().find(x=>x&&x.id===id);
+  if(!it||CT<0||CT>=12){if(m)rowDelNow(m,id);return;}   /* หลุดกรณีแปลกๆ — ลบตรงๆ แบบเดิม */
+  const name=String(gvf(m.np+id,it[m.nf])||'').trim();  /* ชื่อล่าสุดบนจอ ไม่ใช่ค่าที่ยังไม่ sync */
   const ym=ymk(CT);
-  const others=dedDelFind(id,name,ym);
-  _dedDel={id,name,ym,others,label:name||'(ไม่ระบุชื่อ)'};
+  const locked=m.lock.includes(id);
+  const others=locked?[]:rowDelFind(m,id,name,ym);
+  /* แถวเปล่าที่เพิ่งกด ＋ มาแล้วยังไม่ได้กรอกอะไร — ไม่มีอะไรให้เสีย ถามไปก็รำคาญเปล่าๆ */
+  if(!others.length&&!name&&nf(it[m.vf])<=0){rowDelNow(m,id);return;}
 
-  const amt=nf(gv(`dv_${id}`)||it.v);
-  const ct=CT_META[dedCt({id,n:name,ct:gv(`dc_${id}`)||it.ct})];
-  ge('ddHead').innerHTML=`<b>${esc(_dedDel.label)}</b>`
-    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${amt>0?fmt(amt):'ยังไม่ได้กรอกยอด'} · ${ct.icon} ${ct.label} · ${ymLabel(ym)}</div>`;
+  _rowDel={m,id,name,ym,others,label:name||'(ไม่ระบุชื่อ)'};
+  ge('xdTitle').textContent=`🗑️ ลบ${m.label}`;
+  ge('xdHead').innerHTML=`${m.icon} <b>${esc(_rowDel.label)}</b>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${rowDelInfo(m,it)}</div>`
+    +`<div style="font-size:.73rem;color:#718096;margin-top:2px">${ymLabel(ym)}</div>`;
 
   const multi=others.length>0;
-  ge('ddOnly').style.display=multi?'none':'';
-  ge('ddMulti').style.display=multi?'':'none';
+  ge('xdOnly').style.display=multi?'none':'';
+  ge('xdMulti').style.display=multi?'':'none';
   if(multi){
-    ge('ddFound').innerHTML=`⚠️ เจอรายการนี้ในอีก <b>${others.length} เดือน</b>ด้วย`
+    ge('xdFound').innerHTML=`⚠️ เจอรายการนี้ในอีก <b>${others.length} เดือน</b>ด้วย`
       +`<div style="font-size:.78rem;font-weight:400;margin-top:3px">${others.map(ymLabel).join(' · ')}</div>`;
-    ge('ddThisM').textContent=`(${ymLabel(ym)})`;
-    ge('ddYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
-    ge('ddModeOne').checked=true;
-    sv('ddN',String(Math.max(1,11-CT||3)));
-    dedDelPreview();
+    ge('xdThisM').textContent=`(${ymLabel(ym)})`;
+    ge('xdRestTxt').textContent=`เดือนนี้เป็นต้นไปจนจบปี ${CY}`;
+    ge('xdRestSub').textContent=CT<11?`(${MS[CT]} – ธ.ค.)`:'';
+    ge('xdYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
+    /* ตัวเลือกที่ไม่มีความหมายในบริบทนี้ ซ่อนทิ้งดีกว่าปล่อยให้เลือกแล้วได้ผลเท่ากัน:
+       "จนจบปี" ไม่มีความหมายเมื่ออยู่ ธ.ค. · "ทั้งปี" ซ้ำกับ "จนจบปี" เมื่อไม่มีเดือนก่อนหน้าที่มีรายการนี้ */
+    const has=k=>(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,id,name));
+    let earlier=0;for(let i=0;i<CT;i++)if(has(`${CY}-${p2(i+1)}`))earlier++;
+    ge('xdRow3').style.display=CT<11?'':'none';
+    ge('xdRow4').style.display=earlier?'':'none';
+    ge('xdMode1').checked=true;
+    sv('xdN',String(Math.max(1,11-CT||3)));
+    rowDelPreview();
+  }else{
+    ge('xdOnlyTxt').innerHTML=locked
+      ? `รายการนี้<strong>ผูกกับเดือนโดยเฉพาะ</strong> (มีเฉพาะเดือนโบนัส และระบบจะเติมกลับให้เองเมื่อเปิดเดือนนั้น)<br>ลบได้เฉพาะเดือนนี้ — ต้องการลบใช่หรือไม่?`
+      : `ตรวจแล้ว — รายการนี้มีอยู่<strong>แค่เดือนนี้เดือนเดียว</strong> ไม่พบในเดือนอื่น<br>ต้องการลบใช่หรือไม่?`;
   }
-  ge('dedDelModal').classList.add('open');
+  ge('rowDelModal').classList.add('open');
 }
 
+function rowDelMode(){
+  if(ge('xdMode2')?.checked)return'n';
+  if(ge('xdMode3')?.checked)return'rest';
+  if(ge('xdMode4')?.checked)return'year';
+  return'one';
+}
 /* เดือนที่จะโดนลบตามตัวเลือกที่เลือกอยู่ — เดือนปัจจุบันติดไปด้วยเสมอ */
-function dedDelTargets(){
-  const d=_dedDel;if(!d)return[];
-  if(!d.others.length||ge('ddModeOne')?.checked)return[d.ym];
-  const has=k=>(((DB[k]||{}).d)||[]).some(x=>dedSame(x,d.id,d.name));
-  const out=[d.ym];
-  if(ge('ddModeYear')?.checked){
-    for(let i=0;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(k!==d.ym&&has(k))out.push(k);}
-  }else{
-    const n=Math.max(1,Math.min(60,parseInt(gv('ddN'),10)||1));
+function rowDelTargets(){
+  const d=_rowDel;if(!d)return[];
+  const m=d.m;
+  if(!d.others.length)return[d.ym];
+  const has=k=>(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,d.id,d.name));
+  const out=[d.ym],mode=rowDelMode();
+  if(mode==='year'){for(let i=0;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(k!==d.ym&&has(k))out.push(k);}}
+  else if(mode==='rest'){for(let i=CT+1;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(has(k))out.push(k);}}
+  else if(mode==='n'){
+    const n=Math.max(1,Math.min(60,parseInt(gv('xdN'),10)||1));
     for(let k=1;k<=n;k++){const t=ymAdd(d.ym,k);if(has(t))out.push(t);}
   }
   return [...new Set(out)].sort();
 }
 
-function dedDelPreview(){
-  const d=_dedDel;if(!d||!d.others.length)return;
-  const t=dedDelTargets();
-  ge('ddPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน</div>`
+function rowDelPreview(){
+  const d=_rowDel;if(!d||!d.others.length)return;
+  const t=rowDelTargets();
+  ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน</div>`
     +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
     +(t.length<d.others.length+1
       ?`<div style="font-size:.72rem;color:#718096;margin-top:5px">อีก ${d.others.length+1-t.length} เดือนที่มีรายการนี้จะไม่ถูกแตะ</div>`:'');
 }
 
-function dedDelNo(){ge('dedDelModal').classList.remove('open');_dedDel=null;}
+function rowDelNo(){ge('rowDelModal').classList.remove('open');_rowDel=null;}
 
-async function dedDelYes(){
-  const d=_dedDel;if(!d)return;
-  const targets=dedDelTargets();
+async function rowDelYes(){
+  const d=_rowDel;if(!d)return;
+  const m=d.m;
+  const targets=rowDelTargets();
   const others=targets.filter(t=>t!==d.ym);
   /* หลายเดือน = ต้องเขียน DB จริง จึงต้องเช็ค race แบบเดียวกับ saveM() ก่อนแตะอะไรทั้งนั้น */
   if(others.length){
     if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
     if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   }
-  ge('dedDelModal').classList.remove('open');_dedDel=null;
-  delDNow(d.id);
+  ge('rowDelModal').classList.remove('open');_rowDel=null;
+  rowDelNow(m,d.id);
   if(!others.length){toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
 
   saveM();                       /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
-  others.forEach(t=>{const rec=DB[t];if(rec)rec.d=(rec.d||[]).filter(x=>!dedSame(x,d.id,d.name));});
+  others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   for(const t of others){
     try{
       if(fbDb)await fbSaveMonth(t);
       else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
-    }catch(e){console.warn('ded delete sync failed',t,e);}
+    }catch(e){console.warn('row delete sync failed',t,e);}
   }
   if(CT===12)renderSum();
   toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`);
