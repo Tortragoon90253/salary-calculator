@@ -951,7 +951,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         • ตาราง <strong>OT รายวัน</strong> และเครื่องหมาย ☑ จัดการแล้ว / ✓ ยืนยัน <strong>ไม่ถูกลอก</strong> — เป็นของจริงรายเดือน<br>
         • เดือนที่<strong>กรอกจำนวนเงินไว้แล้วจะถูกข้าม</strong> ไม่ถูกเขียนทับ<br>
         • เดือนต้นทางที่ว่าง จะใช้เดือนที่มีข้อมูลใกล้ที่สุดในปีนั้นแทน<br>
-        • เงินเดือนฐานที่คุณตั้งไว้เองในปีนี้ จะไม่ถูกทับด้วยของปีก่อน
+        • เงินเดือนฐานที่คุณตั้งไว้เองในปีนี้ จะไม่ถูกทับด้วยของปีก่อน<br>
+        • <strong>แผนผ่อน &amp; ประกัน</strong> ที่มีอยู่แล้วในเดือนนั้น <strong>จะไม่ถูกลบหรือทับ</strong> — ของปีต้นทางจะเติมให้เฉพาะรายการที่ยังไม่มี
       </div>
 
       <div class="modal-btns">
@@ -967,7 +968,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div id="cpyCfmBody" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
 
       <div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:11px 12px;margin-bottom:16px;font-size:.76rem;color:#975a16;line-height:1.7">
-        ⚠️ รายการเดิมในเดือนที่จะลอก <strong>จะถูกแทนที่</strong>ด้วยโครงสร้างของปีต้นทาง และ<strong>ย้อนกลับไม่ได้</strong>
+        ⚠️ ค่าเพิ่มเติม / รายได้อื่นๆ / รายการหัก / แบ่งเงินลงทุน ของเดือนที่จะลอก <strong>จะถูกแทนที่</strong>ด้วยโครงสร้างของปีต้นทาง และ<strong>ย้อนกลับไม่ได้</strong><br>
+        💳 <strong>แผนผ่อน &amp; ประกัน ปลอดภัย</strong> — ของเดิมในเดือนนั้นอยู่ครบ ปีต้นทางเติมให้เฉพาะรายการที่ยังไม่มี
       </div>
 
       <div class="modal-btns">
@@ -2488,7 +2490,9 @@ function recHasData(rec){
 }
 
 /* ผู้ใช้ลงมือกรอกเดือนนี้จริงหรือยัง — ใช้ตัดสิน "ข้ามไม่เขียนทับ"
-   ไม่นับ base เพราะเงินเดือนฐานไหลมาเองตั้งแต่แค่เปิดดูเดือนนั้น (loadM → getPrev) */
+   ไม่นับ base เพราะเงินเดือนฐานไหลมาเองตั้งแต่แค่เปิดดูเดือนนั้น (loadM → getPrev)
+   ไม่นับแผนผ่อน/ประกันด้วย เพราะมันก็ไหลมาเองเหมือนกัน — ถ้านับ เดือนที่มีแต่แผนจะถูกข้ามทั้งเดือน
+   แล้วไม่ได้โครงรายการของปีต้นทางเลย ตัวแผนเองปลอดภัยอยู่แล้วผ่าน mergeCopyPlans() */
 function recHasUserData(rec){
   if(!rec||typeof rec!=='object')return false;
   return nf(rec.sso)>0||nf(rec.pvd)>0||recHasEntries(rec);
@@ -2647,6 +2651,21 @@ function copyYearPlan(srcYr){
   return {copy,skip,none};
 }
 
+/* แผนผ่อน/ประกันของเดือนปลายทางเป็น "ของจริง" ที่ผู้ใช้วางไว้เองในปีนี้ — เพิ่มเองในเดือนนั้น
+   หรือถูกส่งมาด้วยปุ่ม "ส่งแผนไปเดือนถัดๆ ไป" — ปุ่มลอกจากปีก่อนจึงห้ามล้างทิ้ง
+   (กติกาเดียวกับเงินเดือนฐาน: ของที่ตั้งไว้เองในปีนี้ย่อมชนะของปีก่อน)
+   เพิ่มอย่างเดียว ไม่ลบ: ของเดิมอยู่ครบตามลำดับเดิม · ของปีต้นทางเติมเฉพาะ id ที่ยังไม่มี
+   รายการซ้ำ id → ใช้ของเดือนปลายทาง เพราะงวด/วันที่/ติ๊กจ่ายแล้ว เดินมาถูกต้องอยู่แล้ว */
+function mergeCopyPlans(dstRec,inc){
+  const cur=Array.isArray(dstRec&&dstRec.p)
+    ? dedupeIds(JSON.parse(JSON.stringify(dstRec.p))).map(x=>({...x,type:planTy(x.type)}))
+    : [];
+  if(!cur.length)return dedupeIds(inc||[]);
+  const out=cur.slice();
+  (inc||[]).forEach(x=>{if(x&&!out.some(y=>y&&y.id===x.id))out.push(x);});
+  return dedupeIds(out);
+}
+
 /* สร้าง record ใหม่จากต้นแบบ — โครงสร้างล้วน ไม่เอาจำนวนเงิน/OT */
 function buildCopyRec(src,mi,srcYm,keepAmt){
   const dst=DB[ymk(mi)],dstYm=ymk(mi);
@@ -2665,8 +2684,9 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
     i:anc(src.i||defI(),false),
     o:anc(src.o||defO(),false),
     /* แผนผ่อน/ประกัน: ลอกยอดมาเสมอ (ค่างวดไม่ได้เปลี่ยนไปตามเดือน) แต่เดินงวดตามระยะเวลาที่ห่างกัน
-       รายการที่ผ่อนครบไปแล้วก่อนถึงเดือนปลายทางจะไม่ถูกลอกมาด้วย */
-    p:forwardPlans(src.p,srcYm||dstYm,dstYm).list,
+       รายการที่ผ่อนครบไปแล้วก่อนถึงเดือนปลายทางจะไม่ถูกลอกมาด้วย
+       และของเดิมที่เดือนนี้มีอยู่แล้วต้องอยู่ครบ — เติมทับไม่ได้ (ดู mergeCopyPlans) */
+    p:mergeCopyPlans(dst,forwardPlans(src.p,srcYm||dstYm,dstYm).list),
     days:{}
   };
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
@@ -2715,6 +2735,7 @@ function cpyToConfirm(){
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
   const what=cpyKeepAmt()?'รายการ + จำนวนเงิน':'โครงสร้างรายการ';
   let h=`<div style="font-weight:700;color:#276749">✅ จะเขียน${what}ลง ${p.copy.length} เดือน</div>`+mlist(p.copy.map(c=>c.mi));
+  h+=cpyPlanKeepHtml(p,mlist);
   if(p.skip.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ข้าม ${p.skip.length} เดือนที่กรอกเงินไว้แล้ว — ไม่ถูกแตะ</div>`+mlist(p.skip);
   if(p.none.length)h+=`<div style="font-weight:700;color:#718096;margin-top:10px">— ไม่มีต้นแบบ ${p.none.length} เดือน</div>`+mlist(p.none);
   ge('cpyCfmBody').innerHTML=h;
@@ -2723,6 +2744,14 @@ function cpyToConfirm(){
 
 /* ผู้ใช้เลือกลอกจำนวนเงินมาด้วยไหม */
 function cpyKeepAmt(){return !!ge('cpyAmt')?.checked;}
+
+/* เดือนที่จะถูกลอกแต่มีแผนผ่อน/ประกันอยู่แล้ว — ย้ำให้เห็นว่าของเดิมไม่หาย */
+function cpyPlanKeepHtml(p,mlist){
+  const keep=p.copy.filter(c=>planTotal((DB[ymk(c.mi)]||{}).p)>0);
+  if(!keep.length)return '';
+  return `<div style="font-weight:700;color:#2b6cb0;margin-top:10px">💳 คงแผนผ่อน &amp; ประกันเดิมไว้ ${keep.length} เดือน — ไม่ถูกลบ</div>`
+    +mlist(keep.map(c=>c.mi));
+}
 
 function renderCopyPreview(){
   const el=ge('cpyPreview'),sel=ge('cpySrcYr'),go=ge('cpyGo');
@@ -2738,6 +2767,7 @@ function renderCopyPreview(){
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
   let h=`<div style="font-weight:700;color:#276749">✅ จะลอก ${p.copy.length} เดือน</div>`;
   if(p.copy.length)h+=mlist(p.copy.map(c=>c.mi));
+  h+=cpyPlanKeepHtml(p,mlist);
   if(p.skip.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ข้าม ${p.skip.length} เดือน (มีข้อมูลอยู่แล้ว)</div>`+mlist(p.skip);
   if(p.none.length)h+=`<div style="font-weight:700;color:#718096;margin-top:10px">— ไม่มีต้นแบบ ${p.none.length} เดือน</div>`+mlist(p.none);
   el.innerHTML=h;
