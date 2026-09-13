@@ -61,6 +61,9 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .cfbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e9d8fd;color:#553c9a;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cfbtn.ck{background:#c6f6d5;color:#276749}
 .delbtn{width:26px;height:26px;border:none;border-radius:50%;background:#fed7d7;color:#c53030;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fwdbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e6f0fb;color:#2c5282;cursor:pointer;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fwdbtn:disabled{opacity:.3;cursor:default}
+.chart-na{padding:26px 14px;text-align:center;font-size:.8rem;color:#975a16;background:#fffaf0;border:1px dashed #fbd38d;border-radius:8px;line-height:1.7}
 /* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" (แยกจากปุ่ม ✓ ยืนยันข้อมูล) ── */
 .ckpt{width:17px;height:17px;cursor:pointer;accent-color:#38a169;margin:0;justify-self:center;flex-shrink:0}
 .dr.done,.ir.done{opacity:.72}
@@ -90,7 +93,7 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .cks-pend-t{font-size:.74rem;font-weight:700;color:#c05621;margin-bottom:5px}
 .cks-pd{display:flex;justify-content:space-between;gap:10px;font-size:.73rem;color:#718096;padding:2px 0}
 .cks-done{margin-top:9px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:.78rem;font-weight:700;color:#276749;text-align:center}
-.ir{display:grid;grid-template-columns:20px 1fr 134px 72px 100px auto 28px;gap:6px;align-items:center;margin-bottom:8px;background:#f0fff4;border-radius:8px;padding:8px 10px;border:1px solid #9ae6b4}
+.ir{display:grid;grid-template-columns:20px 1fr 134px 72px 100px auto 28px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#f0fff4;border-radius:8px;padding:8px 10px;border:1px solid #9ae6b4}
 .ir input{font-size:.8rem;background:white}
 .itg{display:flex;border:1px solid #9ae6b4;border-radius:6px;overflow:hidden;flex-shrink:0}
 .itg button{padding:4px 9px;border:none;cursor:pointer;font-size:.8rem;font-weight:700;background:white;color:#718096}
@@ -329,7 +332,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .flow-card{page-break-inside:avoid}
 }
 /* Payment Method */
-.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px!important}
+.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px 28px!important}
 /* ประเภทต้นทุน: คงที่ (Fixed) / ผันแปร (Variable) — หน้าตาเดียวกับ .pmsel */
 .ctsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
 .ct-tax{font-size:.68rem;background:#fff5f5;color:#c53030;border-radius:9px;padding:1px 7px;white-space:nowrap}
@@ -342,13 +345,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 @media(max-width:640px){
   .dr{grid-template-columns:20px 18px 1fr 130px 28px 28px;grid-template-rows:auto auto;row-gap:4px}
   .dr>.dtin{grid-column:3/-1;grid-row:2}
-  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
+  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   .drd>.ctsel{grid-column:5/-1;grid-row:2}
   .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto auto}
   .dr.drb>.dtin{grid-column:3/-1;grid-row:2}
   .dr.drb>.bm-disp{grid-column:3/-1;grid-row:3}
-  .ir{grid-template-columns:20px 1fr 72px 100px auto 28px;row-gap:6px}
+  .ir{grid-template-columns:20px 1fr 72px 100px auto 28px 28px;row-gap:6px}
   .ir>.dtin{grid-column:2/-1;grid-row:2}
 }
 @media(max-width:500px){
@@ -356,18 +359,22 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .dr{grid-template-columns:18px 18px 1fr 100px 26px 26px;gap:4px;row-gap:4px}
   .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px 26px!important;gap:4px;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
-  .drd>.ctsel{grid-column:5/-1;grid-row:2}
+  /* จอแคบสุด: ปุ่ม 📤 ลงไปอยู่ท้ายบรรทัด 2 แทนการกินคอลัมน์บรรทัดแรก
+     ช่องชื่อรายการจึงกว้างเท่าเดิมก่อนมีปุ่มนี้ */
+  .drd>.ctsel{grid-column:5/7;grid-row:2}
+  .drd>.fwdbtn{grid-column:7/-1;grid-row:2}
   .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px 26px}
-  .cfbtn,.delbtn{width:24px;height:24px}
+  .cfbtn,.delbtn,.fwdbtn{width:24px;height:24px}
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
-  .ir{grid-template-columns:18px 72px 1fr auto 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
+  .ir{grid-template-columns:18px 72px 1fr auto 26px 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
   .ir>.ckpt{grid-column:1;grid-row:1}
   .ir>input[type=text]{grid-column:2/-1;grid-row:1}
   .ir>.dtin{grid-column:2/-1;grid-row:2}
   .ir>.itg{grid-column:2;grid-row:3}
   .ir>input[type=number]{grid-column:3;grid-row:3}
   .ir>.icomp{grid-column:4;grid-row:3}
-  .ir>.delbtn{grid-column:5;grid-row:3}
+  .ir>.fwdbtn{grid-column:5;grid-row:3}
+  .ir>.delbtn{grid-column:6;grid-row:3}
 }
 /* ── ไทม์ไลน์กระแสเงิน ── */
 .flow-card{margin-top:12px}
@@ -951,7 +958,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
         • ตาราง <strong>OT รายวัน</strong> และเครื่องหมาย ☑ จัดการแล้ว / ✓ ยืนยัน <strong>ไม่ถูกลอก</strong> — เป็นของจริงรายเดือน<br>
         • เดือนที่<strong>กรอกจำนวนเงินไว้แล้วจะถูกข้าม</strong> ไม่ถูกเขียนทับ<br>
         • เดือนต้นทางที่ว่าง จะใช้เดือนที่มีข้อมูลใกล้ที่สุดในปีนั้นแทน<br>
-        • เงินเดือนฐานที่คุณตั้งไว้เองในปีนี้ จะไม่ถูกทับด้วยของปีก่อน
+        • เงินเดือนฐานที่คุณตั้งไว้เองในปีนี้ จะไม่ถูกทับด้วยของปีก่อน<br>
+        • <strong>แผนผ่อน &amp; ประกัน</strong> ที่มีอยู่แล้วในเดือนนั้น <strong>จะไม่ถูกลบหรือทับ</strong> — ของปีต้นทางจะเติมให้เฉพาะรายการที่ยังไม่มี
       </div>
 
       <div class="modal-btns">
@@ -967,7 +975,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div id="cpyCfmBody" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
 
       <div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:11px 12px;margin-bottom:16px;font-size:.76rem;color:#975a16;line-height:1.7">
-        ⚠️ รายการเดิมในเดือนที่จะลอก <strong>จะถูกแทนที่</strong>ด้วยโครงสร้างของปีต้นทาง และ<strong>ย้อนกลับไม่ได้</strong>
+        ⚠️ ค่าเพิ่มเติม / รายได้อื่นๆ / รายการหัก / แบ่งเงินลงทุน ของเดือนที่จะลอก <strong>จะถูกแทนที่</strong>ด้วยโครงสร้างของปีต้นทาง และ<strong>ย้อนกลับไม่ได้</strong><br>
+        💳 <strong>แผนผ่อน &amp; ประกัน ปลอดภัย</strong> — ของเดิมในเดือนนั้นอยู่ครบ ปีต้นทางเติมให้เฉพาะรายการที่ยังไม่มี
       </div>
 
       <div class="modal-btns">
@@ -1023,6 +1032,93 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="modal-btns">
       <button class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="planFwdYes()">✅ ส่งเลย</button>
       <button class="mbtn-cancel" onclick="planFwdNo()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: ส่งรายการไปเดือนถัดๆ ไป (ใช้ร่วมกันทุกกล่องที่มีปุ่ม 📤) ── -->
+<div id="rowFwdModal" class="modal-overlay" onclick="if(event.target===this)rowFwdNo()">
+  <div class="modal-box" style="max-width:470px">
+    <div class="modal-title" id="xfTitle">📤 ส่งรายการนี้ไปเดือนถัดๆ ไป</div>
+
+    <div id="xfHead" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+
+    <label id="xfRowYear" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+      <input type="radio" name="xfMode" id="xfModeYear" checked onchange="rowFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748"><strong id="xfYearTxt">ทุกเดือนที่เหลือของปีนี้</strong></span>
+    </label>
+
+    <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+      <input type="radio" name="xfMode" id="xfModeN" onchange="rowFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <strong>ระบุเอง</strong>
+        <input type="number" id="xfN" min="1" max="60" step="1" value="3" onfocus="ge('xfModeN').checked=true;rowFwdPreview()" oninput="ge('xfModeN').checked=true;rowFwdPreview()" style="width:74px;text-align:right">
+        <span>เดือนถัดไป</span>
+      </span>
+    </label>
+
+    <div id="xfPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+    <div id="xfNote" style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7"></div>
+
+    <div class="modal-btns">
+      <button id="xfGo" class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="rowFwdYes()">✅ ส่งเลย</button>
+      <button class="mbtn-cancel" onclick="rowFwdNo()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: ลบรายการ (ใช้ร่วมกันทุกกล่อง) · ถามก่อนเสมอ · ลบข้ามเดือนได้ ── -->
+<div id="rowDelModal" class="modal-overlay" onclick="if(event.target===this)rowDelNo()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-title" id="xdTitle">🗑️ ลบรายการ</div>
+
+    <div id="xdHead" style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+
+    <!-- หน้า A: รายการนี้มีอยู่แค่เดือนนี้ -->
+    <div id="xdOnly" style="font-size:.85rem;color:#4a5568;line-height:1.75;margin-bottom:16px">
+      <span id="xdOnlyTxt"></span>
+    </div>
+
+    <!-- หน้า B: เจอรายการเดียวกันในเดือนอื่นด้วย -->
+    <div id="xdMulti" style="display:none">
+      <div id="xdFound" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.82rem;color:#975a16;line-height:1.7"></div>
+
+      <label id="xdRow1" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode1" checked onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong>เฉพาะเดือนนี้</strong> <span id="xdThisM" style="color:#718096;font-weight:400"></span></span>
+      </label>
+
+      <label id="xdRow2" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode2" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+          <strong>เดือนนี้ + อีก</strong>
+          <input type="number" id="xdN" min="1" max="60" step="1" value="3" onfocus="ge('xdMode2').checked=true;rowDelPreview()" oninput="ge('xdMode2').checked=true;rowDelPreview()" style="width:74px;text-align:right">
+          <span>เดือนถัดไป</span>
+        </span>
+      </label>
+
+      <label id="xdRow3" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode3" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="xdRestTxt">เดือนนี้เป็นต้นไปจนจบปี</strong> <span id="xdRestSub" style="color:#718096;font-weight:400"></span></span>
+      </label>
+
+      <label id="xdRow4" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode4" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="xdYearTxt">ตลอดทั้งปีนี้</strong> <span style="color:#718096;font-weight:400">(รวมเดือนก่อนหน้าด้วย)</span></span>
+      </label>
+
+      <div id="xdPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+      <div style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
+        • ลบหลายเดือนจะ<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — ลบเฉพาะเดือนนี้จะรอคุณกดบันทึกเหมือนเดิม<br>
+        • เดือนอื่นที่มีชื่อรายการตรงกันเป๊ะ ถือเป็นรายการเดียวกัน
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button id="xdGo" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="rowDelYes()">🗑️ ลบ</button>
+      <button class="mbtn-cancel" onclick="rowDelNo()">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -1141,9 +1237,12 @@ function shiftDt(dt,n){
 /* serial day สำหรับวางตำแหน่งบนแกนเวลา */
 const dSer=dt=>{const[y,m,d]=dt.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5);};
 const serDt=s=>{const d=new Date(s*864e5);return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}`;};
-/* อ่านค่าวันที่จาก DOM — ถ้ามี element ต้องเชื่อ element เสมอ
-   (ห้ามใช้ gv()||fallback เพราะช่องที่ผู้ใช้ตั้งใจล้างจะโดนค่าเก่าเด้งกลับ) */
-const gdt=(id,fb)=>{const e=ge(id);return e?e.value:(fb||'');};
+/* อ่านค่าจาก DOM — ถ้ามี element ต้องเชื่อ element เสมอ แม้ค่าจะว่าง
+   ห้ามใช้ gv()||fallback กับช่องที่ผู้ใช้ล้างทิ้งได้ เพราะ '' เป็น falsy
+   ค่าเก่าจะเด้งกลับตอนบันทึก (เดือนที่ "ไม่ได้เบี้ยขยัน" ก็ยังมีเบี้ยขยันของเดือนก่อนติดมา)
+   fallback มีไว้กันกรณี element ไม่ได้ถูก render เท่านั้น ไม่ใช่กรณีค่าว่าง */
+const gvf=(id,fb)=>{const e=ge(id);return e?e.value:(fb||'');};
+const gdt=gvf;   /* ชื่อเดิมสำหรับช่องวันที่ — พฤติกรรมเดียวกันเป๊ะ */
 
 const fbTs=()=>{const n=new Date();return `${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}:${p2(n.getSeconds())}.${String(n.getMilliseconds()).padStart(3,'0')}`;};
 
@@ -1359,6 +1458,12 @@ async function saveFbCfg(){
   const docId=ge('fbDocId').value.trim()||'default';
   if(!apiKey||!projectId){
     showFbStatus('กรุณากรอก API Key และ Project ID ให้ครบ','err');
+    return;
+  }
+  /* Firebase SDK มาจาก CDN เหมือน Chart.js — โหลดไม่ได้ก็ไม่มี window.firebase
+     ถ้าไม่กันไว้ บรรทัดล่างจะโยน ReferenceError แบบไม่มีใครรับ = กดปุ่มแล้วเงียบสนิท */
+  if(typeof firebase==='undefined'){
+    showFbStatus('โหลดไลบรารี Firebase จากอินเทอร์เน็ตไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วรีเฟรชหน้าใหม่ (ข้อมูลยังถูกเก็บในเครื่องตามปกติ)','err');
     return;
   }
   /* ลบ app เก่าก่อน init ใหม่ (กรณีเปลี่ยน config) */
@@ -1749,6 +1854,9 @@ function rD(){
         ${CT_ORDER.map(k=>`<option value="${k}"${dedCt(d)===k?' selected':''}>${CT_META[k].icon} ${CT_META[k].label}</option>`).join('')}
       </select>
       <input type="number" id="dv_${d.id}" value="${esc(d.v)}" placeholder="0.00" min="0" oninput="dirtD('${d.id}');updInv()">
+      ${isBTax
+        ?`<button class="fwdbtn" disabled title="ภาษีโบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>`
+        :`<button class="fwdbtn" onclick="openRowFwd('d','${d.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>`}
       <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
     </div>`;
@@ -1791,6 +1899,7 @@ function rI(){
       </div>
       <input type="number" id="iv_${inv.id}" value="${esc(inv.v)}" placeholder="${isP?'เช่น 30':'0.00'}" min="0" step="${isP?'1':'0.01'}" oninput="onII('${inv.id}')">
       <span class="icomp" id="ic_${inv.id}">${isP&&base>0?` = ${fmt(cv)}`:isP?' = ฿0.00':''}</span>
+      <button class="fwdbtn" onclick="openRowFwd('i','${inv.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>
       <button class="delbtn" onclick="delI('${inv.id}')">✕</button>
     </div>`;
   }).join('');
@@ -2018,19 +2127,22 @@ function renderCkSum(){
 
 /* ── Add / Del ── */
 function addA(){A.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:payDate(gv('fPrd'))});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
-function delA(id){A=A.filter(x=>x.id!==id);rA();}
+function delA(id){openRowDel('a',id);}
 function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(gv('fPrd'))});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
-function delD(id){D=D.filter(x=>x.id!==id);rD();}
+/* ปุ่ม ✕ ทุกกล่องถามก่อนเสมอ ไม่ลบทันทีเหมือนเดิม — ถ้ารายการเดียวกันไปโผล่เดือนอื่นด้วย
+   จะให้เลือกได้ว่าจะลบแค่เดือนนี้ / n เดือน / จนจบปี / ทั้งปี
+   (ตัวจัดการอยู่ในบล็อก "ลบรายการข้ามเดือน" ด้านล่าง) */
+function delD(id){openRowDel('d',id);}
 function addO(){O.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:''});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
-function delO(id){O=O.filter(x=>x.id!==id);rO();updInv();}
+function delO(id){openRowDel('o',id);}
 function addI(){I.push({id:uid(),n:'',t:'%',v:'',dn:false,dt:''});rI();setTimeout(()=>ge(`in_${I[I.length-1].id}`)?.focus(),50);}
-function delI(id){I=I.filter(x=>x.id!==id);rI();}
+function delI(id){openRowDel('i',id);}
 function addP(){
   P.push({id:uid(),name:'',amount:'',current_term:1,total_term:12,type:'installment',note:'',
           pm:'bank',dn:false,dt:payDate(gv('fPrd'))});
   rP();setTimeout(()=>ge(`pn_${P[P.length-1].id}`)?.focus(),50);
 }
-function delP(id){P=P.filter(x=>x.id!==id);rP();}
+function delP(id){openRowDel('p',id);}
 /* สลับประเภท = ต้องวาดใหม่ เพราะแถบงวดมีเฉพาะ installment */
 function setPTy(id,t){const it=P.find(x=>x.id===id);if(!it)return;it.type=planTy(t);rP();}
 function dirtP(id){
@@ -2066,19 +2178,19 @@ function setIT(id,t){const it=I.find(x=>x.id===id);if(!it)return;it.t=t==='%'?'%
 function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv();}
 
 /* ── Collect DOM ── */
-function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,dt:gdt(`adt_${a.id}`,a.dt),ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
-function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ct:dedCt({id:d.id,n:gv(`dn_${d.id}`)||d.n,ct:gv(`dc_${d.id}`)||d.ct}),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn}));}
-function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v,dt:gdt(`idt_${i.id}`,i.dt),dn:!!i.dn}));}
-function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.id}`)||o.v,dt:gdt(`odt_${o.id}`,o.dt),ok:o.ok,dn:!!o.dn}));}
+function colA(){return A.map(a=>{const item={id:a.id,n:gvf(`an_${a.id}`,a.n),v:gvf(`av_${a.id}`,a.v),dt:gdt(`adt_${a.id}`,a.dt),ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=gvf(`abm_${a.id}`,a.bm);}return item;});}
+function colD(){return D.map(d=>{const n=gvf(`dn_${d.id}`,d.n);return{id:d.id,n,v:gvf(`dv_${d.id}`,d.v),pm:gvf(`dp_${d.id}`,d.pm)||'bank',ct:dedCt({id:d.id,n,ct:gvf(`dc_${d.id}`,d.ct)}),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn};});}
+function colI(){return I.map(i=>({id:i.id,n:gvf(`in_${i.id}`,i.n),t:i.t,v:gvf(`iv_${i.id}`,i.v),dt:gdt(`idt_${i.id}`,i.dt),dn:!!i.dn}));}
+function colO(){return O.map(o=>({id:o.id,n:gvf(`on_${o.id}`,o.n),v:gvf(`ov_${o.id}`,o.v),dt:gdt(`odt_${o.id}`,o.dt),ok:o.ok,dn:!!o.dn}));}
 function colP(){return P.map(x=>({
   id:x.id,
-  name:gv(`pn_${x.id}`)||x.name||'',
-  amount:ge(`pv_${x.id}`)?gv(`pv_${x.id}`):(x.amount||''),
+  name:gvf(`pn_${x.id}`,x.name),
+  amount:gvf(`pv_${x.id}`,x.amount),
   current_term:planTerm(gv(`pc_${x.id}`)||x.current_term),
   total_term:planTerm(gv(`pt_${x.id}`)||x.total_term),
   type:planTy(ge(`py_${x.id}`)?.value||x.type),
-  note:gv(`pnote_${x.id}`)||x.note||'',
-  pm:gv(`pp_${x.id}`)||x.pm||'bank',
+  note:gvf(`pnote_${x.id}`,x.note),
+  pm:gvf(`pp_${x.id}`,x.pm)||'bank',
   dt:gdt(`pdt_${x.id}`,x.dt),
   dn:!!x.dn
 }));}
@@ -2390,7 +2502,9 @@ function loadM(mi){
   const rec=DB[ym];
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
-    sv('fBaseDt',rec.baseDt||payDate(ym));
+    /* ต่างจาก SSO/กองทุนฯ ข้างล่าง — ช่องนี้ "เคารพการล้างค่า" ตามที่ buildCopyRec() ยึดไว้
+       เทียบ undefined ไม่ใช่ falsy ไม่งั้นวันที่ที่ผู้ใช้ตั้งใจลบทิ้งจะเด้งกลับทุกครั้งที่เปิดเดือน */
+    sv('fBaseDt',rec.baseDt!==undefined?rec.baseDt:payDate(ym));
     /* SSO/PVD ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ (ต่างจาก baseDt ที่เคารพการล้างค่า) */
     sv('fSsoDt',rec.ssoDt||payDate(ym));sv('fPvdDt',rec.pvdDt||payDate(ym));
     _wkb=rec.wkb||_wkbDef;
@@ -2488,7 +2602,9 @@ function recHasData(rec){
 }
 
 /* ผู้ใช้ลงมือกรอกเดือนนี้จริงหรือยัง — ใช้ตัดสิน "ข้ามไม่เขียนทับ"
-   ไม่นับ base เพราะเงินเดือนฐานไหลมาเองตั้งแต่แค่เปิดดูเดือนนั้น (loadM → getPrev) */
+   ไม่นับ base เพราะเงินเดือนฐานไหลมาเองตั้งแต่แค่เปิดดูเดือนนั้น (loadM → getPrev)
+   ไม่นับแผนผ่อน/ประกันด้วย เพราะมันก็ไหลมาเองเหมือนกัน — ถ้านับ เดือนที่มีแต่แผนจะถูกข้ามทั้งเดือน
+   แล้วไม่ได้โครงรายการของปีต้นทางเลย ตัวแผนเองปลอดภัยอยู่แล้วผ่าน mergeCopyPlans() */
 function recHasUserData(rec){
   if(!rec||typeof rec!=='object')return false;
   return nf(rec.sso)>0||nf(rec.pvd)>0||recHasEntries(rec);
@@ -2588,6 +2704,296 @@ async function planFwdYes(){
   toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`);
 }
 
+/* ════════════════════════════════════════════════════
+   ลบรายการข้ามเดือน — กลไกกลาง ใช้ร่วมกันทุกกล่อง
+   (ค่าเพิ่มเติม · รายการหัก · รายได้อื่นๆ · แผนลงทุน · แผนผ่อน&ประกัน)
+   ปุ่ม ✕ ทุกใบจึงทำงานเหมือนกันหมด ไม่ต้องมี modal ห้าชุด
+
+   "รายการเดียวกัน" = id ตรงกัน — รายการที่ไหลข้ามเดือน (loadM → blankItems / forwardPlans)
+   หรือถูกส่งด้วยปุ่ม 📤 เก็บ id เดิมไว้เสมอ จึงเชื่อ id ได้
+   หรือชื่อตรงกันเป๊ะ — ผู้ใช้ที่พิมพ์รายการเดิมซ้ำเองในเดือนอื่นไม่รู้จัก id
+   ทุกเดือนที่จะโดนลบถูกโชว์เป็นรายชื่อก่อนเสมอ การจับคู่ด้วยชื่อจึงไม่ลบอะไรแบบเงียบๆ
+   ════════════════════════════════════════════════════ */
+/* nf/vf = ชื่อฟิลด์ที่ต่างกันระหว่างกล่อง (แผนผ่อนใช้ name/amount ที่เหลือใช้ n/v)
+   lock  = แถวที่ผูกกับเดือนโดยตรง ลบข้ามเดือนไม่ได้ เพราะ loadM() เติมกลับให้เองทุกครั้ง */
+/* pay = ผูกกับวันเงินเดือนออกไหม — กติกาเดียวกับพารามิเตอร์ payday ของ anchorDates()
+        true  → ช่องวันที่ว่างเมื่อไหร่ก็เติมวันที่ 5 กลับให้
+        false → รายได้อื่นๆ / แบ่งลงทุน ปล่อยว่างไว้ให้กรอกเอง ห้ามเติมแทน */
+const LIST_META={
+  a:{key:'a',label:'ค่าเพิ่มเติม',      icon:'➕',nf:'n',   vf:'v',     np:'an_',pay:true, get:()=>A,set:v=>{A=v;},re:()=>rA(),        lock:[BONUS_ID]},
+  d:{key:'d',label:'รายการหัก',         icon:'➖',nf:'n',   vf:'v',     np:'dn_',pay:true, get:()=>D,set:v=>{D=v;},re:()=>rD(),        lock:[BONUS_TAX_ID]},
+  o:{key:'o',label:'รายได้อื่นๆ',        icon:'💰',nf:'n',   vf:'v',     np:'on_',pay:false,get:()=>O,set:v=>{O=v;},re:()=>{rO();updInv();},lock:[]},
+  i:{key:'i',label:'แบ่งเงินลงทุน',      icon:'📈',nf:'n',   vf:'v',     np:'in_',pay:false,get:()=>I,set:v=>{I=v;},re:()=>rI(),        lock:[]},
+  p:{key:'p',label:'แผนผ่อน & ประกัน',  icon:'💳',nf:'name',vf:'amount',np:'pn_',pay:true, get:()=>P,set:v=>{P=v;},re:()=>rP(),        lock:[]}
+};
+let _rowDel=null;
+
+const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
+function rowSame(m,x,id,name){
+  if(!x)return false;
+  if(x.id===id)return true;
+  return !!name&&rowName(m,x)===name;
+}
+/* เดือนอื่นทั้งหมดใน DB ที่มีรายการเดียวกัน (ข้ามปีด้วย — ผู้ใช้ควรเห็นภาพจริง) */
+function rowDelFind(m,id,name,skipYm){
+  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k!==skipYm
+    &&(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,id,name))).sort();
+}
+/* บรรทัดรายละเอียดใต้ชื่อ — แต่ละกล่องมีของที่ควรเห็นก่อนตัดสินใจลบไม่เหมือนกัน */
+function rowDelInfo(m,it){
+  const bits=[];
+  if(m.key==='i'&&it.t==='%')bits.push(`${nf(it.v)}% ของฐาน`);
+  else{const amt=nf(it[m.vf]);bits.push(amt>0?fmt(amt):'ยังไม่ได้กรอกยอด');}
+  if(m.key==='d'){
+    const c=CT_META[dedCt(it)],pm=PM_META[it.pm]||PM_META.bank;
+    bits.push(`${pm.icon} ${pm.label}`,`${c.icon} ${c.label}`);
+  }
+  if(m.key==='p'){
+    const ty=planTy(it.type);bits.push(`${PLAN_TYPES[ty].icon} ${PLAN_TYPES[ty].short}`);
+    if(ty==='installment')bits.push(`งวด ${planTerm(it.current_term)}/${planTerm(it.total_term)}`);
+  }
+  return bits.join(' · ');
+}
+/* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
+function rowDelNow(m,id){m.set(m.get().filter(x=>x&&x.id!==id));m.re();}
+
+function openRowDel(kind,id){
+  const m=LIST_META[kind];if(!m)return;
+  const it=m.get().find(x=>x&&x.id===id);
+  if(!it||CT<0||CT>=12){if(m)rowDelNow(m,id);return;}   /* หลุดกรณีแปลกๆ — ลบตรงๆ แบบเดิม */
+  const name=String(gvf(m.np+id,it[m.nf])||'').trim();  /* ชื่อล่าสุดบนจอ ไม่ใช่ค่าที่ยังไม่ sync */
+  const ym=ymk(CT);
+  const locked=m.lock.includes(id);
+  const others=locked?[]:rowDelFind(m,id,name,ym);
+  /* แถวเปล่าที่เพิ่งกด ＋ มาแล้วยังไม่ได้กรอกอะไร — ไม่มีอะไรให้เสีย ถามไปก็รำคาญเปล่าๆ */
+  if(!others.length&&!name&&nf(it[m.vf])<=0){rowDelNow(m,id);return;}
+
+  _rowDel={m,id,name,ym,others,label:name||'(ไม่ระบุชื่อ)'};
+  ge('xdTitle').textContent=`🗑️ ลบ${m.label}`;
+  ge('xdHead').innerHTML=`${m.icon} <b>${esc(_rowDel.label)}</b>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${rowDelInfo(m,it)}</div>`
+    +`<div style="font-size:.73rem;color:#718096;margin-top:2px">${ymLabel(ym)}</div>`;
+
+  const multi=others.length>0;
+  ge('xdOnly').style.display=multi?'none':'';
+  ge('xdMulti').style.display=multi?'':'none';
+  if(multi){
+    ge('xdFound').innerHTML=`⚠️ เจอรายการนี้ในอีก <b>${others.length} เดือน</b>ด้วย`
+      +`<div style="font-size:.78rem;font-weight:400;margin-top:3px">${others.map(ymLabel).join(' · ')}</div>`;
+    ge('xdThisM').textContent=`(${ymLabel(ym)})`;
+    ge('xdRestTxt').textContent=`เดือนนี้เป็นต้นไปจนจบปี ${CY}`;
+    ge('xdRestSub').textContent=CT<11?`(${MS[CT]} – ธ.ค.)`:'';
+    ge('xdYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
+    /* ตัวเลือกที่ไม่มีความหมายในบริบทนี้ ซ่อนทิ้งดีกว่าปล่อยให้เลือกแล้วได้ผลเท่ากัน:
+       "จนจบปี" ไม่มีความหมายเมื่ออยู่ ธ.ค. · "ทั้งปี" ซ้ำกับ "จนจบปี" เมื่อไม่มีเดือนก่อนหน้าที่มีรายการนี้ */
+    const has=k=>(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,id,name));
+    let earlier=0;for(let i=0;i<CT;i++)if(has(`${CY}-${p2(i+1)}`))earlier++;
+    ge('xdRow3').style.display=CT<11?'':'none';
+    ge('xdRow4').style.display=earlier?'':'none';
+    ge('xdMode1').checked=true;
+    sv('xdN',String(Math.max(1,11-CT||3)));
+    rowDelPreview();
+  }else{
+    ge('xdOnlyTxt').innerHTML=locked
+      ? `รายการนี้<strong>ผูกกับเดือนโดยเฉพาะ</strong> (มีเฉพาะเดือนโบนัส และระบบจะเติมกลับให้เองเมื่อเปิดเดือนนั้น)<br>ลบได้เฉพาะเดือนนี้ — ต้องการลบใช่หรือไม่?`
+      : `ตรวจแล้ว — รายการนี้มีอยู่<strong>แค่เดือนนี้เดือนเดียว</strong> ไม่พบในเดือนอื่น<br>ต้องการลบใช่หรือไม่?`;
+  }
+  ge('rowDelModal').classList.add('open');
+}
+
+function rowDelMode(){
+  if(ge('xdMode2')?.checked)return'n';
+  if(ge('xdMode3')?.checked)return'rest';
+  if(ge('xdMode4')?.checked)return'year';
+  return'one';
+}
+/* เดือนที่จะโดนลบตามตัวเลือกที่เลือกอยู่ — เดือนปัจจุบันติดไปด้วยเสมอ */
+function rowDelTargets(){
+  const d=_rowDel;if(!d)return[];
+  const m=d.m;
+  if(!d.others.length)return[d.ym];
+  const has=k=>(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,d.id,d.name));
+  const out=[d.ym],mode=rowDelMode();
+  if(mode==='year'){for(let i=0;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(k!==d.ym&&has(k))out.push(k);}}
+  else if(mode==='rest'){for(let i=CT+1;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(has(k))out.push(k);}}
+  else if(mode==='n'){
+    const n=Math.max(1,Math.min(60,parseInt(gv('xdN'),10)||1));
+    for(let k=1;k<=n;k++){const t=ymAdd(d.ym,k);if(has(t))out.push(t);}
+  }
+  return [...new Set(out)].sort();
+}
+
+function rowDelPreview(){
+  const d=_rowDel;if(!d||!d.others.length)return;
+  const t=rowDelTargets();
+  ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน</div>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
+    +(t.length<d.others.length+1
+      ?`<div style="font-size:.72rem;color:#718096;margin-top:5px">อีก ${d.others.length+1-t.length} เดือนที่มีรายการนี้จะไม่ถูกแตะ</div>`:'');
+}
+
+function rowDelNo(){ge('rowDelModal').classList.remove('open');_rowDel=null;}
+
+async function rowDelYes(){
+  const d=_rowDel;if(!d)return;
+  const m=d.m;
+  const targets=rowDelTargets();
+  const others=targets.filter(t=>t!==d.ym);
+  /* หลายเดือน = ต้องเขียน DB จริง จึงต้องเช็ค race แบบเดียวกับ saveM() ก่อนแตะอะไรทั้งนั้น */
+  if(others.length){
+    if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+    if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  }
+  ge('rowDelModal').classList.remove('open');_rowDel=null;
+  rowDelNow(m,d.id);
+  if(!others.length){toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
+
+  saveM();                       /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
+  others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  for(const t of others){
+    try{
+      if(fbDb)await fbSaveMonth(t);
+      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
+    }catch(e){console.warn('row delete sync failed',t,e);}
+  }
+  if(CT===12)renderSum();
+  toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`);
+}
+
+/* ════════════════════════════════════════════════════
+   ส่งรายการทีละรายการไปเดือนถัดๆ ไป — กลไกกลาง ใช้ร่วมกันทุกกล่องที่มีปุ่ม 📤
+   ต่างจากปุ่มส่งแผนผ่อน/ประกันทั้งกล่องตรงที่ผู้ใช้เลือกช่วงเองได้ — ที่เหลือของปี หรือ n เดือน
+   ปลายทาง = เดือนที่ "บันทึกไว้แล้ว" เท่านั้น กติกาเดียวกับ planFwdTargets()/basePropYes()
+   เพราะเดือนที่ยังไม่เคยเปิดจะได้โครงรายการนี้เองตอนเปิด (loadM → blankItems)
+   ต่างกันแค่ยอดเงินที่ยังว่าง — modal จึงบอกไว้ชัดๆ ไม่ปล่อยให้เงียบ
+   ════════════════════════════════════════════════════ */
+let _rowFwd=null;
+
+/* ym ที่ห่างออกไป n เดือน — ข้ามปีได้ ผู้ใช้จึงส่งจาก ธ.ค. ไปต้นปีหน้าได้ */
+function ymAdd(ym,n){
+  const[y,m]=String(ym||'').split('-').map(Number);
+  if(!y||!m)return'';
+  const t=y*12+(m-1)+(parseInt(n,10)||0);
+  return `${Math.floor(t/12)}-${p2(t%12+1)}`;
+}
+
+/* จำนวนเดือนที่เลือกอยู่ — โหมด "ที่เหลือของปี" นับจากเดือนปัจจุบันถึง ธ.ค. */
+function rowFwdSpan(){
+  if(!_rowFwd)return 0;
+  if(ge('xfModeN')?.checked)return Math.max(1,Math.min(60,parseInt(gv('xfN'),10)||1));
+  return 11-_rowFwd.mi;
+}
+
+/* แยกเดือนในช่วง (ym, ym+span] เป็นเดือนที่เขียนได้ กับเดือนที่ยังไม่เคยเปิด */
+function rowFwdScan(ym,span){
+  const hit=[],miss=[];
+  for(let k=1;k<=span;k++){
+    const t=ymAdd(ym,k);
+    (recHasData(DB[t])?hit:miss).push(t);
+  }
+  return{hit,miss};
+}
+
+/* วางรายการลงเดือนปลายทาง — จับคู่ด้วย id จึงอัปเดตของเดิม ไม่สร้างซ้ำ
+   ☑ จัดการแล้ว / ✓ ยืนยัน เป็นของจริงรายเดือน จึงล้างเสมอ
+   วันที่เลื่อนตามระยะเดือน · ช่องว่างเติมให้เฉพาะกล่องที่ผูกกับวันเงินเดือนออก (m.pay)
+   ทั้งหมดยึดกติกาเดียวกับ anchorDates() */
+function rowPut(m,arr,item,srcYm,dstYm){
+  const n=ymDelta(srcYm,dstYm);
+  const it={...item,ok:false,dn:false};
+  if(m.key==='d'){it.ct=dedCt(item);it.pm=PM_META[item.pm]?item.pm:'bank';}
+  it.dt=item.dt?shiftDt(item.dt,n):(m.pay?payDate(dstYm):'');
+  const out=(arr||[]).slice();
+  const i=out.findIndex(x=>x&&x.id===it.id);
+  if(i>=0)out[i]={...out[i],...it};else out.push(it);
+  return dedupeIds(out);
+}
+
+function openRowFwd(kind,id){
+  const m=LIST_META[kind];if(!m)return;
+  if(CT<0||CT>=12)return;
+  if(m.lock.includes(id)){toast('รายการนี้ผูกกับเดือนโดยเฉพาะ — ส่งต่อไม่ได้','te');return;}
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  saveM();                        /* commit ค่าที่ยังค้างในฟอร์ม — ส่งของที่เห็นบนจอจริงๆ */
+  const ym=ymk(CT);
+  const it=(((DB[ym]||{})[m.key])||[]).find(x=>x&&x.id===id);
+  if(!it){toast('ไม่พบรายการนี้','te');return;}
+  if(!String(it[m.nf]||'').trim()){toast('ตั้งชื่อรายการก่อน แล้วค่อยส่งไปเดือนอื่น','te');return;}
+  _rowFwd={m,mi:CT,ym,item:JSON.parse(JSON.stringify(it))};
+
+  ge('xfTitle').textContent=`📤 ส่ง${m.label}นี้ไปเดือนถัดๆ ไป`;
+  ge('xfHead').innerHTML=`${m.icon} <b>${esc(String(it[m.nf]))}</b>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${rowDelInfo(m,it)}</div>`
+    +`<div style="font-size:.73rem;color:#718096;margin-top:2px">จาก ${ymLabel(ym)}</div>`;
+  /* แบ่งเงินลงทุนแบบ % ส่งไปเป็น "สูตร" ไม่ใช่ตัวเลข — ยอดจริงของแต่ละเดือนจึงต่างกันได้ */
+  const pctNote=(m.key==='i'&&it.t==='%')
+    ?'• เป็นแบบ <strong>%</strong> — ส่งไปเป็นเปอร์เซ็นต์ ยอดจริงของแต่ละเดือนจะคำนวณจากฐานของเดือนนั้นเอง<br>':'';
+  const dtNote=m.pay
+    ?'วันที่เลื่อนตามเดือนให้เอง'
+    :'วันที่ว่างไว้ให้กรอกเอง (ตามกติกาเดิมของกล่องนี้)';
+  ge('xfNote').innerHTML=pctNote
+    +`• ส่ง<strong>ชื่อ · ยอด · ตัวเลือกของรายการ</strong> ไปให้ · ${dtNote}<br>`
+    +'• รายการเดิมที่ id ตรงกันจะถูก<strong>อัปเดต ไม่สร้างซ้ำ</strong><br>'
+    +'• เครื่องหมาย ☑ จัดการแล้ว / ✓ ยืนยัน <strong>ไม่ถูกส่งไป</strong> — เป็นของจริงรายเดือน';
+
+  /* ธ.ค. ไม่มีเดือนเหลือในปีแล้ว — ปิดตัวเลือกแรก แล้วเด้งไปโหมดระบุจำนวนเดือนแทน */
+  const restOfYear=11-CT;
+  const rYear=ge('xfModeYear'),rowYear=ge('xfRowYear');
+  rYear.disabled=restOfYear<1;
+  rowYear.style.opacity=restOfYear<1?'.45':'';
+  rowYear.style.cursor=restOfYear<1?'default':'pointer';
+  ge('xfYearTxt').textContent=restOfYear<1
+    ?`ไม่มีเดือนเหลือในปี ${CY} แล้ว`
+    :`ทุกเดือนที่เหลือของปี ${CY} — ${MS[CT+1]} ถึง ธ.ค. (${restOfYear} เดือน)`;
+  if(restOfYear<1)ge('xfModeN').checked=true;else rYear.checked=true;
+  sv('xfN',String(Math.max(1,restOfYear||3)));
+
+  rowFwdPreview();
+  ge('rowFwdModal').classList.add('open');
+}
+
+function rowFwdPreview(){
+  const d=_rowFwd;if(!d)return;
+  const el=ge('xfPreview'),go=ge('xfGo');
+  const span=rowFwdSpan();
+  if(span<1){
+    el.innerHTML='<div style="color:#c53030;font-weight:700">ไม่มีเดือนถัดไปในปีนี้ — เลือก "ระบุเอง" เพื่อส่งข้ามปี</div>';
+    go.disabled=true;return;
+  }
+  const sc=rowFwdScan(d.ym,span);
+  const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(ymLabel).join(' · ')}</div>`;
+  let h=`<div style="font-weight:700;color:#276749">✅ เขียนลง ${sc.hit.length} เดือน</div>`;
+  if(sc.hit.length)h+=mlist(sc.hit);
+  if(sc.miss.length){
+    h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ยังไม่เคยเปิด ${sc.miss.length} เดือน</div>`+mlist(sc.miss)
+      +`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">เดือนพวกนี้จะได้โครงรายการนี้เองตอนเปิด แต่<strong>ยอดต้องกรอกเอง</strong> — เปิดแล้วกดปุ่มนี้ซ้ำก็ได้ครบ</div>`;
+  }
+  el.innerHTML=h;
+  go.disabled=!sc.hit.length;
+}
+
+function rowFwdNo(){ge('rowFwdModal').classList.remove('open');_rowFwd=null;}
+
+async function rowFwdYes(){
+  const d=_rowFwd;if(!d)return;
+  const m=d.m;
+  const sc=rowFwdScan(d.ym,rowFwdSpan());
+  ge('rowFwdModal').classList.remove('open');_rowFwd=null;
+  if(!sc.hit.length)return;
+  sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  for(const t of sc.hit){
+    try{
+      if(fbDb)await fbSaveMonth(t);
+      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
+    }catch(e){console.warn('row propagate sync failed',t,e);}
+  }
+  if(CT===12)renderSum();
+  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`);
+}
+
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
 function announcePlansDone(done){
   if(!done||!done.length)return;
@@ -2647,6 +3053,21 @@ function copyYearPlan(srcYr){
   return {copy,skip,none};
 }
 
+/* แผนผ่อน/ประกันของเดือนปลายทางเป็น "ของจริง" ที่ผู้ใช้วางไว้เองในปีนี้ — เพิ่มเองในเดือนนั้น
+   หรือถูกส่งมาด้วยปุ่ม "ส่งแผนไปเดือนถัดๆ ไป" — ปุ่มลอกจากปีก่อนจึงห้ามล้างทิ้ง
+   (กติกาเดียวกับเงินเดือนฐาน: ของที่ตั้งไว้เองในปีนี้ย่อมชนะของปีก่อน)
+   เพิ่มอย่างเดียว ไม่ลบ: ของเดิมอยู่ครบตามลำดับเดิม · ของปีต้นทางเติมเฉพาะ id ที่ยังไม่มี
+   รายการซ้ำ id → ใช้ของเดือนปลายทาง เพราะงวด/วันที่/ติ๊กจ่ายแล้ว เดินมาถูกต้องอยู่แล้ว */
+function mergeCopyPlans(dstRec,inc){
+  const cur=Array.isArray(dstRec&&dstRec.p)
+    ? dedupeIds(JSON.parse(JSON.stringify(dstRec.p))).map(x=>({...x,type:planTy(x.type)}))
+    : [];
+  if(!cur.length)return dedupeIds(inc||[]);
+  const out=cur.slice();
+  (inc||[]).forEach(x=>{if(x&&!out.some(y=>y&&y.id===x.id))out.push(x);});
+  return dedupeIds(out);
+}
+
 /* สร้าง record ใหม่จากต้นแบบ — โครงสร้างล้วน ไม่เอาจำนวนเงิน/OT */
 function buildCopyRec(src,mi,srcYm,keepAmt){
   const dst=DB[ymk(mi)],dstYm=ymk(mi);
@@ -2665,8 +3086,9 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
     i:anc(src.i||defI(),false),
     o:anc(src.o||defO(),false),
     /* แผนผ่อน/ประกัน: ลอกยอดมาเสมอ (ค่างวดไม่ได้เปลี่ยนไปตามเดือน) แต่เดินงวดตามระยะเวลาที่ห่างกัน
-       รายการที่ผ่อนครบไปแล้วก่อนถึงเดือนปลายทางจะไม่ถูกลอกมาด้วย */
-    p:forwardPlans(src.p,srcYm||dstYm,dstYm).list,
+       รายการที่ผ่อนครบไปแล้วก่อนถึงเดือนปลายทางจะไม่ถูกลอกมาด้วย
+       และของเดิมที่เดือนนี้มีอยู่แล้วต้องอยู่ครบ — เติมทับไม่ได้ (ดู mergeCopyPlans) */
+    p:mergeCopyPlans(dst,forwardPlans(src.p,srcYm||dstYm,dstYm).list),
     days:{}
   };
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
@@ -2715,6 +3137,7 @@ function cpyToConfirm(){
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
   const what=cpyKeepAmt()?'รายการ + จำนวนเงิน':'โครงสร้างรายการ';
   let h=`<div style="font-weight:700;color:#276749">✅ จะเขียน${what}ลง ${p.copy.length} เดือน</div>`+mlist(p.copy.map(c=>c.mi));
+  h+=cpyPlanKeepHtml(p,mlist);
   if(p.skip.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ข้าม ${p.skip.length} เดือนที่กรอกเงินไว้แล้ว — ไม่ถูกแตะ</div>`+mlist(p.skip);
   if(p.none.length)h+=`<div style="font-weight:700;color:#718096;margin-top:10px">— ไม่มีต้นแบบ ${p.none.length} เดือน</div>`+mlist(p.none);
   ge('cpyCfmBody').innerHTML=h;
@@ -2723,6 +3146,14 @@ function cpyToConfirm(){
 
 /* ผู้ใช้เลือกลอกจำนวนเงินมาด้วยไหม */
 function cpyKeepAmt(){return !!ge('cpyAmt')?.checked;}
+
+/* เดือนที่จะถูกลอกแต่มีแผนผ่อน/ประกันอยู่แล้ว — ย้ำให้เห็นว่าของเดิมไม่หาย */
+function cpyPlanKeepHtml(p,mlist){
+  const keep=p.copy.filter(c=>planTotal((DB[ymk(c.mi)]||{}).p)>0);
+  if(!keep.length)return '';
+  return `<div style="font-weight:700;color:#2b6cb0;margin-top:10px">💳 คงแผนผ่อน &amp; ประกันเดิมไว้ ${keep.length} เดือน — ไม่ถูกลบ</div>`
+    +mlist(keep.map(c=>c.mi));
+}
 
 function renderCopyPreview(){
   const el=ge('cpyPreview'),sel=ge('cpySrcYr'),go=ge('cpyGo');
@@ -2738,6 +3169,7 @@ function renderCopyPreview(){
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(mi=>MS[mi]).join(' · ')}</div>`;
   let h=`<div style="font-weight:700;color:#276749">✅ จะลอก ${p.copy.length} เดือน</div>`;
   if(p.copy.length)h+=mlist(p.copy.map(c=>c.mi));
+  h+=cpyPlanKeepHtml(p,mlist);
   if(p.skip.length)h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ข้าม ${p.skip.length} เดือน (มีข้อมูลอยู่แล้ว)</div>`+mlist(p.skip);
   if(p.none.length)h+=`<div style="font-weight:700;color:#718096;margin-top:10px">— ไม่มีต้นแบบ ${p.none.length} เดือน</div>`+mlist(p.none);
   el.innerHTML=h;
@@ -3957,6 +4389,44 @@ function compM(ym){
   return computeRec(rec,ym);
 }
 
+/* ════════════════════════════════════════════════════
+   Chart.js มาจาก CDN — เน็ตไม่ถึง / โดนไฟร์วอลล์บล็อก = ไม่มี window.Chart
+   ถ้าปล่อยให้ new Chart() โยน ReferenceError หน้าสรุปจะพังตั้งแต่กราฟตัวแรก
+   แล้วทุกอย่างที่ renderSum() เรียกต่อจากนั้นจะไม่ถูกวาดเลย — สรุปรายการหัก ·
+   สรุปวิธีจ่าย · สรุปภาษี · ไทม์ไลน์ทั้งปี หายหมด ทั้งที่ไม่เกี่ยวกับกราฟ
+   และ error ยังทะลุออกจาก switchTab() ไปหยุดโค้ดของผู้เรียกอีกชั้นด้วย
+   mkChart() จึงกลืน error ไว้ตรงนี้: ไม่มีไลบรารีก็ข้ามเฉพาะกราฟ ตัวเลขยังครบทุกตัว
+   ════════════════════════════════════════════════════ */
+function chartNA(el,msg){
+  if(!el)return;
+  el.style.display='none';
+  const id='chna_'+el.id;
+  let box=ge(id);
+  if(!box){
+    box=document.createElement('div');box.id=id;box.className='chart-na';
+    el.parentNode.insertBefore(box,el.nextSibling);
+  }
+  box.textContent=msg;
+  box.style.display='';
+}
+function mkChart(canvasId,cfg){
+  const el=ge(canvasId);if(!el)return null;
+  const na=ge('chna_'+canvasId);
+  if(typeof Chart==='undefined'){
+    chartNA(el,'📉 แสดงกราฟไม่ได้ — โหลดไลบรารีกราฟจากอินเทอร์เน็ตไม่สำเร็จ (ตัวเลขทั้งหมดยังถูกต้องครบ)');
+    return null;
+  }
+  try{
+    const c=new Chart(el,cfg);
+    el.style.display='';if(na)na.style.display='none';
+    return c;
+  }catch(e){
+    console.warn('chart render failed:',canvasId,e);
+    chartNA(el,'📉 วาดกราฟนี้ไม่สำเร็จ (ตัวเลขทั้งหมดยังถูกต้องครบ)');
+    return null;
+  }
+}
+
 /* ── Deduction category helpers ── */
 function buildDedCats(){
   const order=[];
@@ -4034,11 +4504,11 @@ function renderDedSum(){
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
   if(CH.c5){CH.c5.destroy();CH.c5=null;}
   const coBar={responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
-  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
+  CH.c4=mkChart('cDedBar',{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
   if(activeCats.length){
     const sortedPie=[...activeCats].sort((a,b)=>b.total-a.total);
     const pieData=sortedPie.map(c=>+c.total.toFixed(2));
-    CH.c5=new Chart(ge('cDedPie'),{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
+    CH.c5=mkChart('cDedPie',{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
   }
 }
 
@@ -4093,7 +4563,7 @@ function rebuildIncChart(){
       stack:isStacked?'s':undefined};
   });
   const baseType=isLine?'line':'bar';
-  CH.c1=new Chart(ge('cInc'),{
+  CH.c1=mkChart('cInc',{
     type:incChartType==='mixed'?'bar':baseType,
     data:{labels:_incLbs,datasets},
     options:{...co,scales:{
@@ -4154,7 +4624,7 @@ function renderPmYear(){
     const pct=grand?((tot[k]/grand)*100).toFixed(1):0;
     return`<div class="ded-stat-item" style="border-left-color:${COLR[k]}"><div class="ded-stat-lbl">${PM_META[k].icon} ${PM_META[k].label}</div><div class="ded-stat-val" style="color:${COLR[k]}">฿${fN(tot[k])}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
   }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grand)}</div><div class="ded-stat-sub">100%</div></div>`;
-  CH.c6=new Chart(ge('cPmBar'),{type:'bar',
+  CH.c6=mkChart('cPmBar',{type:'bar',
     data:{labels:MS,datasets:used.map(k=>({label:PM_META[k].icon+' '+PM_META[k].label,data:per[k].map(v=>+v.toFixed(2)),backgroundColor:BG[k],borderColor:COLR[k],borderWidth:1,stack:'s'}))},
     options:{responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},
       scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
@@ -4267,12 +4737,12 @@ function renderSum(){
   const ch={responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+' ชม.'}}}};
   _incLbs=lbs;_dInc=dInc;_dTH=dTH;_dFin=dFin;_dDed=dDed;
   rebuildIncChart();
-  CH.c2=new Chart(ge('cOT'),{type:'bar',data:{labels:lbs,datasets:[
+  CH.c2=mkChart('cOT',{type:'bar',data:{labels:lbs,datasets:[
     {label:'×1.5',data:dH15,backgroundColor:'rgba(99,179,237,.75)',stack:'s'},
     {label:'×2.0',data:dH20,backgroundColor:'rgba(104,211,145,.75)',stack:'s'},
     {label:'×3.0',data:dH30,backgroundColor:'rgba(237,137,54,.75)',stack:'s'},
   ]},options:{...ch,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>v+' ชม.'}}}}});
-  CH.c3=new Chart(ge('cIA'),{type:'line',data:{labels:lbs,datasets:[
+  CH.c3=mkChart('cIA',{type:'line',data:{labels:lbs,datasets:[
     {label:'สะสมจริง',data:dA2,borderColor:'#38b2ac',backgroundColor:'rgba(56,178,172,.15)',borderWidth:2.5,fill:true,tension:.35,pointBackgroundColor:'#38b2ac',pointRadius:4,spanGaps:false},
     {label:'Forecast',data:dF,borderColor:'#a0aec0',backgroundColor:'rgba(160,174,192,.08)',borderWidth:2,borderDash:[6,4],fill:false,tension:.35,pointBackgroundColor:'#a0aec0',pointRadius:3,spanGaps:false},
   ]},options:{...co,scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
