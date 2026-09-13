@@ -1070,6 +1070,57 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 </div>
 
+<!-- ── Modal: ลบรายการหัก (ถามก่อนเสมอ · ลบข้ามเดือนได้ถ้ารายการเดียวกันอยู่หลายเดือน) ── -->
+<div id="dedDelModal" class="modal-overlay" onclick="if(event.target===this)dedDelNo()">
+  <div class="modal-box" style="max-width:470px">
+    <div class="modal-title">🗑️ ลบรายการหัก</div>
+
+    <div id="ddHead" style="background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+
+    <!-- หน้า A: รายการนี้มีอยู่แค่เดือนนี้ -->
+    <div id="ddOnly" style="font-size:.85rem;color:#4a5568;line-height:1.75;margin-bottom:16px">
+      ตรวจแล้ว — รายการนี้มีอยู่<strong>แค่เดือนนี้เดือนเดียว</strong> ไม่พบในเดือนอื่น<br>
+      ต้องการลบใช่หรือไม่?
+    </div>
+
+    <!-- หน้า B: เจอรายการเดียวกันในเดือนอื่นด้วย -->
+    <div id="ddMulti" style="display:none">
+      <div id="ddFound" style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.82rem;color:#975a16;line-height:1.7"></div>
+
+      <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="ddMode" id="ddModeOne" checked onchange="dedDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong>เฉพาะเดือนนี้</strong> <span id="ddThisM" style="color:#718096;font-weight:400"></span></span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="ddMode" id="ddModeN" onchange="dedDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+          <strong>เดือนนี้ + อีก</strong>
+          <input type="number" id="ddN" min="1" max="60" step="1" value="3" onfocus="ge('ddModeN').checked=true;dedDelPreview()" oninput="ge('ddModeN').checked=true;dedDelPreview()" style="width:74px;text-align:right">
+          <span>เดือนถัดไป</span>
+        </span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+        <input type="radio" name="ddMode" id="ddModeYear" onchange="dedDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="ddYearTxt">ตลอดทั้งปีนี้</strong> <span style="color:#718096;font-weight:400">(รวมเดือนก่อนหน้าด้วย)</span></span>
+      </label>
+
+      <div id="ddPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+      <div style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
+        • ลบหลายเดือนจะ<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — ลบเฉพาะเดือนนี้จะรอคุณกดบันทึกเหมือนเดิม<br>
+        • เดือนอื่นที่มีชื่อรายการตรงกันเป๊ะ ถือเป็นรายการเดียวกัน
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button id="ddGo" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="dedDelYes()">🗑️ ลบ</button>
+      <button class="mbtn-cancel" onclick="dedDelNo()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Firebase SDK (compat v9) -->
@@ -2066,7 +2117,12 @@ function renderCkSum(){
 function addA(){A.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:payDate(gv('fPrd'))});rA();setTimeout(()=>ge(`an_${A[A.length-1].id}`)?.focus(),50);}
 function delA(id){A=A.filter(x=>x.id!==id);rA();}
 function addD(){D.push({id:uid(),n:'',v:'',pm:'bank',ct:'fix',ok:false,dn:false,dt:payDate(gv('fPrd'))});rD();setTimeout(()=>ge(`dn_${D[D.length-1].id}`)?.focus(),50);}
-function delD(id){D=D.filter(x=>x.id!==id);rD();}
+/* ลบรายการหัก — ถามก่อนเสมอ ไม่ลบทันทีเหมือนเดิม
+   ถ้ารายการเดียวกันไปโผล่เดือนอื่นด้วย ให้เลือกได้ว่าจะลบแค่เดือนนี้ / n เดือน / ทั้งปี
+   (ตัวจัดการอยู่ในบล็อก "ลบรายการหักข้ามเดือน" ด้านล่าง) */
+function delD(id){openDedDel(id);}
+/* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
+function delDNow(id){D=D.filter(x=>x&&x.id!==id);rD();}
 function addO(){O.push({id:uid(),n:'',v:'',ok:false,dn:false,dt:''});rO();setTimeout(()=>ge(`on_${O[O.length-1].id}`)?.focus(),50);}
 function delO(id){O=O.filter(x=>x.id!==id);rO();updInv();}
 function addI(){I.push({id:uid(),n:'',t:'%',v:'',dn:false,dt:''});rI();setTimeout(()=>ge(`in_${I[I.length-1].id}`)?.focus(),50);}
@@ -2634,6 +2690,107 @@ async function planFwdYes(){
   }
   if(CT===12)renderSum();
   toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`);
+}
+
+/* ════════════════════════════════════════════════════
+   ลบรายการหักข้ามเดือน
+   "รายการเดียวกัน" = id ตรงกัน — รายการที่ไหลข้ามเดือน (loadM → blankItems)
+   หรือถูกส่งด้วยปุ่ม 📤 เก็บ id เดิมไว้เสมอ จึงเชื่อ id ได้
+   หรือชื่อตรงกันเป๊ะ — ผู้ใช้ที่พิมพ์รายการเดิมซ้ำเองในเดือนอื่นไม่รู้จัก id
+   ทุกเดือนที่จะโดนลบถูกโชว์เป็นรายชื่อก่อนเสมอ การจับคู่ด้วยชื่อจึงไม่ลบอะไรแบบเงียบๆ
+   ════════════════════════════════════════════════════ */
+let _dedDel=null;
+
+const dedName=x=>String((x&&x.n)||'').trim();
+function dedSame(x,id,name){
+  if(!x)return false;
+  if(x.id===id)return true;
+  return !!name&&dedName(x)===name;
+}
+/* เดือนอื่นทั้งหมดใน DB ที่มีรายการเดียวกัน (ข้ามปีด้วย — ผู้ใช้ควรเห็นภาพจริง) */
+function dedDelFind(id,name,skipYm){
+  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k!==skipYm
+    &&(((DB[k]||{}).d)||[]).some(x=>dedSame(x,id,name))).sort();
+}
+
+function openDedDel(id){
+  const it=D.find(x=>x&&x.id===id);
+  if(!it||CT<0||CT>=12){delDNow(id);return;}        /* หลุดกรณีแปลกๆ — ลบตรงๆ แบบเดิม */
+  const name=dedName({n:gv(`dn_${id}`)||it.n});     /* ชื่อล่าสุดบนจอ ไม่ใช่ค่าที่ยังไม่ sync */
+  const ym=ymk(CT);
+  const others=dedDelFind(id,name,ym);
+  _dedDel={id,name,ym,others,label:name||'(ไม่ระบุชื่อ)'};
+
+  const amt=nf(gv(`dv_${id}`)||it.v);
+  const ct=CT_META[dedCt({id,n:name,ct:gv(`dc_${id}`)||it.ct})];
+  ge('ddHead').innerHTML=`<b>${esc(_dedDel.label)}</b>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${amt>0?fmt(amt):'ยังไม่ได้กรอกยอด'} · ${ct.icon} ${ct.label} · ${ymLabel(ym)}</div>`;
+
+  const multi=others.length>0;
+  ge('ddOnly').style.display=multi?'none':'';
+  ge('ddMulti').style.display=multi?'':'none';
+  if(multi){
+    ge('ddFound').innerHTML=`⚠️ เจอรายการนี้ในอีก <b>${others.length} เดือน</b>ด้วย`
+      +`<div style="font-size:.78rem;font-weight:400;margin-top:3px">${others.map(ymLabel).join(' · ')}</div>`;
+    ge('ddThisM').textContent=`(${ymLabel(ym)})`;
+    ge('ddYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
+    ge('ddModeOne').checked=true;
+    sv('ddN',String(Math.max(1,11-CT||3)));
+    dedDelPreview();
+  }
+  ge('dedDelModal').classList.add('open');
+}
+
+/* เดือนที่จะโดนลบตามตัวเลือกที่เลือกอยู่ — เดือนปัจจุบันติดไปด้วยเสมอ */
+function dedDelTargets(){
+  const d=_dedDel;if(!d)return[];
+  if(!d.others.length||ge('ddModeOne')?.checked)return[d.ym];
+  const has=k=>(((DB[k]||{}).d)||[]).some(x=>dedSame(x,d.id,d.name));
+  const out=[d.ym];
+  if(ge('ddModeYear')?.checked){
+    for(let i=0;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(k!==d.ym&&has(k))out.push(k);}
+  }else{
+    const n=Math.max(1,Math.min(60,parseInt(gv('ddN'),10)||1));
+    for(let k=1;k<=n;k++){const t=ymAdd(d.ym,k);if(has(t))out.push(t);}
+  }
+  return [...new Set(out)].sort();
+}
+
+function dedDelPreview(){
+  const d=_dedDel;if(!d||!d.others.length)return;
+  const t=dedDelTargets();
+  ge('ddPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน</div>`
+    +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
+    +(t.length<d.others.length+1
+      ?`<div style="font-size:.72rem;color:#718096;margin-top:5px">อีก ${d.others.length+1-t.length} เดือนที่มีรายการนี้จะไม่ถูกแตะ</div>`:'');
+}
+
+function dedDelNo(){ge('dedDelModal').classList.remove('open');_dedDel=null;}
+
+async function dedDelYes(){
+  const d=_dedDel;if(!d)return;
+  const targets=dedDelTargets();
+  const others=targets.filter(t=>t!==d.ym);
+  /* หลายเดือน = ต้องเขียน DB จริง จึงต้องเช็ค race แบบเดียวกับ saveM() ก่อนแตะอะไรทั้งนั้น */
+  if(others.length){
+    if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+    if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  }
+  ge('dedDelModal').classList.remove('open');_dedDel=null;
+  delDNow(d.id);
+  if(!others.length){toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
+
+  saveM();                       /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
+  others.forEach(t=>{const rec=DB[t];if(rec)rec.d=(rec.d||[]).filter(x=>!dedSame(x,d.id,d.name));});
+  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  for(const t of others){
+    try{
+      if(fbDb)await fbSaveMonth(t);
+      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
+    }catch(e){console.warn('ded delete sync failed',t,e);}
+  }
+  if(CT===12)renderSum();
+  toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`);
 }
 
 /* ════════════════════════════════════════════════════
