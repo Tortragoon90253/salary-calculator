@@ -1009,6 +1009,28 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 </div>
 
+<!-- ── Modal: ล้างข้อมูลเดือนนี้ (ถามยืนยันทุกครั้ง — เดิมลบทันทีไม่ถามอะไรเลย) ── -->
+<div id="resetMonthModal" class="modal-overlay" onclick="if(event.target===this)closeResetM()">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-title">🔄 ล้างข้อมูลเดือนนี้</div>
+    <div class="modal-sub">ลบข้อมูล<strong>ทั้งเดือน</strong> — เงินเดือนฐาน · ค่าเพิ่มเติม · รายได้อื่นๆ · รายการหัก · แบ่งเงินลงทุน · แผนผ่อน &amp; ประกัน · ตาราง OT รายวัน</div>
+
+    <div id="rmHead" style="text-align:center;font-size:1rem;font-weight:700;color:#c53030;background:#fff5f5;border:1px solid #feb2b2;border-radius:8px;padding:12px;margin-bottom:14px"></div>
+
+    <div id="rmBody" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+    <div style="background:#fff5f5;border:1px solid #feb2b2;border-radius:8px;padding:11px 12px;margin-bottom:16px;font-size:.76rem;color:#9b2c2c;line-height:1.7">
+      ⚠️ ต้องการล้างใช่หรือไม่? ข้อมูลเดือนนี้จะถูกลบทั้งในเครื่องและบน cloud และ<strong>ย้อนกลับไม่ได้</strong><br>
+      เดือนอื่นไม่ถูกแตะ — ถ้าอยากลบแค่บางรายการ ให้กด ✕ ที่แถวนั้นแทน
+    </div>
+
+    <div class="modal-btns">
+      <button id="rmConfirm" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="doResetM()">🔄 ใช่ ล้างเลย</button>
+      <button class="mbtn-cancel" onclick="closeResetM()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div id="basePropModal" class="modal-overlay" onclick="if(event.target===this)basePropNo()">
   <div class="modal-box" style="max-width:440px">
     <div class="modal-title">📈 อัปเดตเงินเดือนเดือนถัดไปด้วยไหม?</div>
@@ -1106,6 +1128,11 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <label id="xdRow4" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
         <input type="radio" name="xdMode" id="xdMode4" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
         <span style="font-size:.85rem;color:#2d3748"><strong id="xdYearTxt">ตลอดทั้งปีนี้</strong> <span style="color:#718096;font-weight:400">(รวมเดือนก่อนหน้าด้วย)</span></span>
+      </label>
+
+      <label id="xdRow5" style="display:flex;align-items:center;gap:9px;border:1px solid #fc8181;background:#fff5f5;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode5" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="xdAllTxt">ทุกเดือนที่พบ</strong> <span style="color:#c53030;font-weight:400">(รวมปีอื่นด้วย)</span></span>
       </label>
 
       <div id="xdPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
@@ -2756,6 +2783,17 @@ function rowDelInfo(m,it){
 }
 /* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
 function rowDelNow(m,id){m.set(m.get().filter(x=>x&&x.id!==id));m.re();}
+/* ลบ "ทุกแถวที่ถือเป็นรายการเดียวกัน" ออกจากฟอร์มเดือนนี้ — ใช้เฉพาะตอนลบข้ามเดือน
+   ต้องใช้เกณฑ์ id-หรือ-ชื่อ ตัวเดียวกับที่ใช้กับเดือนอื่นเป๊ะ ไม่งั้นเดือนที่มีแถวชื่อซ้ำกัน
+   จะเหลือค้างอยู่แถวหนึ่ง ทั้งที่ preview นับเดือนนี้รวมไปแล้ว = "ลบแล้วไม่หมด"
+   (ส่วนโหมด "เฉพาะเดือนนี้" ยังใช้ rowDelNow() ตาม id เพราะผู้ใช้ชี้แถวไหนก็แถวนั้น) */
+function rowDelNowAll(m,id,name){m.set(m.get().filter(x=>!rowSame(m,x,id,name)));m.re();}
+/* จำนวนแถวที่เข้าข่าย "รายการเดียวกัน" ในเดือนหนึ่ง — เดือนที่เปิดอยู่ต้องอ่านจากฟอร์ม
+   ไม่ใช่จาก DB เพราะอาจยังไม่ได้ commit */
+function rowDelCount(m,k,id,name,curYm){
+  const arr=(k===curYm)?m.get():(((DB[k]||{})[m.key])||[]);
+  return (arr||[]).filter(x=>rowSame(m,x,id,name)).length;
+}
 
 function openRowDel(kind,id){
   const m=LIST_META[kind];if(!m)return;
@@ -2784,12 +2822,15 @@ function openRowDel(kind,id){
     ge('xdRestTxt').textContent=`เดือนนี้เป็นต้นไปจนจบปี ${CY}`;
     ge('xdRestSub').textContent=CT<11?`(${MS[CT]} – ธ.ค.)`:'';
     ge('xdYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
-    /* ตัวเลือกที่ไม่มีความหมายในบริบทนี้ ซ่อนทิ้งดีกว่าปล่อยให้เลือกแล้วได้ผลเท่ากัน:
-       "จนจบปี" ไม่มีความหมายเมื่ออยู่ ธ.ค. · "ทั้งปี" ซ้ำกับ "จนจบปี" เมื่อไม่มีเดือนก่อนหน้าที่มีรายการนี้ */
-    const has=k=>(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,id,name));
-    let earlier=0;for(let i=0;i<CT;i++)if(has(`${CY}-${p2(i+1)}`))earlier++;
-    ge('xdRow3').style.display=CT<11?'':'none';
+    /* ซ่อนตัวเลือกที่ให้ผลเท่ากับตัวอื่น — ยึด "เดือนที่มีรายการนี้จริง" ไม่ใช่แค่ตำแหน่งเดือน
+       ไม่งั้นจะมีตัวเลือกที่กดแล้วลบได้เดือนเดียวเหมือน "เฉพาะเดือนนี้" ให้เลือกเก้อ */
+    const inCY=others.filter(k=>k.slice(0,4)===String(CY));
+    const later=inCY.filter(k=>k>ym).length, earlier=inCY.length-later;
+    const outside=others.length-inCY.length;
+    ge('xdRow3').style.display=later?'':'none';
     ge('xdRow4').style.display=earlier?'':'none';
+    ge('xdRow5').style.display=outside?'':'none';
+    ge('xdAllTxt').textContent=`ทุกเดือนที่พบ — ${others.length+1} เดือน`;
     ge('xdMode1').checked=true;
     sv('xdN',String(Math.max(1,11-CT||3)));
     rowDelPreview();
@@ -2805,6 +2846,7 @@ function rowDelMode(){
   if(ge('xdMode2')?.checked)return'n';
   if(ge('xdMode3')?.checked)return'rest';
   if(ge('xdMode4')?.checked)return'year';
+  if(ge('xdMode5')?.checked)return'all';
   return'one';
 }
 /* เดือนที่จะโดนลบตามตัวเลือกที่เลือกอยู่ — เดือนปัจจุบันติดไปด้วยเสมอ */
@@ -2814,6 +2856,9 @@ function rowDelTargets(){
   if(!d.others.length)return[d.ym];
   const has=k=>(((DB[k]||{})[m.key])||[]).some(x=>rowSame(m,x,d.id,d.name));
   const out=[d.ym],mode=rowDelMode();
+  /* "ทุกเดือนที่พบ" = รายชื่อที่โชว์ในกล่องด้านบนเป๊ะๆ ข้ามปีด้วย — ตัวเลือกอื่นเอื้อมไม่ถึงปีอื่นเลย
+     ผู้ใช้ที่เห็น "เจอในอีก 8 เดือน" แล้วสั่งลบ จึงต้องมีทางลบให้หมดจริงตามที่เห็น */
+  if(mode==='all'){return[...new Set([d.ym,...d.others])].sort();}
   if(mode==='year'){for(let i=0;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(k!==d.ym&&has(k))out.push(k);}}
   else if(mode==='rest'){for(let i=CT+1;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(has(k))out.push(k);}}
   else if(mode==='n'){
@@ -2826,7 +2871,11 @@ function rowDelTargets(){
 function rowDelPreview(){
   const d=_rowDel;if(!d||!d.others.length)return;
   const t=rowDelTargets();
-  ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน</div>`
+  /* บางเดือนมีแถวชื่อซ้ำกันมากกว่าหนึ่งแถว — บอกจำนวนแถวด้วย ไม่งั้นตัวเลข "กี่เดือน"
+     จะทำให้เข้าใจว่าลบแค่เดือนละแถว */
+  const rows=t.reduce((sum,k)=>sum+rowDelCount(d.m,k,d.id,d.name,d.ym),0);
+  ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน`
+    +(rows>t.length?` (${rows} แถว)`:'')+`</div>`
     +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
     +(t.length<d.others.length+1
       ?`<div style="font-size:.72rem;color:#718096;margin-top:5px">อีก ${d.others.length+1-t.length} เดือนที่มีรายการนี้จะไม่ถูกแตะ</div>`:'');
@@ -2845,8 +2894,8 @@ async function rowDelYes(){
     if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   }
   ge('rowDelModal').classList.remove('open');_rowDel=null;
-  rowDelNow(m,d.id);
-  if(!others.length){toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
+  if(!others.length){rowDelNow(m,d.id);toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
+  rowDelNowAll(m,d.id,d.name);   /* เกณฑ์เดียวกับเดือนอื่น ไม่งั้นเดือนนี้เหลือแถวซ้ำชื่อค้าง */
 
   saveM();                       /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
   others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
@@ -4037,7 +4086,34 @@ function fillBlankDates(){
   doCalc();
 }
 
+/* เดิมปุ่มนี้ล้างทั้งเดือนทันทีโดยไม่ถามอะไรเลย ทั้งที่ทำลายมากกว่าปุ่ม ✕ รายแถวเสียอีก
+   (ลบเงินเดือนฐาน · ทุกกล่อง · ตาราง OT แล้ว push การลบขึ้น cloud ทันที)
+   และไม่มี guard กัน race ที่ doClearYear()/saveM() มีอยู่ — cloud ยังโหลดไม่เสร็จก็ลบทับได้ */
 function resetM(){
+  if(CT<0||CT>=12)return;
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  if(formDirty)saveM();          /* สรุปที่โชว์ต้องตรงกับของที่จะถูกลบจริง */
+  const ym=ymk(CT),rec=DB[ym];
+  ge('rmHead').innerHTML=`ล้างข้อมูล ${ymFull(ym)}`;
+  if(!recHasData(rec)){
+    ge('rmBody').innerHTML='<div style="font-weight:700;color:#718096">เดือนนี้ยังไม่มีข้อมูลที่กรอกไว้ — ล้างได้แต่ไม่มีอะไรหาย</div>';
+  }else{
+    const cnt=(k,fld)=>((rec[k]||[]).filter(x=>x&&nf(x[fld])>0)).length;
+    const otMin=Object.values(rec.days||{}).reduce((s,d)=>s+nf(d&&d.ac)+nf(d&&d.o3),0);
+    const bits=[];
+    if(nf(rec.base)>0)bits.push(`เงินเดือนฐาน ${fmt(nf(rec.base))}`);
+    [['a','v','ค่าเพิ่มเติม'],['o','v','รายได้อื่นๆ'],['d','v','รายการหัก'],['i','v','แบ่งเงินลงทุน'],['p','amount','แผนผ่อน & ประกัน']]
+      .forEach(([k,f,label])=>{const n=cnt(k,f);if(n)bits.push(`${label} ${n} รายการ`);});
+    if(otMin>0)bits.push(`OT รวม ${(otMin/60).toFixed(2)} ชม.`);
+    ge('rmBody').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบข้อมูลเหล่านี้</div>`
+      +`<div style="font-size:.8rem;color:#4a5568;margin-top:4px">${bits.length?bits.join('<br>'):'— ไม่มีรายการที่กรอกยอดไว้ —'}</div>`;
+  }
+  ge('resetMonthModal').classList.add('open');
+}
+function closeResetM(){ge('resetMonthModal').classList.remove('open');}
+function doResetM(){
+  ge('resetMonthModal').classList.remove('open');
   const ym=ymk(CT);
   ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
   ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
