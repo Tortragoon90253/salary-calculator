@@ -63,6 +63,7 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .delbtn{width:26px;height:26px;border:none;border-radius:50%;background:#fed7d7;color:#c53030;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fwdbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e6f0fb;color:#2c5282;cursor:pointer;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fwdbtn:disabled{opacity:.3;cursor:default}
+.chart-na{padding:26px 14px;text-align:center;font-size:.8rem;color:#975a16;background:#fffaf0;border:1px dashed #fbd38d;border-radius:8px;line-height:1.7}
 /* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" (แยกจากปุ่ม ✓ ยืนยันข้อมูล) ── */
 .ckpt{width:17px;height:17px;cursor:pointer;accent-color:#38a169;margin:0;justify-self:center;flex-shrink:0}
 .dr.done,.ir.done{opacity:.72}
@@ -1235,9 +1236,12 @@ function shiftDt(dt,n){
 /* serial day สำหรับวางตำแหน่งบนแกนเวลา */
 const dSer=dt=>{const[y,m,d]=dt.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5);};
 const serDt=s=>{const d=new Date(s*864e5);return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}`;};
-/* อ่านค่าวันที่จาก DOM — ถ้ามี element ต้องเชื่อ element เสมอ
-   (ห้ามใช้ gv()||fallback เพราะช่องที่ผู้ใช้ตั้งใจล้างจะโดนค่าเก่าเด้งกลับ) */
-const gdt=(id,fb)=>{const e=ge(id);return e?e.value:(fb||'');};
+/* อ่านค่าจาก DOM — ถ้ามี element ต้องเชื่อ element เสมอ แม้ค่าจะว่าง
+   ห้ามใช้ gv()||fallback กับช่องที่ผู้ใช้ล้างทิ้งได้ เพราะ '' เป็น falsy
+   ค่าเก่าจะเด้งกลับตอนบันทึก (เดือนที่ "ไม่ได้เบี้ยขยัน" ก็ยังมีเบี้ยขยันของเดือนก่อนติดมา)
+   fallback มีไว้กันกรณี element ไม่ได้ถูก render เท่านั้น ไม่ใช่กรณีค่าว่าง */
+const gvf=(id,fb)=>{const e=ge(id);return e?e.value:(fb||'');};
+const gdt=gvf;   /* ชื่อเดิมสำหรับช่องวันที่ — พฤติกรรมเดียวกันเป๊ะ */
 
 const fbTs=()=>{const n=new Date();return `${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}:${p2(n.getSeconds())}.${String(n.getMilliseconds()).padStart(3,'0')}`;};
 
@@ -1453,6 +1457,12 @@ async function saveFbCfg(){
   const docId=ge('fbDocId').value.trim()||'default';
   if(!apiKey||!projectId){
     showFbStatus('กรุณากรอก API Key และ Project ID ให้ครบ','err');
+    return;
+  }
+  /* Firebase SDK มาจาก CDN เหมือน Chart.js — โหลดไม่ได้ก็ไม่มี window.firebase
+     ถ้าไม่กันไว้ บรรทัดล่างจะโยน ReferenceError แบบไม่มีใครรับ = กดปุ่มแล้วเงียบสนิท */
+  if(typeof firebase==='undefined'){
+    showFbStatus('โหลดไลบรารี Firebase จากอินเทอร์เน็ตไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วรีเฟรชหน้าใหม่ (ข้อมูลยังถูกเก็บในเครื่องตามปกติ)','err');
     return;
   }
   /* ลบ app เก่าก่อน init ใหม่ (กรณีเปลี่ยน config) */
@@ -2168,19 +2178,19 @@ function setIT(id,t){const it=I.find(x=>x.id===id);if(!it)return;it.t=t==='%'?'%
 function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv();}
 
 /* ── Collect DOM ── */
-function colA(){return A.map(a=>{const item={id:a.id,n:gv(`an_${a.id}`)||a.n,v:gv(`av_${a.id}`)||a.v,dt:gdt(`adt_${a.id}`,a.dt),ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=ge(`abm_${a.id}`)?.value||a.bm||'';}return item;});}
-function colD(){return D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),pm:gv(`dp_${d.id}`)||d.pm||'bank',ct:dedCt({id:d.id,n:gv(`dn_${d.id}`)||d.n,ct:gv(`dc_${d.id}`)||d.ct}),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn}));}
-function colI(){return I.map(i=>({id:i.id,n:gv(`in_${i.id}`)||i.n,t:i.t,v:gv(`iv_${i.id}`)||i.v,dt:gdt(`idt_${i.id}`,i.dt),dn:!!i.dn}));}
-function colO(){return O.map(o=>({id:o.id,n:gv(`on_${o.id}`)||o.n,v:gv(`ov_${o.id}`)||o.v,dt:gdt(`odt_${o.id}`,o.dt),ok:o.ok,dn:!!o.dn}));}
+function colA(){return A.map(a=>{const item={id:a.id,n:gvf(`an_${a.id}`,a.n),v:gvf(`av_${a.id}`,a.v),dt:gdt(`adt_${a.id}`,a.dt),ok:a.ok,dn:!!a.dn};if(a.id===BONUS_ID){item.bm=gvf(`abm_${a.id}`,a.bm);}return item;});}
+function colD(){return D.map(d=>{const n=gvf(`dn_${d.id}`,d.n);return{id:d.id,n,v:gvf(`dv_${d.id}`,d.v),pm:gvf(`dp_${d.id}`,d.pm)||'bank',ct:dedCt({id:d.id,n,ct:gvf(`dc_${d.id}`,d.ct)}),dt:gdt(`ddt_${d.id}`,d.dt),ok:d.ok,dn:!!d.dn};});}
+function colI(){return I.map(i=>({id:i.id,n:gvf(`in_${i.id}`,i.n),t:i.t,v:gvf(`iv_${i.id}`,i.v),dt:gdt(`idt_${i.id}`,i.dt),dn:!!i.dn}));}
+function colO(){return O.map(o=>({id:o.id,n:gvf(`on_${o.id}`,o.n),v:gvf(`ov_${o.id}`,o.v),dt:gdt(`odt_${o.id}`,o.dt),ok:o.ok,dn:!!o.dn}));}
 function colP(){return P.map(x=>({
   id:x.id,
-  name:gv(`pn_${x.id}`)||x.name||'',
-  amount:ge(`pv_${x.id}`)?gv(`pv_${x.id}`):(x.amount||''),
+  name:gvf(`pn_${x.id}`,x.name),
+  amount:gvf(`pv_${x.id}`,x.amount),
   current_term:planTerm(gv(`pc_${x.id}`)||x.current_term),
   total_term:planTerm(gv(`pt_${x.id}`)||x.total_term),
   type:planTy(ge(`py_${x.id}`)?.value||x.type),
-  note:gv(`pnote_${x.id}`)||x.note||'',
-  pm:gv(`pp_${x.id}`)||x.pm||'bank',
+  note:gvf(`pnote_${x.id}`,x.note),
+  pm:gvf(`pp_${x.id}`,x.pm)||'bank',
   dt:gdt(`pdt_${x.id}`,x.dt),
   dn:!!x.dn
 }));}
@@ -2492,7 +2502,9 @@ function loadM(mi){
   const rec=DB[ym];
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
-    sv('fBaseDt',rec.baseDt||payDate(ym));
+    /* ต่างจาก SSO/กองทุนฯ ข้างล่าง — ช่องนี้ "เคารพการล้างค่า" ตามที่ buildCopyRec() ยึดไว้
+       เทียบ undefined ไม่ใช่ falsy ไม่งั้นวันที่ที่ผู้ใช้ตั้งใจลบทิ้งจะเด้งกลับทุกครั้งที่เปิดเดือน */
+    sv('fBaseDt',rec.baseDt!==undefined?rec.baseDt:payDate(ym));
     /* SSO/PVD ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ (ต่างจาก baseDt ที่เคารพการล้างค่า) */
     sv('fSsoDt',rec.ssoDt||payDate(ym));sv('fPvdDt',rec.pvdDt||payDate(ym));
     _wkb=rec.wkb||_wkbDef;
@@ -4308,6 +4320,44 @@ function compM(ym){
   return computeRec(rec,ym);
 }
 
+/* ════════════════════════════════════════════════════
+   Chart.js มาจาก CDN — เน็ตไม่ถึง / โดนไฟร์วอลล์บล็อก = ไม่มี window.Chart
+   ถ้าปล่อยให้ new Chart() โยน ReferenceError หน้าสรุปจะพังตั้งแต่กราฟตัวแรก
+   แล้วทุกอย่างที่ renderSum() เรียกต่อจากนั้นจะไม่ถูกวาดเลย — สรุปรายการหัก ·
+   สรุปวิธีจ่าย · สรุปภาษี · ไทม์ไลน์ทั้งปี หายหมด ทั้งที่ไม่เกี่ยวกับกราฟ
+   และ error ยังทะลุออกจาก switchTab() ไปหยุดโค้ดของผู้เรียกอีกชั้นด้วย
+   mkChart() จึงกลืน error ไว้ตรงนี้: ไม่มีไลบรารีก็ข้ามเฉพาะกราฟ ตัวเลขยังครบทุกตัว
+   ════════════════════════════════════════════════════ */
+function chartNA(el,msg){
+  if(!el)return;
+  el.style.display='none';
+  const id='chna_'+el.id;
+  let box=ge(id);
+  if(!box){
+    box=document.createElement('div');box.id=id;box.className='chart-na';
+    el.parentNode.insertBefore(box,el.nextSibling);
+  }
+  box.textContent=msg;
+  box.style.display='';
+}
+function mkChart(canvasId,cfg){
+  const el=ge(canvasId);if(!el)return null;
+  const na=ge('chna_'+canvasId);
+  if(typeof Chart==='undefined'){
+    chartNA(el,'📉 แสดงกราฟไม่ได้ — โหลดไลบรารีกราฟจากอินเทอร์เน็ตไม่สำเร็จ (ตัวเลขทั้งหมดยังถูกต้องครบ)');
+    return null;
+  }
+  try{
+    const c=new Chart(el,cfg);
+    el.style.display='';if(na)na.style.display='none';
+    return c;
+  }catch(e){
+    console.warn('chart render failed:',canvasId,e);
+    chartNA(el,'📉 วาดกราฟนี้ไม่สำเร็จ (ตัวเลขทั้งหมดยังถูกต้องครบ)');
+    return null;
+  }
+}
+
 /* ── Deduction category helpers ── */
 function buildDedCats(){
   const order=[];
@@ -4385,11 +4435,11 @@ function renderDedSum(){
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
   if(CH.c5){CH.c5.destroy();CH.c5=null;}
   const coBar={responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
-  CH.c4=new Chart(ge('cDedBar'),{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
+  CH.c4=mkChart('cDedBar',{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
   if(activeCats.length){
     const sortedPie=[...activeCats].sort((a,b)=>b.total-a.total);
     const pieData=sortedPie.map(c=>+c.total.toFixed(2));
-    CH.c5=new Chart(ge('cDedPie'),{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
+    CH.c5=mkChart('cDedPie',{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
   }
 }
 
@@ -4444,7 +4494,7 @@ function rebuildIncChart(){
       stack:isStacked?'s':undefined};
   });
   const baseType=isLine?'line':'bar';
-  CH.c1=new Chart(ge('cInc'),{
+  CH.c1=mkChart('cInc',{
     type:incChartType==='mixed'?'bar':baseType,
     data:{labels:_incLbs,datasets},
     options:{...co,scales:{
@@ -4505,7 +4555,7 @@ function renderPmYear(){
     const pct=grand?((tot[k]/grand)*100).toFixed(1):0;
     return`<div class="ded-stat-item" style="border-left-color:${COLR[k]}"><div class="ded-stat-lbl">${PM_META[k].icon} ${PM_META[k].label}</div><div class="ded-stat-val" style="color:${COLR[k]}">฿${fN(tot[k])}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
   }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grand)}</div><div class="ded-stat-sub">100%</div></div>`;
-  CH.c6=new Chart(ge('cPmBar'),{type:'bar',
+  CH.c6=mkChart('cPmBar',{type:'bar',
     data:{labels:MS,datasets:used.map(k=>({label:PM_META[k].icon+' '+PM_META[k].label,data:per[k].map(v=>+v.toFixed(2)),backgroundColor:BG[k],borderColor:COLR[k],borderWidth:1,stack:'s'}))},
     options:{responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},
       scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
@@ -4618,12 +4668,12 @@ function renderSum(){
   const ch={responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+' ชม.'}}}};
   _incLbs=lbs;_dInc=dInc;_dTH=dTH;_dFin=dFin;_dDed=dDed;
   rebuildIncChart();
-  CH.c2=new Chart(ge('cOT'),{type:'bar',data:{labels:lbs,datasets:[
+  CH.c2=mkChart('cOT',{type:'bar',data:{labels:lbs,datasets:[
     {label:'×1.5',data:dH15,backgroundColor:'rgba(99,179,237,.75)',stack:'s'},
     {label:'×2.0',data:dH20,backgroundColor:'rgba(104,211,145,.75)',stack:'s'},
     {label:'×3.0',data:dH30,backgroundColor:'rgba(237,137,54,.75)',stack:'s'},
   ]},options:{...ch,scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>v+' ชม.'}}}}});
-  CH.c3=new Chart(ge('cIA'),{type:'line',data:{labels:lbs,datasets:[
+  CH.c3=mkChart('cIA',{type:'line',data:{labels:lbs,datasets:[
     {label:'สะสมจริง',data:dA2,borderColor:'#38b2ac',backgroundColor:'rgba(56,178,172,.15)',borderWidth:2.5,fill:true,tension:.35,pointBackgroundColor:'#38b2ac',pointRadius:4,spanGaps:false},
     {label:'Forecast',data:dF,borderColor:'#a0aec0',backgroundColor:'rgba(160,174,192,.08)',borderWidth:2,borderDash:[6,4],fill:false,tension:.35,pointBackgroundColor:'#a0aec0',pointRadius:3,spanGaps:false},
   ]},options:{...co,scales:{y:{ticks:{callback:v=>'฿'+v.toLocaleString()}}}}});
