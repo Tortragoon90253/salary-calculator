@@ -51,20 +51,17 @@ input[type=text],input[type=number],input[type=month],input[type=date],select{wi
 .dtin{font-size:.74rem;padding:4px 4px;min-width:0;color:#4a5568}
 .ir input.dtin{font-size:.74rem}
 input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
-.dr{display:grid;grid-template-columns:20px 18px 1fr 134px 148px 28px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
-.dr.ck{background:#f0fff4;border-color:#9ae6b4}
+.dr{display:grid;grid-template-columns:20px 18px 1fr 134px 148px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
 .dr input[type=text]{font-size:.83rem}.dr input[type=number]{font-size:.83rem;text-align:right}
 .drag-handle{cursor:grab;color:#cbd5e0;font-size:1rem;line-height:1;user-select:none;display:flex;align-items:center;justify-content:center;padding:2px}
 .drag-handle:hover{color:#a0aec0}
 .dr.drag-over{background:#ebf8ff;border-color:#4299e1;border-style:dashed}
 .dr.dragging{opacity:.4}
-.cfbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e9d8fd;color:#553c9a;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.cfbtn.ck{background:#c6f6d5;color:#276749}
 .delbtn{width:26px;height:26px;border:none;border-radius:50%;background:#fed7d7;color:#c53030;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fwdbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e6f0fb;color:#2c5282;cursor:pointer;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fwdbtn:disabled{opacity:.3;cursor:default}
 .chart-na{padding:26px 14px;text-align:center;font-size:.8rem;color:#975a16;background:#fffaf0;border:1px dashed #fbd38d;border-radius:8px;line-height:1.7}
-/* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" (แยกจากปุ่ม ✓ ยืนยันข้อมูล) ── */
+/* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" — ตัวติดตามเดียวของแถว ── */
 .ckpt{width:17px;height:17px;cursor:pointer;accent-color:#38a169;margin:0;justify-self:center;flex-shrink:0}
 .dr.done,.ir.done{opacity:.72}
 .dr.done input[type=text],.ir.done input[type=text]{text-decoration:line-through;color:#718096}
@@ -332,23 +329,23 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .flow-card{page-break-inside:avoid}
 }
 /* Payment Method */
-.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px 28px!important}
+.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px!important}
 /* ประเภทต้นทุน: คงที่ (Fixed) / ผันแปร (Variable) — หน้าตาเดียวกับ .pmsel */
 .ctsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
 .ct-tax{font-size:.68rem;background:#fff5f5;color:#c53030;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-fix{font-size:.68rem;background:#ebf4ff;color:#434190;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-var{font-size:.68rem;background:#fffaf0;color:#c05621;border-radius:9px;padding:1px 7px;white-space:nowrap}
 /* แถวโบนัส — เป็นคลาสแทน inline style เพื่อให้ media query ปรับคอลัมน์บนจอแคบได้ */
-.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px 28px;grid-template-rows:auto auto}
+.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px;grid-template-rows:auto auto}
 .bm-disp{grid-column:3/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem}
 /* จอกลาง-แคบ: ช่องวันที่ตกลงบรรทัดที่ 2 แทนการบีบคอลัมน์เพิ่ม */
 @media(max-width:640px){
-  .dr{grid-template-columns:20px 18px 1fr 130px 28px 28px;grid-template-rows:auto auto;row-gap:4px}
+  .dr{grid-template-columns:20px 18px 1fr 130px 28px;grid-template-rows:auto auto;row-gap:4px}
   .dr>.dtin{grid-column:3/-1;grid-row:2}
-  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
+  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   .drd>.ctsel{grid-column:5/-1;grid-row:2}
-  .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto auto}
+  .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px;grid-template-rows:auto auto auto}
   .dr.drb>.dtin{grid-column:3/-1;grid-row:2}
   .dr.drb>.bm-disp{grid-column:3/-1;grid-row:3}
   .ir{grid-template-columns:20px 1fr 72px 100px auto 28px 28px;row-gap:6px}
@@ -356,15 +353,15 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 }
 @media(max-width:500px){
   /* จอแคบ: บีบคอลัมน์ตัวเลข/ปุ่ม เพื่อให้ช่องชื่อยังกว้างพอพิมพ์ได้หลังเพิ่มคอลัมน์ checkpoint */
-  .dr{grid-template-columns:18px 18px 1fr 100px 26px 26px;gap:4px;row-gap:4px}
-  .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px 26px!important;gap:4px;row-gap:4px}
+  .dr{grid-template-columns:18px 18px 1fr 100px 26px;gap:4px;row-gap:4px}
+  .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px!important;gap:4px;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   /* จอแคบสุด: ปุ่ม 📤 ลงไปอยู่ท้ายบรรทัด 2 แทนการกินคอลัมน์บรรทัดแรก
      ช่องชื่อรายการจึงกว้างเท่าเดิมก่อนมีปุ่มนี้ */
-  .drd>.ctsel{grid-column:5/7;grid-row:2}
-  .drd>.fwdbtn{grid-column:7/-1;grid-row:2}
-  .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px 26px}
-  .cfbtn,.delbtn,.fwdbtn{width:24px;height:24px}
+  .drd>.ctsel{grid-column:5/6;grid-row:2}
+  .drd>.fwdbtn{grid-column:6/-1;grid-row:2}
+  .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px}
+  .delbtn,.fwdbtn{width:24px;height:24px}
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
   .ir{grid-template-columns:18px 72px 1fr auto 26px 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
   .ir>.ckpt{grid-column:1;grid-row:1}
@@ -535,7 +532,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <div class="hactions">
     <div class="hgrp">
       <span class="hgrp-lbl">ซิงค์</span>
-      <button class="hbtn gs" onclick="openCfg()">☁️ Sheets</button>
+      <button class="hbtn gs" id="gsBtn" onclick="openCfg()">☁️ Sheets</button>
       <button class="hbtn fb" onclick="openFbCfg()">🔥 Firebase</button>
     </div>
     <div class="hgrp">
@@ -1292,9 +1289,19 @@ let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
 let fbLastKnownTs=null;
+/* ts + เวลาที่ "เครื่องนี้เขียนขึ้น Firebase เอง" ครั้งล่าสุด — ใช้กรอง echo ของตัวเองตอนวนเขียนหลายเดือน
+   (รายละเอียดเหตุผลอยู่ที่ตัวกรองใน fbStartListener) */
+let fbOwnTs=null,fbOwnAt=0;
+const fbMarkOwn=ts=>{if(ts){fbOwnTs=ts;fbOwnAt=Date.now();}return ts;};
+const FB_ECHO_MS=60000;   /* พ้นช่วงนี้ถือว่าไม่มี echo ค้างแล้ว กลับไปเทียบ ts ตรงๆ แบบเดิม */
 let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
 let fbKnownMonths=new Set();  /* เดือนที่เห็นใน Firebase แล้ว — ใช้ตัดสินใจว่าควรลบ local หรือไม่ */
 let formDirty=false;  /* true เมื่อมีการแก้ใน form แต่ยังไม่ save */
+/* เดือนที่เพิ่งถูก "ล้างข้อมูล" ไป และผู้ใช้ยังไม่ได้แตะอะไรต่อ
+   loadM() ของเดือนเปล่าจะดึงเงินเดือนฐานจากเดือนก่อนหน้ามาโชว์เป็นค่าเริ่มต้นเสมอ
+   พอ switchTab() เรียก saveM() อัตโนมัติ เดือนที่เพิ่งลบไปก็ถูกเขียนกลับเข้า DB ทันที
+   (จุดบนแท็บติดกลับมา + ถูก sync ขึ้น cloud) = ล้างแล้วเหมือนไม่ได้ล้าง */
+let _blankYm=null;
 let pendingRemote=null;  /* { ym } — มี remote update ค้างให้ user ตัดสินใจ */
 
 /* ── Defaults ── */
@@ -1440,6 +1447,12 @@ function loadAllFromGS(data,lastSaved){
    Firebase / Firestore Integration
    ════════════════════════════════════════════════════ */
 
+/* Google Sheets เป็น backend สำรอง — ทุกจุดที่ซิงค์เขียนว่า "ถ้ามี Firebase ใช้ Firebase ก่อน"
+   พอตั้ง Firebase แล้ว ปุ่ม ☁️ Sheets จึงกดไปก็ไม่มีผลอะไร ซ่อนทิ้งไปเลยให้แถบบนไม่รก
+   (ไม่ได้ถอดตัวระบบออก — ล้าง Firebase เมื่อไหร่ปุ่มก็กลับมา ใครยังใช้ Sheets อยู่จึงไม่กระทบ) */
+function updCloudBtns(){
+  const b=ge('gsBtn');if(b)b.style.display=fbDb?'none':'';
+}
 function fbInit(cfg){
   if(!cfg||!cfg.apiKey||!cfg.projectId)return false;
   try{
@@ -1447,6 +1460,7 @@ function fbInit(cfg){
     if(existing){
       fbDb=firebase.firestore(existing);
       fbDocId=cfg.docId||'default';
+      updCloudBtns();
       return true;
     }
     const app=firebase.initializeApp({
@@ -1456,10 +1470,12 @@ function fbInit(cfg){
     },FB_APP_NAME);
     fbDb=firebase.firestore(app);
     fbDocId=cfg.docId||'default';
+    updCloudBtns();
     return true;
   }catch(e){
     console.warn('Firebase init error:',e);
     fbDb=null;
+    updCloudBtns();
     return false;
   }
 }
@@ -1524,7 +1540,7 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
-  fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;
+  fbDb=null;updCloudBtns();fbCfg=null;fbDocId='default';fbLastKnownTs=null;
   fbKnownMonths=new Set();pendingRemote=null;
   const cb=ge('conflictBanner');if(cb)cb.style.display='none';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
@@ -1555,7 +1571,7 @@ function copyFbShareLink(){
 
 async function fbSave(){
   if(!fbDb)return;
-  const ts=fbTs();
+  const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   return ts;
@@ -1563,7 +1579,7 @@ async function fbSave(){
 
 async function fbSaveMonth(ym){
   if(!fbDb||!ym)return;
-  const ts=fbTs();
+  const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.add(ym);
   const ref=fbDb.collection('salary_data').doc(fbDocId);
@@ -1575,9 +1591,15 @@ async function fbSaveMonth(ym){
   return ts;
 }
 
+/* "ไม่มี document ให้ลบ" = งานเสร็จอยู่แล้ว · error อื่น (สิทธิ์ / เน็ต / โควตา) คือความล้มเหลวจริง
+   เดิมกลืนทุก error ทำให้ doClearYear() นับ fail ไม่ได้เลย แล้วรายงานว่าลบสำเร็จทั้งที่ cloud ยังอยู่ครบ */
+const fbErrNotFound=e=>{
+  const c=String((e&&e.code)||'');
+  return c==='not-found'||c==='5'||/no document to update/i.test(String((e&&e.message)||''));
+};
 async function fbDeleteMonth(ym){
   if(!fbDb||!ym)return;
-  const ts=fbTs();
+  const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.delete(ym);
   try{
@@ -1585,7 +1607,7 @@ async function fbDeleteMonth(ym){
       [`data.${ym}`]:firebase.firestore.FieldValue.delete(),
       lastSaved:ts
     });
-  }catch(e){/* doc ไม่มีอยู่ — ถือว่าเสร็จ */}
+  }catch(e){if(!fbErrNotFound(e))throw e;}   /* doc ไม่มีอยู่ — ถือว่าเสร็จ */
   return ts;
 }
 
@@ -1605,8 +1627,17 @@ function fbStartListener(){
     const d=snap.data();
     if(!d||!d.data)return;
     const remoteMonths=new Set(Object.keys(d.data));
-    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว แต่อย่าลืม sync known-months ด้วย */
-    if(d.lastSaved&&d.lastSaved===fbLastKnownTs){fbKnownMonths=remoteMonths;return;}
+    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว แต่อย่าลืม sync known-months ด้วย
+       เงื่อนไขที่สอง (echoWindow) แก้อาการ "ลบหลายเดือนแล้วไม่หมด":
+       ตอนวนเขียนทีละเดือน (ลบรายการข้ามเดือน / ล้างทั้งปี / ส่งต่อ / ไหลเงินเดือนฐาน)
+       fbLastKnownTs ถูกทับเป็น ts ของรอบล่าสุดไปแล้ว ส่วน Firestore ยุบ snapshot แล้วส่งกลับมาทีหลัง
+       การเทียบ === จึงพลาด แล้วตีความว่า "มีคนแก้จากอีกเครื่อง" → fbSyncFromRemote() เอา DB
+       เวอร์ชันเก่าจาก cloud มาทับ เดือนที่ยังไม่ได้ push จึงได้รายการที่เพิ่งลบกลับคืนมา
+       แล้ววนเขียนขึ้น cloud ซ้ำ = ลบไม่หมด
+       ts รูปแบบ 'YYYY-MM-DD HH:MM:SS.mmm' ความกว้างคงที่ เทียบสตริง = เทียบเวลา
+       จำกัดไว้แค่ 1 นาทีหลังเราเขียนเอง เพื่อไม่ให้เครื่องที่นาฬิกาเดินช้ากว่าถูกเมินถาวร */
+    const echoWindow=fbOwnTs&&(Date.now()-fbOwnAt<FB_ECHO_MS)&&d.lastSaved<=fbOwnTs;
+    if(d.lastSaved&&(d.lastSaved===fbLastKnownTs||echoWindow)){fbKnownMonths=remoteMonths;return;}
     /* timestamp ใหม่ — มาจากเครื่องอื่น */
     fbLastKnownTs=d.lastSaved||null;
     fbSyncFromRemote(d.data,d.lastSaved,remoteMonths);
@@ -1757,6 +1788,7 @@ async function restore(){
     const raw=localStorage.getItem(FB_CFG_KEY);
     if(raw&&!fbDb){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
   }catch(e){fbDb=null;}
+  updCloudBtns();
 
   /* 1. ลอง Firebase ก่อน (priority สูงสุด) */
   if(fbDb){
@@ -1835,26 +1867,24 @@ function rA(){
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
       const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
-      return`<div class="dr drb${a.ok?' ck':''}${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      return`<div class="dr drb${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         ${ckBox('A',a)}
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
         <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อ" oninput="dirtA('${a.id}')">
         <input type="date" class="dtin" id="adt_${a.id}" value="${esc(a.dt||'')}" title="วันที่ได้รับ" oninput="dirtA('${a.id}')" onchange="dirtA('${a.id}')">
         <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" oninput="onBonusMthChg();dirtA('${a.id}')">
         <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap;align-self:center">เดือน</span>
-        <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
         <span class="bm-disp" id="abm_disp_${a.id}">${amtDisp}</span>
         <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
       </div>`;
     }
-    return`<div class="dr${a.ok?' ck':''}${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+    return`<div class="dr${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
       ${ckBox('A',a)}
       <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')">
       <input type="date" class="dtin" id="adt_${a.id}" value="${esc(a.dt||'')}" title="วันที่ได้รับ" oninput="dirtA('${a.id}')" onchange="dirtA('${a.id}')">
       <input type="number" id="av_${a.id}" value="${esc(a.v)}" placeholder="0.00" min="0" oninput="dirtA('${a.id}');updInv()">
-      <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
       <button class="delbtn" onclick="delA('${a.id}')">✕</button>
     </div>`;
   }).join('');
@@ -1867,7 +1897,7 @@ function rD(){
   ge('dList').innerHTML=D.map(d=>{
     const isBTax=d.id===BONUS_TAX_ID;
     const bStyle=isBTax?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
-    return`<div class="dr drd${d.ok?' ck':''}${d.dn?' done':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
+    return`<div class="dr drd${d.dn?' done':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
       ${ckBox('D',d)}
       <span class="drag-handle" title="${isBTax?'ภาษีโบนัส — คำนวณอัตโนมัติ':'ลากเพื่อจัดเรียง'}">⠿</span>
       <input type="text"   id="dn_${d.id}" value="${esc(d.n)}" placeholder="ชื่อรายการหัก" oninput="dirtD('${d.id}')">
@@ -1884,7 +1914,6 @@ function rD(){
       ${isBTax
         ?`<button class="fwdbtn" disabled title="ภาษีโบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>`
         :`<button class="fwdbtn" onclick="openRowFwd('d','${d.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>`}
-      <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
     </div>`;
   }).join('');
@@ -1896,13 +1925,12 @@ function rD(){
 function rO(){
   O.forEach(o=>{const nEl=ge(`on_${o.id}`);const vEl=ge(`ov_${o.id}`);const tEl=ge(`odt_${o.id}`);if(nEl)o.n=nEl.value;if(vEl)o.v=vEl.value;if(tEl)o.dt=tEl.value;});
   if(!O.length){ge('oList').innerHTML='<div class="empty-hint">ยังไม่มีรายได้อื่นๆ<br>กด ＋ เพิ่มรายได้อื่นๆ ด้านล่าง</div>';updOth();updCkBars();return;}
-  ge('oList').innerHTML=O.map(o=>`<div class="dr dro${o.ok?' ck':''}${o.dn?' done':''}" id="ro_${o.id}" draggable="true" data-id="${o.id}" data-list="O">
+  ge('oList').innerHTML=O.map(o=>`<div class="dr dro${o.dn?' done':''}" id="ro_${o.id}" draggable="true" data-id="${o.id}" data-list="O">
       ${ckBox('O',o)}
       <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="on_${o.id}" value="${esc(o.n)}" placeholder="ชื่อรายได้อื่นๆ (ไม่คิดภาษี)" oninput="dirtO('${o.id}')">
       <input type="date" class="dtin" id="odt_${o.id}" value="${esc(o.dt||'')}" title="วันที่ได้รับ" oninput="dirtO('${o.id}')" onchange="dirtO('${o.id}')">
       <input type="number" id="ov_${o.id}" value="${esc(o.v)}" placeholder="0.00" min="0" oninput="dirtO('${o.id}');updInv()">
-      <button class="cfbtn${o.ok?' ck':''}" onclick="cfO('${o.id}')">✓</button>
       <button class="delbtn" onclick="delO('${o.id}')">✕</button>
     </div>`).join('');
   bindDrag('oList',O,rO);
@@ -2032,29 +2060,13 @@ function bindDrag(listId,arr,reFn){
 }
 
 /* ── Confirm / Dirty ── */
-function cfA(id){
-  const it=A.find(x=>x.id===id);if(!it)return;
-  it.n=gv(`an_${id}`);
-  it.dt=gdt(`adt_${id}`,it.dt);
-  if(id===BONUS_ID){
-    const mth=parseFloat(ge(`abm_${id}`)?.value)||0;
-    const base=num('fBase');
-    it.bm=mth?String(mth):'';
-    it.v=(base*mth).toFixed(2);
-    const hid=ge(`av_${id}`);if(hid)hid.value=it.v;
-  }else{it.v=gv(`av_${id}`);}
-  it.ok=true;rA();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);if(id===BONUS_ID)applyBonusTax();
-}
-function cfD(id){const it=D.find(x=>x.id===id);if(!it)return;it.n=gv(`dn_${id}`);it.v=gv(`dv_${id}`);it.pm=gv(`dp_${id}`)||'bank';it.dt=gdt(`ddt_${id}`,it.dt);it.ok=true;rD();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
-function cfO(id){const it=O.find(x=>x.id===id);if(!it)return;it.n=gv(`on_${id}`);it.v=gv(`ov_${id}`);it.dt=gdt(`odt_${id}`,it.dt);it.ok=true;rO();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
-/* dirt* เคลียร์เฉพาะ ok (= "กรอกข้อมูลเสร็จ") — ห้ามแตะ dn (= "จัดการจริงแล้ว") ซึ่งต้องคงอยู่แม้แก้ตัวเลข */
-function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
-function dirtD(id){
-  const it=D.find(x=>x.id===id);
-  if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}
-  updPlan();updCkBars();
-}
-function dirtO(id){const it=O.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ro_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
+/* ปุ่ม ✓ ยืนยันรายแถวถูกถอดออกแล้ว — ธง ok ที่มันตั้งไม่มีผลต่อการคำนวณใดๆ เป็นแค่สีพื้นของแถว
+   และมีอยู่แค่ 3 จาก 5 กล่อง ส่วนการติดตามจริงใช้ ☑ จัดการแล้ว (dn) ซึ่งมีแถบความคืบหน้าให้ด้วย
+   ฟิลด์ ok ยังถูกอ่าน/เขียน/export ตามเดิม ข้อมูลเก่าจึงไม่หาย และเอาปุ่มกลับมาได้ทุกเมื่อ
+   dirt* เหลือหน้าที่อัปเดตตัวเลขสรุป — ห้ามแตะ dn ซึ่งต้องคงอยู่แม้แก้ตัวเลข */
+function dirtA(id){updCkBars();}
+function dirtD(id){updPlan();updCkBars();}
+function dirtO(id){updCkBars();}
 
 /* ════════════════════════════════════════════════════
    Checkpoint — ติดตามว่าแต่ละรายการ "ถูกจัดการตามแผนแล้วหรือยัง"
@@ -2357,6 +2369,11 @@ function onBonusMthChg(){
   const amt=base*mth;
   if(dispEl)dispEl.textContent=mth&&base?`= ฿${fmt(amt)}`:'';
   if(hidEl)hidEl.value=amt?amt.toFixed(2):'';
+  /* ยอดโบนัสเปลี่ยน = ภาษีหัก ณ ที่จ่ายของโบนัสต้องเปลี่ยนตามทันที
+     เดิมคำนวณให้เฉพาะตอนกดปุ่ม ✓ ที่แถวโบนัสเท่านั้น ใครกรอกจำนวนเดือนแล้วกด "คำนวณเงินเดือน" เลย
+     จะได้ยอดรับจริงสูงเกินจริงทั้งเดือน เพราะภาษีโบนัสยังเป็น 0 อยู่
+     ข้ามระหว่าง loadM() เพราะตอนนั้นช่องกรอกบนจอยังเป็นของเดือนก่อน */
+  if(!_loadingM)applyBonusTax(true);
   updInv();
 }
 function onBaseChg(){
@@ -2437,6 +2454,8 @@ function saveM(fb=false){
     if(fb){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อนบันทึก');ge('conflictBanner')?.scrollIntoView({behavior:'smooth',block:'center'});}
     return;
   }
+  /* autosave ห้ามชุบชีวิตเดือนที่เพิ่งล้างไป — กดปุ่ม 💾 เอง (fb=true) ยังบันทึกได้ตามปกติ */
+  if(!fb&&_blankYm===ymCur&&!formDirty&&!DB[ymCur])return;
   A=colA();D=colD();I=colI();O=colO();P=colP();
   const ym=ymCur;
   const cnt=new Date(CY,CT+1,0).getDate();
@@ -2457,13 +2476,39 @@ function saveM(fb=false){
     p:JSON.parse(JSON.stringify(P)),days};
   formDirty=false;
   updateDots();
-  persist();
+  const pr=persist();             /* คืนออกไปด้วย — คนที่เขียนหลายเดือนต่อจะได้รอให้เดือนนี้เสร็จก่อน
+                                     ไม่งั้นสถานะ sync ของเดือนนี้จะมาทับผลลัพธ์ของทั้งชุดทีหลัง */
   if(fb){
     const ts=p2(new Date().getHours())+':'+p2(new Date().getMinutes());
     const el=ge('savSt');el.textContent=`✅ บันทึกแล้ว เวลา ${ts}`;el.style.color='#48bb78';el.style.opacity='1';
     setTimeout(()=>{el.style.opacity='0';},3000);
   }
+  return pr;
 }
+
+/* ════════════════════════════════════════════════════
+   เขียนหลายเดือนขึ้น cloud — ทางผ่านเดียวของทุกปุ่มที่แตะมากกว่าหนึ่งเดือน
+   (ลบข้ามเดือน · 📤 ส่งรายการ · 📤 ส่งแผนผ่อน · ไหลเงินเดือนฐาน)
+   เดิมแต่ละที่ catch แล้ว console.warn เฉยๆ แล้วขึ้น toast ว่าสำเร็จ — ผู้ใช้จึงไม่มีทางรู้ว่า
+   cloud เขียนไม่ผ่านบางเดือน ทั้งที่ local ดูถูกต้องหมด พอเปิดอีกเครื่อง/โหลดใหม่ของเก่าก็กลับมา
+   คืนจำนวนเดือนที่ล้มเหลว ให้ผู้เรียกเอาไปบอกผู้ใช้เสมอ
+   ════════════════════════════════════════════════════ */
+async function syncMonths(yms,label){
+  if(!yms||!yms.length||(!fbDb&&!gsUrl))return 0;
+  setSyncSt(fbDb?'fb_saving':'saving');
+  let fail=0;
+  for(const ym of yms){
+    try{
+      if(fbDb)await fbSaveMonth(ym);
+      else await gsPost({action:'saveMonth',ym,record:DB[ym]});
+    }catch(e){fail++;console.warn(label+' sync failed',ym,e);}
+  }
+  if(fail)setSyncSt(fbDb?'fb_error':'error',`ซิงค์ไม่สำเร็จ ${fail} เดือน`);
+  else setSyncSt(fbDb?'fb_ok':'ok');
+  return fail;
+}
+/* ท้าย toast เมื่อ sync ไม่ครบ — ต้องเห็นพร้อมข้อความสำเร็จเสมอ ไม่ใช่ซ่อนไว้ใน console */
+const syncFailTxt=n=>n?` ⚠️ แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${n} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำอีกครั้ง`:'';
 
 /* ── Base salary propagation (ขึ้น/ปรับเงินเดือน → ไหลไปเดือนถัดๆ ไป) ── */
 let _baseProp=null;
@@ -2502,27 +2547,26 @@ function basePropCancel(){
 async function basePropYes(){
   const d=_baseProp;ge('basePropModal').classList.remove('open');_baseProp=null;
   if(!d)return;
-  saveM();                                         /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
+  await saveM();                                   /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
   d.targets.forEach(k=>{if(DB[k])DB[k].base=String(d.newBase);});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   updateDots();
-  let ok=0;
-  for(const ym of d.targets){
-    try{
-      if(fbDb)await fbSaveMonth(ym);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]});
-      ok++;
-    }catch(e){console.warn('propagate sync failed',ym,e);}
-  }
+  const fail=await syncMonths(d.targets,'propagate');
   if(CT===12)renderSum();
-  toast(`✅ อัปเดตเงินเดือนฐาน ${d.targets.length} เดือนถัดไปแล้ว`);
+  toast(`✅ อัปเดตเงินเดือนฐาน ${d.targets.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ── LOAD ── */
 /* รายการผ่อนที่ "ผ่อนครบ" จากการข้ามเดือนรอบล่าสุด — เก็บไว้แจ้งหลัง render เสร็จ */
 let _planDone=[];
+let _loadingM=false;   /* true ระหว่าง loadM() — DOM ยังเป็นของเดือนก่อน ห้ามคำนวณอะไรจากมัน */
 function loadM(mi){
+  _loadingM=true;
+  try{loadMonth(mi);}finally{_loadingM=false;}
+}
+function loadMonth(mi){
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
+  if(_blankYm&&_blankYm!==ym)_blankYm=null;   /* ย้ายเดือนแล้ว — สถานะ "เพิ่งล้าง" หมดอายุ */
   ge('res').style.display='none';ge('savSt').style.opacity='0';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   formDirty=false;
@@ -2686,11 +2730,15 @@ function mergePlans(dst,inc){
    ปุ่มนี้จึงเป็นทางแก้แบบชัดเจน: ผู้ใช้สั่งเอง เห็นก่อนว่าจะกระทบเดือนไหน
    ════════════════════════════════════════════════════ */
 let _planFwd=null;
+/* เดือนถัดไปที่ "มี record อยู่แล้ว" — เกณฑ์เดียวกับ rowFwdScan() และด้วยเหตุผลเดียวกัน
+   (เดือนที่มี record แต่ base ว่าง ต้องนับเป็นปลายทาง ไม่งั้นแผนหายไปหนึ่งเดือนกลางทางแบบเงียบๆ
+   เพราะ loadM() ของเดือนนั้นอ่าน rec.p ของตัวเอง ไม่ auto-forward จากเดือนก่อน) */
 function planFwdTargets(fromYm){
-  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&recHasData(DB[k])).sort();
+  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&DB[k]).sort();
 }
 function openPlanFwd(){
   if(CT<0||CT>=12)return;
+  _blankYm=null;                  /* ผู้ใช้ลงมือกับเดือนนี้แล้ว — saveM() ข้างล่างต้องบันทึกจริง */
   if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   saveM();                       /* ต้นทางต้องบันทึกก่อน ไม่งั้นส่งของที่ยังไม่ commit */
@@ -2710,8 +2758,12 @@ function openPlanFwd(){
 }
 function planFwdNo(){ge('planFwdModal').classList.remove('open');_planFwd=null;}
 async function planFwdYes(){
-  const d=_planFwd;ge('planFwdModal').classList.remove('open');_planFwd=null;
+  const d=_planFwd;
   if(!d)return;
+  /* เช็ค race ซ้ำตอนกดยืนยัน แบบเดียวกับ rowDelYes() — สถานะอาจเปลี่ยนระหว่างที่กล่องเปิดค้าง */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  ge('planFwdModal').classList.remove('open');_planFwd=null;
   d.targets.forEach(t=>{
     const rec=DB[t];if(!rec)return;
     const fw=forwardPlans(d.src,d.ym,t);
@@ -2721,14 +2773,9 @@ async function planFwdYes(){
   });
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   updateDots();
-  for(const ym of d.targets){
-    try{
-      if(fbDb)await fbSaveMonth(ym);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]});
-    }catch(e){console.warn('plan propagate sync failed',ym,e);}
-  }
+  const fail=await syncMonths(d.targets,'plan propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`);
+  toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ════════════════════════════════════════════════════
@@ -2746,13 +2793,27 @@ async function planFwdYes(){
 /* pay = ผูกกับวันเงินเดือนออกไหม — กติกาเดียวกับพารามิเตอร์ payday ของ anchorDates()
         true  → ช่องวันที่ว่างเมื่อไหร่ก็เติมวันที่ 5 กลับให้
         false → รายได้อื่นๆ / แบ่งลงทุน ปล่อยว่างไว้ให้กรอกเอง ห้ามเติมแทน */
+/* vp = prefix ของช่องยอดเงินบนจอ — ต้องมีคู่กับ np ไม่งั้นด่านลบอ่านได้แต่ชื่อ ส่วนยอดอ่านจาก
+       object ที่ยัง sync ไม่ถึง (ค่าใน A/D/O/I/P อัปเดตตอน re-render เท่านั้น ไม่ใช่ทุกตัวอักษร) */
 const LIST_META={
-  a:{key:'a',label:'ค่าเพิ่มเติม',      icon:'➕',nf:'n',   vf:'v',     np:'an_',pay:true, get:()=>A,set:v=>{A=v;},re:()=>rA(),        lock:[BONUS_ID]},
-  d:{key:'d',label:'รายการหัก',         icon:'➖',nf:'n',   vf:'v',     np:'dn_',pay:true, get:()=>D,set:v=>{D=v;},re:()=>rD(),        lock:[BONUS_TAX_ID]},
-  o:{key:'o',label:'รายได้อื่นๆ',        icon:'💰',nf:'n',   vf:'v',     np:'on_',pay:false,get:()=>O,set:v=>{O=v;},re:()=>{rO();updInv();},lock:[]},
-  i:{key:'i',label:'แบ่งเงินลงทุน',      icon:'📈',nf:'n',   vf:'v',     np:'in_',pay:false,get:()=>I,set:v=>{I=v;},re:()=>rI(),        lock:[]},
-  p:{key:'p',label:'แผนผ่อน & ประกัน',  icon:'💳',nf:'name',vf:'amount',np:'pn_',pay:true, get:()=>P,set:v=>{P=v;},re:()=>rP(),        lock:[]}
+  a:{key:'a',label:'ค่าเพิ่มเติม',      icon:'➕',nf:'n',   vf:'v',     np:'an_',vp:'av_',pay:true, get:()=>A,set:v=>{A=v;},re:()=>rA(),        lock:[BONUS_ID]},
+  d:{key:'d',label:'รายการหัก',         icon:'➖',nf:'n',   vf:'v',     np:'dn_',vp:'dv_',pay:true, get:()=>D,set:v=>{D=v;},re:()=>rD(),        lock:[BONUS_TAX_ID]},
+  o:{key:'o',label:'รายได้อื่นๆ',        icon:'💰',nf:'n',   vf:'v',     np:'on_',vp:'ov_',pay:false,get:()=>O,set:v=>{O=v;},re:()=>{rO();updInv();},lock:[]},
+  i:{key:'i',label:'แบ่งเงินลงทุน',      icon:'📈',nf:'n',   vf:'v',     np:'in_',vp:'iv_',pay:false,get:()=>I,set:v=>{I=v;},re:()=>rI(),        lock:[]},
+  p:{key:'p',label:'แผนผ่อน & ประกัน',  icon:'💳',nf:'name',vf:'amount',np:'pn_',vp:'pv_',pay:true, get:()=>P,set:v=>{P=v;},re:()=>rP(),        lock:[]}
 };
+/* ดึงชื่อ/ยอดล่าสุดจากหน้าจอกลับเข้า array ก่อนตัดสินใจลบ — กติกาเดียวกับ pre-sync ใน rA/rD/rO/rI/rP
+   ไม่ทำก่อน จะเจอสามอาการ: (1) แถวที่พิมพ์ยอดไว้แต่ยังไม่ตั้งชื่อถูกลบเงียบๆ ไม่ถามสักคำ
+   (2) กล่องยืนยันขึ้นว่า "ยังไม่ได้กรอกยอด" ทั้งที่กรอกแล้ว (3) แถวที่เพิ่งเปลี่ยนชื่อบนจอ
+   ยังถูกจับคู่ด้วยชื่อเก่า → ลบผิดแถว/ลบพ่วงไปด้วยตอนลบข้ามเดือน */
+function rowSyncDom(m){
+  (m.get()||[]).forEach(x=>{
+    if(!x)return;
+    const nEl=ge(m.np+x.id);if(nEl)x[m.nf]=nEl.value;
+    const vEl=ge(m.vp+x.id);
+    if(vEl&&vEl.type!=='hidden')x[m.vf]=vEl.value;   /* โบนัสใช้ช่องซ่อนที่คำนวณเอง ห้ามทับ */
+  });
+}
 let _rowDel=null;
 
 const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
@@ -2781,13 +2842,19 @@ function rowDelInfo(m,it){
   }
   return bits.join(' · ');
 }
+/* เขียนผลการลบกลับเข้าฟอร์ม — ถ้ามีแถวหายไปจริง เดือนนี้ก็ไม่ใช่ "เดือนที่เพิ่งล้างแล้วยังไม่แตะ" อีกต่อไป
+   (ไม่งั้น autosave จะข้ามการบันทึก แล้วการลบของเดือนนี้หายไปตอนสลับแท็บ) */
+function rowDelApply(m,out){
+  if(out.length!==(m.get()||[]).length)_blankYm=null;
+  m.set(out);m.re();
+}
 /* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
-function rowDelNow(m,id){m.set(m.get().filter(x=>x&&x.id!==id));m.re();}
+function rowDelNow(m,id){rowDelApply(m,m.get().filter(x=>x&&x.id!==id));}
 /* ลบ "ทุกแถวที่ถือเป็นรายการเดียวกัน" ออกจากฟอร์มเดือนนี้ — ใช้เฉพาะตอนลบข้ามเดือน
    ต้องใช้เกณฑ์ id-หรือ-ชื่อ ตัวเดียวกับที่ใช้กับเดือนอื่นเป๊ะ ไม่งั้นเดือนที่มีแถวชื่อซ้ำกัน
    จะเหลือค้างอยู่แถวหนึ่ง ทั้งที่ preview นับเดือนนี้รวมไปแล้ว = "ลบแล้วไม่หมด"
    (ส่วนโหมด "เฉพาะเดือนนี้" ยังใช้ rowDelNow() ตาม id เพราะผู้ใช้ชี้แถวไหนก็แถวนั้น) */
-function rowDelNowAll(m,id,name){m.set(m.get().filter(x=>!rowSame(m,x,id,name)));m.re();}
+function rowDelNowAll(m,id,name){rowDelApply(m,m.get().filter(x=>!rowSame(m,x,id,name)));}
 /* จำนวนแถวที่เข้าข่าย "รายการเดียวกัน" ในเดือนหนึ่ง — เดือนที่เปิดอยู่ต้องอ่านจากฟอร์ม
    ไม่ใช่จาก DB เพราะอาจยังไม่ได้ commit */
 function rowDelCount(m,k,id,name,curYm){
@@ -2797,9 +2864,10 @@ function rowDelCount(m,k,id,name,curYm){
 
 function openRowDel(kind,id){
   const m=LIST_META[kind];if(!m)return;
+  rowSyncDom(m);                                        /* ต้องมาก่อนทุกการอ่านค่า — ดูหมายเหตุที่ rowSyncDom() */
   const it=m.get().find(x=>x&&x.id===id);
   if(!it||CT<0||CT>=12){if(m)rowDelNow(m,id);return;}   /* หลุดกรณีแปลกๆ — ลบตรงๆ แบบเดิม */
-  const name=String(gvf(m.np+id,it[m.nf])||'').trim();  /* ชื่อล่าสุดบนจอ ไม่ใช่ค่าที่ยังไม่ sync */
+  const name=String(it[m.nf]||'').trim();               /* sync มาจากจอแล้วโดย rowSyncDom() */
   const ym=ymk(CT);
   const locked=m.lock.includes(id);
   const others=locked?[]:rowDelFind(m,id,name,ym);
@@ -2873,7 +2941,10 @@ function rowDelPreview(){
   const t=rowDelTargets();
   /* บางเดือนมีแถวชื่อซ้ำกันมากกว่าหนึ่งแถว — บอกจำนวนแถวด้วย ไม่งั้นตัวเลข "กี่เดือน"
      จะทำให้เข้าใจว่าลบแค่เดือนละแถว */
-  const rows=t.reduce((sum,k)=>sum+rowDelCount(d.m,k,d.id,d.name,d.ym),0);
+  /* โหมด "เฉพาะเดือนนี้" ลบตามแถวที่ผู้ใช้ชี้ (rowDelNow ตาม id) แถวชื่อซ้ำในเดือนเดียวกัน
+     จึงไม่โดนด้วย — ต้องนับ 1 ไม่งั้น preview สัญญาไว้เกินจริง = "ลบแล้วไม่หมด" อีกแบบ */
+  const rows=rowDelMode()==='one'?1
+    :t.reduce((sum,k)=>sum+rowDelCount(d.m,k,d.id,d.name,d.ym),0);
   ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน`
     +(rows>t.length?` (${rows} แถว)`:'')+`</div>`
     +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
@@ -2894,20 +2965,22 @@ async function rowDelYes(){
     if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   }
   ge('rowDelModal').classList.remove('open');_rowDel=null;
-  if(!others.length){rowDelNow(m,d.id);toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
+  /* ลบเฉพาะเดือนนี้ก็บันทึกให้เลย — เดิมค้างไว้ให้ผู้ใช้กด 💾 เอง ซึ่งเป็นกับดัก:
+     ปิดแท็บหรือรีเฟรชก่อนกด แล้วรายการที่ลบไปก็กลับมา (ปุ่มอื่นทุกปุ่มบันทึกให้เองอยู่แล้ว) */
+  if(!others.length){
+    rowDelNow(m,d.id);
+    await saveM();                /* persist() ในนั้นจัดการ localStorage + cloud + แถบสถานะให้เอง */
+    toast(`🗑️ ลบ "${d.label}" แล้ว`);
+    return;
+  }
   rowDelNowAll(m,d.id,d.name);   /* เกณฑ์เดียวกับเดือนอื่น ไม่งั้นเดือนนี้เหลือแถวซ้ำชื่อค้าง */
 
-  saveM();                       /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
+  await saveM();                 /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
   others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
-  for(const t of others){
-    try{
-      if(fbDb)await fbSaveMonth(t);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
-    }catch(e){console.warn('row delete sync failed',t,e);}
-  }
+  const fail=await syncMonths(others,'row delete');
   if(CT===12)renderSum();
-  toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`);
+  toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ════════════════════════════════════════════════════
@@ -2934,12 +3007,17 @@ function rowFwdSpan(){
   return 11-_rowFwd.mi;
 }
 
-/* แยกเดือนในช่วง (ym, ym+span] เป็นเดือนที่เขียนได้ กับเดือนที่ยังไม่เคยเปิด */
+/* แยกเดือนในช่วง (ym, ym+span] เป็นเดือนที่เขียนได้ กับเดือนที่ยังไม่เคยเปิด
+   เกณฑ์คือ "มี record อยู่ใน DB ไหม" ไม่ใช่ recHasData() — เพราะคำสัญญาในกล่อง
+   ("เดือนพวกนี้จะได้โครงรายการนี้เองตอนเปิด") จริงเฉพาะเดือนที่ยังไม่มี record เท่านั้น
+   loadM() ของเดือนที่มี record แล้วจะอ่านรายการจาก record ตัวเอง ไม่ไปหยิบจากเดือนก่อนหน้า
+   ถ้าใช้ recHasData() เดือนที่เคยเปิดแต่ยังไม่ได้กรอกเงินเดือนฐาน (base ว่าง) จะถูกจัดเป็น
+   "ยังไม่เคยเปิด" → ข้ามการเขียน แล้วก็ไม่ได้โครงเองตอนเปิดด้วย = รายการหายไปเงียบๆ */
 function rowFwdScan(ym,span){
   const hit=[],miss=[];
   for(let k=1;k<=span;k++){
     const t=ymAdd(ym,k);
-    (recHasData(DB[t])?hit:miss).push(t);
+    (DB[t]?hit:miss).push(t);
   }
   return{hit,miss};
 }
@@ -2962,6 +3040,7 @@ function rowPut(m,arr,item,srcYm,dstYm){
 function openRowFwd(kind,id){
   const m=LIST_META[kind];if(!m)return;
   if(CT<0||CT>=12)return;
+  _blankYm=null;                  /* ผู้ใช้ลงมือกับเดือนนี้แล้ว — saveM() ข้างล่างต้องบันทึกจริง */
   if(m.lock.includes(id)){toast('รายการนี้ผูกกับเดือนโดยเฉพาะ — ส่งต่อไม่ได้','te');return;}
   if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
@@ -3029,18 +3108,16 @@ async function rowFwdYes(){
   const d=_rowFwd;if(!d)return;
   const m=d.m;
   const sc=rowFwdScan(d.ym,rowFwdSpan());
+  /* เช็ค race ซ้ำตอนกดยืนยัน แบบเดียวกับ rowDelYes() — สถานะอาจเปลี่ยนระหว่างที่กล่องเปิดค้าง */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   ge('rowFwdModal').classList.remove('open');_rowFwd=null;
   if(!sc.hit.length)return;
   sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
-  for(const t of sc.hit){
-    try{
-      if(fbDb)await fbSaveMonth(t);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
-    }catch(e){console.warn('row propagate sync failed',t,e);}
-  }
+  const fail=await syncMonths(sc.hit,'row propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`);
+  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
@@ -3257,6 +3334,7 @@ async function doCopyYear(){
     }
     if(fail)setSyncSt(fbDb?'fb_error':'error',`sync ไม่สำเร็จ ${fail} เดือน`);
     else setSyncSt(fbDb?'fb_ok':'ok');
+    if(fail)toast(`⚠️ ลอกลงเครื่องแล้ว แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${fail} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำ`,'te');
   }
   go.disabled=false;
 }
@@ -3308,7 +3386,7 @@ async function doClearYear(){
   /* ล้างหน้าจอให้ตรงกับข้อมูลที่เพิ่งลบ — เดือนที่เปิดอยู่จะกลับเป็นฟอร์มเปล่า */
   if(CT===12)renderSum();else switchTab(CT,true);
   formDirty=false;
-  toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
+  _blankYm=CT===12?null:ymk(CT);   /* ตั้งหลัง switchTab เพราะ loadM() ล้างค่านี้ */
 
   /* sync การลบขึ้น cloud ทีละเดือน — แบบเดียวกับ doCopyYear() */
   if(fbDb||gsUrl){
@@ -3322,7 +3400,9 @@ async function doClearYear(){
     }
     if(fail)setSyncSt(fbDb?'fb_error':'error',`ลบไม่สำเร็จ ${fail} เดือน`);
     else{setSyncSt(fbDb?'fb_ok':'ok');if(fbDb&&lastTs)setBadge(lastTs,'fb');}
-  }
+    toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`
+      +(fail?` ⚠️ แต่ลบบน cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลอาจกลับมาเมื่อเปิดใหม่ ลองสั่งซ้ำ`:''),fail?'te':'ts');
+  }else toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
   btn.disabled=false;
 }
 
@@ -4126,6 +4206,7 @@ function doResetM(){
   ['aList','dList','iList','oList','pList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();rP();buildOT();reOT();updateDots();
   formDirty=false;
+  _blankYm=ym;
   /* บันทึก localStorage */
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
@@ -4276,23 +4357,31 @@ function calcTax(){
     lastTax=mTax;
   }
 }
+/* เขียนยอดลงช่องกรอกบนจอ "ก่อน" เรียก rD()/rA() วาดใหม่
+   เพราะ r*() จะ pre-sync ค่าจากช่องกรอกกลับเข้า array เป็นอย่างแรกเสมอ
+   ถ้าตั้งแต่ใน array อย่างเดียว ค่าเก่าบนจอจะทับกลับทันที
+   เดิมแก้ด้วย setTimeout 50 ms ซึ่งแพ้การสลับเดือน/บันทึกที่เกิดขึ้นก่อนครบเวลา
+   → ยอดภาษีที่เพิ่งกดบันทึกหายเงียบๆ กลายเป็น 0 */
+const setRowVal=(id,v)=>{const e=ge(id);if(e)e.value=v;};
+
 function applyTax(){
-  if(lastTax===undefined){alert('กรุณากดคำนวณก่อนครับ');return;}
+  if(lastTax===undefined){toast('กรุณากดคำนวณก่อนครับ','te');return;}
   /* หาจากธงประเภทต้นทุน ไม่ใช่จากชื่อ — เดิมแถวชื่อ "ภาษีโรงเรือน" ถูกเขียนทับยอดหายได้
      และต้องข้ามแถวภาษีโบนัส ซึ่งมีปุ่มคำนวณของตัวเองอยู่แล้ว (applyBonusTax) */
   const it=D.find(x=>x.id!==BONUS_TAX_ID&&dedCt({id:x.id,n:gv(`dn_${x.id}`)||x.n,ct:gv(`dc_${x.id}`)||x.ct})==='tax');
-  if(it){it.v=lastTax.toFixed(2);it.ok=true;it.ct='tax';rD();setTimeout(()=>{const e=ge(`dv_${it.id}`);if(e)e.value=lastTax.toFixed(2);},50);}
+  if(it){const v=lastTax.toFixed(2);it.v=v;it.ok=true;it.ct='tax';setRowVal(`dv_${it.id}`,v);rD();}
   else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),pm:'bank',ct:'tax',ok:true,dn:false,dt:payDate(gv('fPrd'))});rD();}
   updInv();toast(`✓ บันทึกภาษี ฿${lastTax.toFixed(2)}/เดือน`);
 }
-function applyBonusTax(){
+/* quiet = อัปเดตเงียบๆ ตอนยอดโบนัสเปลี่ยนเอง (ไม่ต้องเด้ง toast ทุกตัวอักษรที่พิมพ์) */
+function applyBonusTax(quiet){
   const bt=calcBonusTax();
   const existing=D.find(x=>x.id===BONUS_TAX_ID);
   if(bt>0){
     if(existing){existing.v=bt.toFixed(2);existing.ok=true;}
     else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ct:'tax',ok:true,dn:false});
-    rD();setTimeout(()=>{const e=ge(`dv_${BONUS_TAX_ID}`);if(e)e.value=bt.toFixed(2);},50);
-    toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
+    setRowVal(`dv_${BONUS_TAX_ID}`,bt.toFixed(2));rD();
+    if(!quiet)toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
   }else if(existing){D=D.filter(x=>x.id!==BONUS_TAX_ID);rD();}
   updInv();
 }
@@ -4838,7 +4927,7 @@ document.addEventListener('visibilitychange',()=>{
   ge('mv')?.addEventListener(ev,e=>{
     if(CT===12)return;
     const t=e.target;
-    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'))formDirty=true;
+    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA')){formDirty=true;_blankYm=null;}
   });
 });
 
@@ -6373,14 +6462,20 @@ init();
       const parts=describeChanges(previewYm?fFor(previewYm):f);
       let where;
       if(months.length){
+        /* กัน race แบบเดียวกับปุ่มอื่นที่เขียนหลายเดือน — cloud ยังโหลดไม่เสร็จ/มีข้อขัดแย้งค้าง ห้ามเขียนทับ */
+        if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+        if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
         const curYm=(CT>=0&&CT<12)?ymk(CT):null;
         months.forEach(ym=>{ const fm=fFor(ym); if(ym===curYm)applyToForm(fm); else applyToRecord(ym,fm); });
         if(curYm&&months.includes(curYm))saveM();          /* บันทึกเดือนปัจจุบันที่แก้ผ่านฟอร์ม */
         try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
         updateDots();if(CT===12)renderSum();
-        (async()=>{ for(const ym of months){ if(ym===curYm)continue; try{ if(fbDb)await fbSaveMonth(ym); else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]}); }catch(e){console.warn('sync',ym,e);} } })();
+        /* ใช้ syncMonths() เหมือนปุ่มอื่น — เดิม fire-and-forget แล้ว console.warn เฉยๆ
+           ซิงค์ล้มเหลวกี่เดือนก็ไม่มีใครรู้ ทั้งที่ toast บอกว่าแก้เรียบร้อยแล้ว */
+        syncMonths(months.filter(ym=>ym!==curYm),'ai apply').then(fail=>{
+          toast('✅ แก้ไข '+months.length+' เดือนเรียบร้อย'+syncFailTxt(fail),fail?'te':'ts');
+        });
         where=months.map(monthLabelFull).join(', ');
-        toast('✅ แก้ไข '+months.length+' เดือนเรียบร้อย');
       }else{
         if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
         applyToForm(f);
