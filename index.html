@@ -1585,6 +1585,12 @@ async function fbSaveMonth(ym){
   return ts;
 }
 
+/* "ไม่มี document ให้ลบ" = งานเสร็จอยู่แล้ว · error อื่น (สิทธิ์ / เน็ต / โควตา) คือความล้มเหลวจริง
+   เดิมกลืนทุก error ทำให้ doClearYear() นับ fail ไม่ได้เลย แล้วรายงานว่าลบสำเร็จทั้งที่ cloud ยังอยู่ครบ */
+const fbErrNotFound=e=>{
+  const c=String((e&&e.code)||'');
+  return c==='not-found'||c==='5'||/no document to update/i.test(String((e&&e.message)||''));
+};
 async function fbDeleteMonth(ym){
   if(!fbDb||!ym)return;
   const ts=fbMarkOwn(fbTs());
@@ -1595,7 +1601,7 @@ async function fbDeleteMonth(ym){
       [`data.${ym}`]:firebase.firestore.FieldValue.delete(),
       lastSaved:ts
     });
-  }catch(e){/* doc ไม่มีอยู่ — ถือว่าเสร็จ */}
+  }catch(e){if(!fbErrNotFound(e))throw e;}   /* doc ไม่มีอยู่ — ถือว่าเสร็จ */
   return ts;
 }
 
@@ -2478,13 +2484,39 @@ function saveM(fb=false){
     p:JSON.parse(JSON.stringify(P)),days};
   formDirty=false;
   updateDots();
-  persist();
+  const pr=persist();             /* คืนออกไปด้วย — คนที่เขียนหลายเดือนต่อจะได้รอให้เดือนนี้เสร็จก่อน
+                                     ไม่งั้นสถานะ sync ของเดือนนี้จะมาทับผลลัพธ์ของทั้งชุดทีหลัง */
   if(fb){
     const ts=p2(new Date().getHours())+':'+p2(new Date().getMinutes());
     const el=ge('savSt');el.textContent=`✅ บันทึกแล้ว เวลา ${ts}`;el.style.color='#48bb78';el.style.opacity='1';
     setTimeout(()=>{el.style.opacity='0';},3000);
   }
+  return pr;
 }
+
+/* ════════════════════════════════════════════════════
+   เขียนหลายเดือนขึ้น cloud — ทางผ่านเดียวของทุกปุ่มที่แตะมากกว่าหนึ่งเดือน
+   (ลบข้ามเดือน · 📤 ส่งรายการ · 📤 ส่งแผนผ่อน · ไหลเงินเดือนฐาน)
+   เดิมแต่ละที่ catch แล้ว console.warn เฉยๆ แล้วขึ้น toast ว่าสำเร็จ — ผู้ใช้จึงไม่มีทางรู้ว่า
+   cloud เขียนไม่ผ่านบางเดือน ทั้งที่ local ดูถูกต้องหมด พอเปิดอีกเครื่อง/โหลดใหม่ของเก่าก็กลับมา
+   คืนจำนวนเดือนที่ล้มเหลว ให้ผู้เรียกเอาไปบอกผู้ใช้เสมอ
+   ════════════════════════════════════════════════════ */
+async function syncMonths(yms,label){
+  if(!yms||!yms.length||(!fbDb&&!gsUrl))return 0;
+  setSyncSt(fbDb?'fb_saving':'saving');
+  let fail=0;
+  for(const ym of yms){
+    try{
+      if(fbDb)await fbSaveMonth(ym);
+      else await gsPost({action:'saveMonth',ym,record:DB[ym]});
+    }catch(e){fail++;console.warn(label+' sync failed',ym,e);}
+  }
+  if(fail)setSyncSt(fbDb?'fb_error':'error',`ซิงค์ไม่สำเร็จ ${fail} เดือน`);
+  else setSyncSt(fbDb?'fb_ok':'ok');
+  return fail;
+}
+/* ท้าย toast เมื่อ sync ไม่ครบ — ต้องเห็นพร้อมข้อความสำเร็จเสมอ ไม่ใช่ซ่อนไว้ใน console */
+const syncFailTxt=n=>n?` ⚠️ แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${n} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำอีกครั้ง`:'';
 
 /* ── Base salary propagation (ขึ้น/ปรับเงินเดือน → ไหลไปเดือนถัดๆ ไป) ── */
 let _baseProp=null;
@@ -2523,20 +2555,13 @@ function basePropCancel(){
 async function basePropYes(){
   const d=_baseProp;ge('basePropModal').classList.remove('open');_baseProp=null;
   if(!d)return;
-  saveM();                                         /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
+  await saveM();                                   /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
   d.targets.forEach(k=>{if(DB[k])DB[k].base=String(d.newBase);});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   updateDots();
-  let ok=0;
-  for(const ym of d.targets){
-    try{
-      if(fbDb)await fbSaveMonth(ym);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]});
-      ok++;
-    }catch(e){console.warn('propagate sync failed',ym,e);}
-  }
+  const fail=await syncMonths(d.targets,'propagate');
   if(CT===12)renderSum();
-  toast(`✅ อัปเดตเงินเดือนฐาน ${d.targets.length} เดือนถัดไปแล้ว`);
+  toast(`✅ อัปเดตเงินเดือนฐาน ${d.targets.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ── LOAD ── */
@@ -2751,14 +2776,9 @@ async function planFwdYes(){
   });
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   updateDots();
-  for(const ym of d.targets){
-    try{
-      if(fbDb)await fbSaveMonth(ym);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]});
-    }catch(e){console.warn('plan propagate sync failed',ym,e);}
-  }
+  const fail=await syncMonths(d.targets,'plan propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`);
+  toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ════════════════════════════════════════════════════
@@ -2951,17 +2971,12 @@ async function rowDelYes(){
   if(!others.length){rowDelNow(m,d.id);toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
   rowDelNowAll(m,d.id,d.name);   /* เกณฑ์เดียวกับเดือนอื่น ไม่งั้นเดือนนี้เหลือแถวซ้ำชื่อค้าง */
 
-  saveM();                       /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
+  await saveM();                 /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
   others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
-  for(const t of others){
-    try{
-      if(fbDb)await fbSaveMonth(t);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
-    }catch(e){console.warn('row delete sync failed',t,e);}
-  }
+  const fail=await syncMonths(others,'row delete');
   if(CT===12)renderSum();
-  toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`);
+  toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ════════════════════════════════════════════════════
@@ -3096,14 +3111,9 @@ async function rowFwdYes(){
   if(!sc.hit.length)return;
   sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
-  for(const t of sc.hit){
-    try{
-      if(fbDb)await fbSaveMonth(t);
-      else if(gsUrl)await gsPost({action:'saveMonth',ym:t,record:DB[t]});
-    }catch(e){console.warn('row propagate sync failed',t,e);}
-  }
+  const fail=await syncMonths(sc.hit,'row propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`);
+  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
@@ -3320,6 +3330,7 @@ async function doCopyYear(){
     }
     if(fail)setSyncSt(fbDb?'fb_error':'error',`sync ไม่สำเร็จ ${fail} เดือน`);
     else setSyncSt(fbDb?'fb_ok':'ok');
+    if(fail)toast(`⚠️ ลอกลงเครื่องแล้ว แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${fail} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำ`,'te');
   }
   go.disabled=false;
 }
@@ -3372,7 +3383,6 @@ async function doClearYear(){
   if(CT===12)renderSum();else switchTab(CT,true);
   formDirty=false;
   _blankYm=CT===12?null:ymk(CT);   /* ตั้งหลัง switchTab เพราะ loadM() ล้างค่านี้ */
-  toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
 
   /* sync การลบขึ้น cloud ทีละเดือน — แบบเดียวกับ doCopyYear() */
   if(fbDb||gsUrl){
@@ -3386,7 +3396,9 @@ async function doClearYear(){
     }
     if(fail)setSyncSt(fbDb?'fb_error':'error',`ลบไม่สำเร็จ ${fail} เดือน`);
     else{setSyncSt(fbDb?'fb_ok':'ok');if(fbDb&&lastTs)setBadge(lastTs,'fb');}
-  }
+    toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`
+      +(fail?` ⚠️ แต่ลบบน cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลอาจกลับมาเมื่อเปิดใหม่ ลองสั่งซ้ำ`:''),fail?'te':'ts');
+  }else toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
   btn.disabled=false;
 }
 
