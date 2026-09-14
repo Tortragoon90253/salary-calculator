@@ -51,20 +51,17 @@ input[type=text],input[type=number],input[type=month],input[type=date],select{wi
 .dtin{font-size:.74rem;padding:4px 4px;min-width:0;color:#4a5568}
 .ir input.dtin{font-size:.74rem}
 input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
-.dr{display:grid;grid-template-columns:20px 18px 1fr 134px 148px 28px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
-.dr.ck{background:#f0fff4;border-color:#9ae6b4}
+.dr{display:grid;grid-template-columns:20px 18px 1fr 134px 148px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
 .dr input[type=text]{font-size:.83rem}.dr input[type=number]{font-size:.83rem;text-align:right}
 .drag-handle{cursor:grab;color:#cbd5e0;font-size:1rem;line-height:1;user-select:none;display:flex;align-items:center;justify-content:center;padding:2px}
 .drag-handle:hover{color:#a0aec0}
 .dr.drag-over{background:#ebf8ff;border-color:#4299e1;border-style:dashed}
 .dr.dragging{opacity:.4}
-.cfbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e9d8fd;color:#553c9a;cursor:pointer;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.cfbtn.ck{background:#c6f6d5;color:#276749}
 .delbtn{width:26px;height:26px;border:none;border-radius:50%;background:#fed7d7;color:#c53030;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fwdbtn{width:26px;height:26px;border:none;border-radius:50%;background:#e6f0fb;color:#2c5282;cursor:pointer;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fwdbtn:disabled{opacity:.3;cursor:default}
 .chart-na{padding:26px 14px;text-align:center;font-size:.8rem;color:#975a16;background:#fffaf0;border:1px dashed #fbd38d;border-radius:8px;line-height:1.7}
-/* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" (แยกจากปุ่ม ✓ ยืนยันข้อมูล) ── */
+/* ── Checkpoint: ติ๊กเมื่อ "จัดการรายการนี้จริงแล้ว" — ตัวติดตามเดียวของแถว ── */
 .ckpt{width:17px;height:17px;cursor:pointer;accent-color:#38a169;margin:0;justify-self:center;flex-shrink:0}
 .dr.done,.ir.done{opacity:.72}
 .dr.done input[type=text],.ir.done input[type=text]{text-decoration:line-through;color:#718096}
@@ -332,23 +329,23 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .flow-card{page-break-inside:avoid}
 }
 /* Payment Method */
-.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px 28px!important}
+.drd{grid-template-columns:20px 18px 1fr 134px 88px 88px 95px 28px 28px!important}
 /* ประเภทต้นทุน: คงที่ (Fixed) / ผันแปร (Variable) — หน้าตาเดียวกับ .pmsel */
 .ctsel{padding:3px 4px;border:1px solid #cbd5e0;border-radius:5px;font-size:.7rem;background:#f7fafc;color:#4a5568;width:100%}
 .ct-tax{font-size:.68rem;background:#fff5f5;color:#c53030;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-fix{font-size:.68rem;background:#ebf4ff;color:#434190;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-var{font-size:.68rem;background:#fffaf0;color:#c05621;border-radius:9px;padding:1px 7px;white-space:nowrap}
 /* แถวโบนัส — เป็นคลาสแทน inline style เพื่อให้ media query ปรับคอลัมน์บนจอแคบได้ */
-.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px 28px;grid-template-rows:auto auto}
+.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px;grid-template-rows:auto auto}
 .bm-disp{grid-column:3/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem}
 /* จอกลาง-แคบ: ช่องวันที่ตกลงบรรทัดที่ 2 แทนการบีบคอลัมน์เพิ่ม */
 @media(max-width:640px){
-  .dr{grid-template-columns:20px 18px 1fr 130px 28px 28px;grid-template-rows:auto auto;row-gap:4px}
+  .dr{grid-template-columns:20px 18px 1fr 130px 28px;grid-template-rows:auto auto;row-gap:4px}
   .dr>.dtin{grid-column:3/-1;grid-row:2}
-  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
+  .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   .drd>.ctsel{grid-column:5/-1;grid-row:2}
-  .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto auto}
+  .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px;grid-template-rows:auto auto auto}
   .dr.drb>.dtin{grid-column:3/-1;grid-row:2}
   .dr.drb>.bm-disp{grid-column:3/-1;grid-row:3}
   .ir{grid-template-columns:20px 1fr 72px 100px auto 28px 28px;row-gap:6px}
@@ -356,15 +353,15 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 }
 @media(max-width:500px){
   /* จอแคบ: บีบคอลัมน์ตัวเลข/ปุ่ม เพื่อให้ช่องชื่อยังกว้างพอพิมพ์ได้หลังเพิ่มคอลัมน์ checkpoint */
-  .dr{grid-template-columns:18px 18px 1fr 100px 26px 26px;gap:4px;row-gap:4px}
-  .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px 26px!important;gap:4px;row-gap:4px}
+  .dr{grid-template-columns:18px 18px 1fr 100px 26px;gap:4px;row-gap:4px}
+  .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px!important;gap:4px;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   /* จอแคบสุด: ปุ่ม 📤 ลงไปอยู่ท้ายบรรทัด 2 แทนการกินคอลัมน์บรรทัดแรก
      ช่องชื่อรายการจึงกว้างเท่าเดิมก่อนมีปุ่มนี้ */
-  .drd>.ctsel{grid-column:5/7;grid-row:2}
-  .drd>.fwdbtn{grid-column:7/-1;grid-row:2}
-  .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px 26px}
-  .cfbtn,.delbtn,.fwdbtn{width:24px;height:24px}
+  .drd>.ctsel{grid-column:5/6;grid-row:2}
+  .drd>.fwdbtn{grid-column:6/-1;grid-row:2}
+  .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px}
+  .delbtn,.fwdbtn{width:24px;height:24px}
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
   .ir{grid-template-columns:18px 72px 1fr auto 26px 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
   .ir>.ckpt{grid-column:1;grid-row:1}
@@ -535,7 +532,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <div class="hactions">
     <div class="hgrp">
       <span class="hgrp-lbl">ซิงค์</span>
-      <button class="hbtn gs" onclick="openCfg()">☁️ Sheets</button>
+      <button class="hbtn gs" id="gsBtn" onclick="openCfg()">☁️ Sheets</button>
       <button class="hbtn fb" onclick="openFbCfg()">🔥 Firebase</button>
     </div>
     <div class="hgrp">
@@ -1450,6 +1447,12 @@ function loadAllFromGS(data,lastSaved){
    Firebase / Firestore Integration
    ════════════════════════════════════════════════════ */
 
+/* Google Sheets เป็น backend สำรอง — ทุกจุดที่ซิงค์เขียนว่า "ถ้ามี Firebase ใช้ Firebase ก่อน"
+   พอตั้ง Firebase แล้ว ปุ่ม ☁️ Sheets จึงกดไปก็ไม่มีผลอะไร ซ่อนทิ้งไปเลยให้แถบบนไม่รก
+   (ไม่ได้ถอดตัวระบบออก — ล้าง Firebase เมื่อไหร่ปุ่มก็กลับมา ใครยังใช้ Sheets อยู่จึงไม่กระทบ) */
+function updCloudBtns(){
+  const b=ge('gsBtn');if(b)b.style.display=fbDb?'none':'';
+}
 function fbInit(cfg){
   if(!cfg||!cfg.apiKey||!cfg.projectId)return false;
   try{
@@ -1457,6 +1460,7 @@ function fbInit(cfg){
     if(existing){
       fbDb=firebase.firestore(existing);
       fbDocId=cfg.docId||'default';
+      updCloudBtns();
       return true;
     }
     const app=firebase.initializeApp({
@@ -1466,10 +1470,12 @@ function fbInit(cfg){
     },FB_APP_NAME);
     fbDb=firebase.firestore(app);
     fbDocId=cfg.docId||'default';
+    updCloudBtns();
     return true;
   }catch(e){
     console.warn('Firebase init error:',e);
     fbDb=null;
+    updCloudBtns();
     return false;
   }
 }
@@ -1534,7 +1540,7 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
-  fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;
+  fbDb=null;updCloudBtns();fbCfg=null;fbDocId='default';fbLastKnownTs=null;
   fbKnownMonths=new Set();pendingRemote=null;
   const cb=ge('conflictBanner');if(cb)cb.style.display='none';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
@@ -1782,6 +1788,7 @@ async function restore(){
     const raw=localStorage.getItem(FB_CFG_KEY);
     if(raw&&!fbDb){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
   }catch(e){fbDb=null;}
+  updCloudBtns();
 
   /* 1. ลอง Firebase ก่อน (priority สูงสุด) */
   if(fbDb){
@@ -1860,26 +1867,24 @@ function rA(){
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
       const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
-      return`<div class="dr drb${a.ok?' ck':''}${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+      return`<div class="dr drb${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         ${ckBox('A',a)}
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
         <input type="text" id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อ" oninput="dirtA('${a.id}')">
         <input type="date" class="dtin" id="adt_${a.id}" value="${esc(a.dt||'')}" title="วันที่ได้รับ" oninput="dirtA('${a.id}')" onchange="dirtA('${a.id}')">
         <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" oninput="onBonusMthChg();dirtA('${a.id}')">
         <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap;align-self:center">เดือน</span>
-        <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
         <span class="bm-disp" id="abm_disp_${a.id}">${amtDisp}</span>
         <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
       </div>`;
     }
-    return`<div class="dr${a.ok?' ck':''}${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
+    return`<div class="dr${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
       ${ckBox('A',a)}
       <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')">
       <input type="date" class="dtin" id="adt_${a.id}" value="${esc(a.dt||'')}" title="วันที่ได้รับ" oninput="dirtA('${a.id}')" onchange="dirtA('${a.id}')">
       <input type="number" id="av_${a.id}" value="${esc(a.v)}" placeholder="0.00" min="0" oninput="dirtA('${a.id}');updInv()">
-      <button class="cfbtn${a.ok?' ck':''}" onclick="cfA('${a.id}')">✓</button>
       <button class="delbtn" onclick="delA('${a.id}')">✕</button>
     </div>`;
   }).join('');
@@ -1892,7 +1897,7 @@ function rD(){
   ge('dList').innerHTML=D.map(d=>{
     const isBTax=d.id===BONUS_TAX_ID;
     const bStyle=isBTax?' style="border-left:3px solid #ed8936;background:#fffaf0;"':'';
-    return`<div class="dr drd${d.ok?' ck':''}${d.dn?' done':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
+    return`<div class="dr drd${d.dn?' done':''}"${bStyle} id="rd_${d.id}" draggable="true" data-id="${d.id}" data-list="D">
       ${ckBox('D',d)}
       <span class="drag-handle" title="${isBTax?'ภาษีโบนัส — คำนวณอัตโนมัติ':'ลากเพื่อจัดเรียง'}">⠿</span>
       <input type="text"   id="dn_${d.id}" value="${esc(d.n)}" placeholder="ชื่อรายการหัก" oninput="dirtD('${d.id}')">
@@ -1909,7 +1914,6 @@ function rD(){
       ${isBTax
         ?`<button class="fwdbtn" disabled title="ภาษีโบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>`
         :`<button class="fwdbtn" onclick="openRowFwd('d','${d.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>`}
-      <button class="cfbtn${d.ok?' ck':''}" onclick="cfD('${d.id}')">✓</button>
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
     </div>`;
   }).join('');
@@ -1921,13 +1925,12 @@ function rD(){
 function rO(){
   O.forEach(o=>{const nEl=ge(`on_${o.id}`);const vEl=ge(`ov_${o.id}`);const tEl=ge(`odt_${o.id}`);if(nEl)o.n=nEl.value;if(vEl)o.v=vEl.value;if(tEl)o.dt=tEl.value;});
   if(!O.length){ge('oList').innerHTML='<div class="empty-hint">ยังไม่มีรายได้อื่นๆ<br>กด ＋ เพิ่มรายได้อื่นๆ ด้านล่าง</div>';updOth();updCkBars();return;}
-  ge('oList').innerHTML=O.map(o=>`<div class="dr dro${o.ok?' ck':''}${o.dn?' done':''}" id="ro_${o.id}" draggable="true" data-id="${o.id}" data-list="O">
+  ge('oList').innerHTML=O.map(o=>`<div class="dr dro${o.dn?' done':''}" id="ro_${o.id}" draggable="true" data-id="${o.id}" data-list="O">
       ${ckBox('O',o)}
       <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="on_${o.id}" value="${esc(o.n)}" placeholder="ชื่อรายได้อื่นๆ (ไม่คิดภาษี)" oninput="dirtO('${o.id}')">
       <input type="date" class="dtin" id="odt_${o.id}" value="${esc(o.dt||'')}" title="วันที่ได้รับ" oninput="dirtO('${o.id}')" onchange="dirtO('${o.id}')">
       <input type="number" id="ov_${o.id}" value="${esc(o.v)}" placeholder="0.00" min="0" oninput="dirtO('${o.id}');updInv()">
-      <button class="cfbtn${o.ok?' ck':''}" onclick="cfO('${o.id}')">✓</button>
       <button class="delbtn" onclick="delO('${o.id}')">✕</button>
     </div>`).join('');
   bindDrag('oList',O,rO);
@@ -2057,29 +2060,13 @@ function bindDrag(listId,arr,reFn){
 }
 
 /* ── Confirm / Dirty ── */
-function cfA(id){
-  const it=A.find(x=>x.id===id);if(!it)return;
-  it.n=gv(`an_${id}`);
-  it.dt=gdt(`adt_${id}`,it.dt);
-  if(id===BONUS_ID){
-    const mth=parseFloat(ge(`abm_${id}`)?.value)||0;
-    const base=num('fBase');
-    it.bm=mth?String(mth):'';
-    it.v=(base*mth).toFixed(2);
-    const hid=ge(`av_${id}`);if(hid)hid.value=it.v;
-  }else{it.v=gv(`av_${id}`);}
-  it.ok=true;rA();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);if(id===BONUS_ID)applyBonusTax();
-}
-function cfD(id){const it=D.find(x=>x.id===id);if(!it)return;it.n=gv(`dn_${id}`);it.v=gv(`dv_${id}`);it.pm=gv(`dp_${id}`)||'bank';it.dt=gdt(`ddt_${id}`,it.dt);it.ok=true;rD();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
-function cfO(id){const it=O.find(x=>x.id===id);if(!it)return;it.n=gv(`on_${id}`);it.v=gv(`ov_${id}`);it.dt=gdt(`odt_${id}`,it.dt);it.ok=true;rO();toast(`✓ ยืนยัน "${it.n||'รายการ'}"`);}
-/* dirt* เคลียร์เฉพาะ ok (= "กรอกข้อมูลเสร็จ") — ห้ามแตะ dn (= "จัดการจริงแล้ว") ซึ่งต้องคงอยู่แม้แก้ตัวเลข */
-function dirtA(id){const it=A.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ra_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
-function dirtD(id){
-  const it=D.find(x=>x.id===id);
-  if(it&&it.ok){it.ok=false;const r=ge(`rd_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}
-  updPlan();updCkBars();
-}
-function dirtO(id){const it=O.find(x=>x.id===id);if(it&&it.ok){it.ok=false;const r=ge(`ro_${id}`);if(r){r.classList.remove('ck');r.querySelector('.cfbtn')?.classList.remove('ck');}}updCkBars();}
+/* ปุ่ม ✓ ยืนยันรายแถวถูกถอดออกแล้ว — ธง ok ที่มันตั้งไม่มีผลต่อการคำนวณใดๆ เป็นแค่สีพื้นของแถว
+   และมีอยู่แค่ 3 จาก 5 กล่อง ส่วนการติดตามจริงใช้ ☑ จัดการแล้ว (dn) ซึ่งมีแถบความคืบหน้าให้ด้วย
+   ฟิลด์ ok ยังถูกอ่าน/เขียน/export ตามเดิม ข้อมูลเก่าจึงไม่หาย และเอาปุ่มกลับมาได้ทุกเมื่อ
+   dirt* เหลือหน้าที่อัปเดตตัวเลขสรุป — ห้ามแตะ dn ซึ่งต้องคงอยู่แม้แก้ตัวเลข */
+function dirtA(id){updCkBars();}
+function dirtD(id){updPlan();updCkBars();}
+function dirtO(id){updCkBars();}
 
 /* ════════════════════════════════════════════════════
    Checkpoint — ติดตามว่าแต่ละรายการ "ถูกจัดการตามแผนแล้วหรือยัง"
@@ -2978,7 +2965,14 @@ async function rowDelYes(){
     if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   }
   ge('rowDelModal').classList.remove('open');_rowDel=null;
-  if(!others.length){rowDelNow(m,d.id);toast(`🗑️ ลบ "${d.label}" แล้ว — อย่าลืมกดบันทึก`);return;}
+  /* ลบเฉพาะเดือนนี้ก็บันทึกให้เลย — เดิมค้างไว้ให้ผู้ใช้กด 💾 เอง ซึ่งเป็นกับดัก:
+     ปิดแท็บหรือรีเฟรชก่อนกด แล้วรายการที่ลบไปก็กลับมา (ปุ่มอื่นทุกปุ่มบันทึกให้เองอยู่แล้ว) */
+  if(!others.length){
+    rowDelNow(m,d.id);
+    await saveM();                /* persist() ในนั้นจัดการ localStorage + cloud + แถบสถานะให้เอง */
+    toast(`🗑️ ลบ "${d.label}" แล้ว`);
+    return;
+  }
   rowDelNowAll(m,d.id,d.name);   /* เกณฑ์เดียวกับเดือนอื่น ไม่งั้นเดือนนี้เหลือแถวซ้ำชื่อค้าง */
 
   await saveM();                 /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
