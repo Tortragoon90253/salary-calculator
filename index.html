@@ -1221,9 +1221,20 @@ const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&g
 let _uid=0;const uid=()=>'u'+Date.now().toString(36)+(++_uid).toString(36)+Math.random().toString(36).slice(2,6);
 const dedupeIds=arr=>{if(!Array.isArray(arr))return arr;const seen=new Set();arr.forEach(it=>{if(!it||typeof it!=='object')return;if(!it.id||seen.has(it.id))it.id=uid();seen.add(it.id);});return arr;};
 const p2=n=>String(n).padStart(2,'0');
+/* ข้อมูลเข้ามาได้จากไฟล์ import · cloud · localStorage ที่เขียนไม่จบ — ชนิดผิดได้ทุกฟิลด์
+   ถ้าปล่อยผ่าน anchorDates()/forwardPlans() จะพังตอนเรียก .map() แล้วทั้งเดือนคำนวณไม่ได้เลย
+   ฟิลด์ที่ "ไม่มี" ต้องคงความไม่มีไว้ — loadM() ใช้แยกระหว่าง "ตั้งใจว่าง" กับ "ยังไม่เคยมี" */
 const normDays=rec=>{
-  if(rec&&rec.days){const nd={};Object.keys(rec.days).forEach(k=>{nd[String(k)]=rec.days[k];});rec.days=nd;}
-  if(rec){dedupeIds(rec.a);dedupeIds(rec.d);dedupeIds(rec.i);dedupeIds(rec.o);dedupeIds(rec.p);}
+  if(!rec||typeof rec!=='object')return rec;
+  if(rec.days&&typeof rec.days==='object'&&!Array.isArray(rec.days)){
+    const nd={};Object.keys(rec.days).forEach(k=>{const v=rec.days[k];if(v&&typeof v==='object')nd[String(k)]=v;});
+    rec.days=nd;
+  }else rec.days={};
+  ['a','d','i','o','p'].forEach(k=>{
+    if(rec[k]===undefined)return;
+    rec[k]=Array.isArray(rec[k])?rec[k].filter(x=>x&&typeof x==='object'):[];
+    dedupeIds(rec[k]);
+  });
   return rec;
 };
 
@@ -2329,7 +2340,7 @@ function getOTs(){
   const[y,m]=pv.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
   let m15=0,m20=0,m30=0;
   for(let d=1;d<=cnt;d++){
-    const ac=nf(ge(`ota_${d}`)?.value),o3=nf(ge(`ot3_${d}`)?.value);
+    const ac=Math.max(0,nf(ge(`ota_${d}`)?.value)),o3=Math.max(0,nf(ge(`ot3_${d}`)?.value));   /* ค่าติดลบต้องไม่หักยอด OT */
     const dow=new Date(y,m-1,d).getDay();
     if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
   }
@@ -3615,7 +3626,7 @@ function reOT(){
   const[y,m]=pv.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
   let m15=0,m20=0,m30=0;
   for(let d=1;d<=cnt;d++){
-    const ac=nf(ge(`ota_${d}`)?.value),o3=nf(ge(`ot3_${d}`)?.value);
+    const ac=Math.max(0,nf(ge(`ota_${d}`)?.value)),o3=Math.max(0,nf(ge(`ot3_${d}`)?.value));   /* ค่าติดลบต้องไม่หักยอด OT */
     const dow=new Date(y,m-1,d).getDay();
     const tp=ge(`otp_${d}`);
     if(tp){let b='';if(ac>0)b+=dow===0?`<span class="rb rb20">×2.0</span> `:`<span class="rb rb15">×1.5</span> `;if(o3>0)b+=`<span class="rb rb30">×3.0</span>`;tp.innerHTML=b||'<span class="rbn">—</span>';}
@@ -4703,7 +4714,7 @@ function otMinutes(rec,ym){
   const byDow=[0,1,2,3,4,5,6].map(()=>({ac:0,o3:0,days:0}));
   for(let d=1;d<=cnt;d++){
     const dv=rec.days?.[String(d)];if(!dv)continue;
-    const ac=nf(dv.ac),o3=nf(dv.o3);
+    const ac=Math.max(0,nf(dv.ac)),o3=Math.max(0,nf(dv.o3));   /* กติกาเดียวกับ getOTs()/reOT() */
     const dow=new Date(y,m-1,d).getDay();
     if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
     if(ac||o3){const g=byDow[dow];g.ac+=ac;g.o3+=o3;g.days++;}
