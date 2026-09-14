@@ -1895,7 +1895,17 @@ function setBadge(ts,source){
 
 /* ── Render rows ── */
 function rA(){
-  A.forEach(a=>{const nEl=ge(`an_${a.id}`);const vEl=ge(`av_${a.id}`);const tEl=ge(`adt_${a.id}`);if(nEl)a.n=nEl.value;if(vEl&&vEl.type!=='hidden')a.v=vEl.value;if(tEl)a.dt=tEl.value;});
+  /* pre-sync ค่าจากจอกลับเข้า array ก่อนวาดใหม่
+     แถวโบนัสเก็บ "จำนวนเดือน" ไว้ในช่อง abm_ และยอดที่คำนวณแล้วในช่องซ่อน av_
+     ต้องดึงกลับทั้งคู่ ไม่งั้นพออะไรสั่งวาดใหม่ (กด ＋ / ลบแถว / เรียง) ยอดโบนัสที่เพิ่งกรอก
+     จะหายทั้งก้อน ทั้งที่ภาษีโบนัสยังถูกหักอยู่ — ยอดรับจริงจะต่ำกว่าความจริงทั้งเดือน */
+  A.forEach(a=>{
+    const nEl=ge(`an_${a.id}`),vEl=ge(`av_${a.id}`),tEl=ge(`adt_${a.id}`),bEl=ge(`abm_${a.id}`);
+    if(nEl)a.n=nEl.value;
+    if(tEl)a.dt=tEl.value;
+    if(bEl)a.bm=bEl.value;
+    if(vEl&&(vEl.type!=='hidden'||a.id===BONUS_ID))a.v=vEl.value;
+  });
   if(!A.length){ge('aList').innerHTML='<div class="empty-hint">ยังไม่มีค่าเพิ่มเติม<br>กด ＋ เพิ่มรายการ ด้านล่าง</div>';updCkBars();return;}
   ge('aList').innerHTML=A.map(a=>{
     const isBonus=a.id===BONUS_ID;
@@ -1903,7 +1913,7 @@ function rA(){
       const bm=a.bm||'';
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
-      const amtDisp=computedAmt?`= ฿${fmt(parseFloat(computedAmt))}`:'';
+      const amtDisp=computedAmt?`= ${fmt(parseFloat(computedAmt))}`:'';   /* fmt() ใส่ ฿ ให้แล้ว */
       return`<div class="dr drb${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         ${ckBox('A',a)}
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
@@ -2408,7 +2418,7 @@ function onBonusMthChg(){
   if(!mthEl)return;
   const mth=parseFloat(mthEl.value)||0;
   const amt=base*mth;
-  if(dispEl)dispEl.textContent=mth&&base?`= ฿${fmt(amt)}`:'';
+  if(dispEl)dispEl.textContent=mth&&base?`= ${fmt(amt)}`:'';   /* fmt() ใส่ ฿ ให้แล้ว เดิมขึ้น "฿฿" */
   if(hidEl)hidEl.value=amt?amt.toFixed(2):'';
   /* ยอดโบนัสเปลี่ยน = ภาษีหัก ณ ที่จ่ายของโบนัสต้องเปลี่ยนตามทันที
      เดิมคำนวณให้เฉพาะตอนกดปุ่ม ✓ ที่แถวโบนัสเท่านั้น ใครกรอกจำนวนเดือนแล้วกด "คำนวณเงินเดือน" เลย
@@ -2853,7 +2863,10 @@ function rowSyncDom(m){
     if(!x)return;
     const nEl=ge(m.np+x.id);if(nEl)x[m.nf]=nEl.value;
     const vEl=ge(m.vp+x.id);
-    if(vEl&&vEl.type!=='hidden')x[m.vf]=vEl.value;   /* โบนัสใช้ช่องซ่อนที่คำนวณเอง ห้ามทับ */
+    /* ช่องซ่อนมีแค่แถวโบนัส และมันคือยอดจริงที่ onBonusMthChg() คำนวณไว้ — ต้องอ่าน ไม่ใช่ข้าม
+       ไม่งั้นการเรียงตามยอดจะมองโบนัสเป็น "ยังไม่ได้กรอก" แล้วจมไปท้ายสุด */
+    if(vEl&&(vEl.type!=='hidden'||x.id===BONUS_ID))x[m.vf]=vEl.value;
+    const bEl=ge('abm_'+x.id);if(bEl)x.bm=bEl.value;
   });
 }
 let _rowDel=null;
@@ -4381,6 +4394,7 @@ function doResetM(){
   rA();rD();rO();rI();rP();buildOT();reOT();updateDots();
   formDirty=false;
   _blankYm=ym;
+  sortResetAll();   /* ไม่ได้ผ่าน loadM() — ต้องล้างสถานะเรียงเอง ไม่งั้น "ลำดับเดิม" ชี้ไปแถวที่ถูกล้างไปแล้ว */
   /* บันทึก localStorage */
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
