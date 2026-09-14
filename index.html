@@ -2708,11 +2708,15 @@ function mergePlans(dst,inc){
    ปุ่มนี้จึงเป็นทางแก้แบบชัดเจน: ผู้ใช้สั่งเอง เห็นก่อนว่าจะกระทบเดือนไหน
    ════════════════════════════════════════════════════ */
 let _planFwd=null;
+/* เดือนถัดไปที่ "มี record อยู่แล้ว" — เกณฑ์เดียวกับ rowFwdScan() และด้วยเหตุผลเดียวกัน
+   (เดือนที่มี record แต่ base ว่าง ต้องนับเป็นปลายทาง ไม่งั้นแผนหายไปหนึ่งเดือนกลางทางแบบเงียบๆ
+   เพราะ loadM() ของเดือนนั้นอ่าน rec.p ของตัวเอง ไม่ auto-forward จากเดือนก่อน) */
 function planFwdTargets(fromYm){
-  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&recHasData(DB[k])).sort();
+  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&DB[k]).sort();
 }
 function openPlanFwd(){
   if(CT<0||CT>=12)return;
+  _blankYm=null;                  /* ผู้ใช้ลงมือกับเดือนนี้แล้ว — saveM() ข้างล่างต้องบันทึกจริง */
   if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   saveM();                       /* ต้นทางต้องบันทึกก่อน ไม่งั้นส่งของที่ยังไม่ commit */
@@ -2732,8 +2736,12 @@ function openPlanFwd(){
 }
 function planFwdNo(){ge('planFwdModal').classList.remove('open');_planFwd=null;}
 async function planFwdYes(){
-  const d=_planFwd;ge('planFwdModal').classList.remove('open');_planFwd=null;
+  const d=_planFwd;
   if(!d)return;
+  /* เช็ค race ซ้ำตอนกดยืนยัน แบบเดียวกับ rowDelYes() — สถานะอาจเปลี่ยนระหว่างที่กล่องเปิดค้าง */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  ge('planFwdModal').classList.remove('open');_planFwd=null;
   d.targets.forEach(t=>{
     const rec=DB[t];if(!rec)return;
     const fw=forwardPlans(d.src,d.ym,t);
@@ -2817,13 +2825,19 @@ function rowDelInfo(m,it){
   }
   return bits.join(' · ');
 }
+/* เขียนผลการลบกลับเข้าฟอร์ม — ถ้ามีแถวหายไปจริง เดือนนี้ก็ไม่ใช่ "เดือนที่เพิ่งล้างแล้วยังไม่แตะ" อีกต่อไป
+   (ไม่งั้น autosave จะข้ามการบันทึก แล้วการลบของเดือนนี้หายไปตอนสลับแท็บ) */
+function rowDelApply(m,out){
+  if(out.length!==(m.get()||[]).length)_blankYm=null;
+  m.set(out);m.re();
+}
 /* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
-function rowDelNow(m,id){m.set(m.get().filter(x=>x&&x.id!==id));m.re();}
+function rowDelNow(m,id){rowDelApply(m,m.get().filter(x=>x&&x.id!==id));}
 /* ลบ "ทุกแถวที่ถือเป็นรายการเดียวกัน" ออกจากฟอร์มเดือนนี้ — ใช้เฉพาะตอนลบข้ามเดือน
    ต้องใช้เกณฑ์ id-หรือ-ชื่อ ตัวเดียวกับที่ใช้กับเดือนอื่นเป๊ะ ไม่งั้นเดือนที่มีแถวชื่อซ้ำกัน
    จะเหลือค้างอยู่แถวหนึ่ง ทั้งที่ preview นับเดือนนี้รวมไปแล้ว = "ลบแล้วไม่หมด"
    (ส่วนโหมด "เฉพาะเดือนนี้" ยังใช้ rowDelNow() ตาม id เพราะผู้ใช้ชี้แถวไหนก็แถวนั้น) */
-function rowDelNowAll(m,id,name){m.set(m.get().filter(x=>!rowSame(m,x,id,name)));m.re();}
+function rowDelNowAll(m,id,name){rowDelApply(m,m.get().filter(x=>!rowSame(m,x,id,name)));}
 /* จำนวนแถวที่เข้าข่าย "รายการเดียวกัน" ในเดือนหนึ่ง — เดือนที่เปิดอยู่ต้องอ่านจากฟอร์ม
    ไม่ใช่จาก DB เพราะอาจยังไม่ได้ commit */
 function rowDelCount(m,k,id,name,curYm){
@@ -2974,12 +2988,17 @@ function rowFwdSpan(){
   return 11-_rowFwd.mi;
 }
 
-/* แยกเดือนในช่วง (ym, ym+span] เป็นเดือนที่เขียนได้ กับเดือนที่ยังไม่เคยเปิด */
+/* แยกเดือนในช่วง (ym, ym+span] เป็นเดือนที่เขียนได้ กับเดือนที่ยังไม่เคยเปิด
+   เกณฑ์คือ "มี record อยู่ใน DB ไหม" ไม่ใช่ recHasData() — เพราะคำสัญญาในกล่อง
+   ("เดือนพวกนี้จะได้โครงรายการนี้เองตอนเปิด") จริงเฉพาะเดือนที่ยังไม่มี record เท่านั้น
+   loadM() ของเดือนที่มี record แล้วจะอ่านรายการจาก record ตัวเอง ไม่ไปหยิบจากเดือนก่อนหน้า
+   ถ้าใช้ recHasData() เดือนที่เคยเปิดแต่ยังไม่ได้กรอกเงินเดือนฐาน (base ว่าง) จะถูกจัดเป็น
+   "ยังไม่เคยเปิด" → ข้ามการเขียน แล้วก็ไม่ได้โครงเองตอนเปิดด้วย = รายการหายไปเงียบๆ */
 function rowFwdScan(ym,span){
   const hit=[],miss=[];
   for(let k=1;k<=span;k++){
     const t=ymAdd(ym,k);
-    (recHasData(DB[t])?hit:miss).push(t);
+    (DB[t]?hit:miss).push(t);
   }
   return{hit,miss};
 }
@@ -3002,6 +3021,7 @@ function rowPut(m,arr,item,srcYm,dstYm){
 function openRowFwd(kind,id){
   const m=LIST_META[kind];if(!m)return;
   if(CT<0||CT>=12)return;
+  _blankYm=null;                  /* ผู้ใช้ลงมือกับเดือนนี้แล้ว — saveM() ข้างล่างต้องบันทึกจริง */
   if(m.lock.includes(id)){toast('รายการนี้ผูกกับเดือนโดยเฉพาะ — ส่งต่อไม่ได้','te');return;}
   if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
@@ -3069,6 +3089,9 @@ async function rowFwdYes(){
   const d=_rowFwd;if(!d)return;
   const m=d.m;
   const sc=rowFwdScan(d.ym,rowFwdSpan());
+  /* เช็ค race ซ้ำตอนกดยืนยัน แบบเดียวกับ rowDelYes() — สถานะอาจเปลี่ยนระหว่างที่กล่องเปิดค้าง */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   ge('rowFwdModal').classList.remove('open');_rowFwd=null;
   if(!sc.hit.length)return;
   sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
