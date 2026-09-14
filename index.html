@@ -9,6 +9,14 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;color:#2d3748;font-size:15px}
+/* ── แถบบนติดหนึบเวลาเลื่อนหน้า ──
+   ครอบ header + แถบปี + แท็บเดือน ไว้ในกล่องเดียว จะได้ไม่ต้องคำนวณ offset ของแต่ละแถบ
+   (ความสูงเปลี่ยนตามการตัดบรรทัดในแต่ละความกว้างจอ)
+   จอแคบ: สามแถบรวมกันสูง ~330px = 41% ของจอมือถือ ค้างทั้งหมดแล้วเหลือที่อ่านนิดเดียว
+   จึงให้เลื่อนขึ้นไปก่อนแล้วค้างเฉพาะแท็บเดือน ด้วย top ติดลบเท่ากับความสูงสองแถบบน
+   (ค่านี้ตั้งจาก syncTopbar() เพราะวัดตอนรันจริงเท่านั้นถึงจะตรง) */
+#topbar{position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(15,23,42,.18)}
+@media print{#topbar{position:static;box-shadow:none}}
 header{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:white;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{font-size:1.1rem;font-weight:700;flex:1}
 .hbtn{padding:5px 12px;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
@@ -551,6 +559,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 </head>
 <body>
 
+<div id="topbar">
 <header>
   <svg width="44" height="44" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
     <ellipse cx="20" cy="42" rx="13" ry="4" fill="#f6ad55"/>
@@ -591,6 +600,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <span id="syncSt"></span>
 </div>
 <div class="tabs" id="tabs"></div>
+</div><!-- /topbar -->
 
 <!-- ── Month View ── -->
 <div id="mv" class="wrap">
@@ -5116,6 +5126,22 @@ function renderSum(){
   fillTlMonSel();
   renderYearTimeline();
 }
+
+/* ── แถบบนติดหนึบ ──
+   จอกว้าง: ค้างทั้งก้อน (header + แถบปี + แท็บเดือน)
+   จอแคบ: ให้เลื่อนขึ้นไปก่อนแล้วค้างเฉพาะแท็บเดือน — วัดระยะจากขอบบนของแถบถึงแท็บ
+   แล้วใช้เป็น top ติดลบ ความสูงเปลี่ยนเองได้ตามการตัดบรรทัด จึงวัดใหม่ทุกครั้งที่ขนาดเปลี่ยน */
+const TOPBAR_FULL_MIN=768;
+function syncTopbar(){
+  const bar=ge('topbar'),tabs=ge('tabs');
+  if(!bar||!tabs)return;
+  if(window.innerWidth>=TOPBAR_FULL_MIN){bar.style.top='0px';return;}
+  const off=Math.round(tabs.getBoundingClientRect().top-bar.getBoundingClientRect().top);
+  bar.style.top=(off>0?-off:0)+'px';
+}
+window.addEventListener('resize',syncTopbar);
+if(window.ResizeObserver)new ResizeObserver(syncTopbar).observe(ge('topbar'));
+syncTopbar();
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'&&CT!==12)saveM();
