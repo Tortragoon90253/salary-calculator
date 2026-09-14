@@ -90,7 +90,7 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .cks-pend-t{font-size:.74rem;font-weight:700;color:#c05621;margin-bottom:5px}
 .cks-pd{display:flex;justify-content:space-between;gap:10px;font-size:.73rem;color:#718096;padding:2px 0}
 .cks-done{margin-top:9px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:.78rem;font-weight:700;color:#276749;text-align:center}
-.ir{display:grid;grid-template-columns:20px 1fr 134px 72px 100px auto 28px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#f0fff4;border-radius:8px;padding:8px 10px;border:1px solid #9ae6b4}
+.ir{display:grid;grid-template-columns:20px 16px 1fr 134px 72px 100px auto 28px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#f0fff4;border-radius:8px;padding:8px 10px;border:1px solid #9ae6b4}
 .ir input{font-size:.8rem;background:white}
 .itg{display:flex;border:1px solid #9ae6b4;border-radius:6px;overflow:hidden;flex-shrink:0}
 .itg button{padding:4px 9px;border:none;cursor:pointer;font-size:.8rem;font-weight:700;background:white;color:#718096}
@@ -101,7 +101,7 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .pln-total-val{color:#434190;font-size:.85rem}
 .pln-fcf-val{color:#2b6cb0;font-size:.85rem}
 .pln-fcf-val.neg{color:#c53030}
-.pl{display:grid;grid-template-columns:20px 1fr 124px 110px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#ebf4ff;border-radius:8px;padding:8px 10px;border:1px solid #c3dafe}
+.pl{display:grid;grid-template-columns:20px 16px 1fr 124px 110px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#ebf4ff;border-radius:8px;padding:8px 10px;border:1px solid #c3dafe}
 .pl.pl-rec-row{background:#faf5ff;border-color:#d6bcfa}
 .pl input,.pl select{font-size:.8rem;background:white}
 .pl input[type=number]{text-align:right}
@@ -120,6 +120,7 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 @media(max-width:640px){
   .pl{grid-template-columns:20px 1fr 104px 28px;grid-template-rows:auto auto auto auto}
   .pl>.ckpt{grid-column:1;grid-row:1}
+  .pl>.drag-handle{display:none}
   .pl>.pl-name{grid-column:2/4;grid-row:1}
   .pl>.delbtn{grid-column:4;grid-row:1}
   .pl>.pl-type{grid-column:1/3;grid-row:2}
@@ -348,8 +349,8 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px;grid-template-rows:auto auto auto}
   .dr.drb>.dtin{grid-column:3/-1;grid-row:2}
   .dr.drb>.bm-disp{grid-column:3/-1;grid-row:3}
-  .ir{grid-template-columns:20px 1fr 72px 100px auto 28px 28px;row-gap:6px}
-  .ir>.dtin{grid-column:2/-1;grid-row:2}
+  .ir{grid-template-columns:20px 16px 1fr 72px 100px auto 28px 28px;row-gap:6px}
+  .ir>.dtin{grid-column:3/-1;grid-row:2}
 }
 @media(max-width:500px){
   /* จอแคบ: บีบคอลัมน์ตัวเลข/ปุ่ม เพื่อให้ช่องชื่อยังกว้างพอพิมพ์ได้หลังเพิ่มคอลัมน์ checkpoint */
@@ -365,6 +366,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
   .ir{grid-template-columns:18px 72px 1fr auto 26px 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
   .ir>.ckpt{grid-column:1;grid-row:1}
+  .ir>.drag-handle{display:none}
   .ir>input[type=text]{grid-column:2/-1;grid-row:1}
   .ir>.dtin{grid-column:2/-1;grid-row:2}
   .ir>.itg{grid-column:2;grid-row:3}
@@ -459,6 +461,41 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .input-ro{background:#edf2f7;pointer-events:none}
 .input-auto{background:#edf2f7}
 .ch-sub{margin-left:auto;font-size:.75rem;font-weight:400;color:#718096}
+.ch{position:relative}
+.sortbtn{
+  margin-left:8px;border:1px solid #cbd5e0;background:#fff;color:#4a5568;border-radius:7px;
+  padding:2px 8px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;gap:5px;line-height:1.7;white-space:nowrap;flex:none;
+}
+.sortbtn:hover{border-color:#4299e1;color:#2b6cb0}
+.sortbtn[aria-expanded="true"]{border-color:#4299e1;color:#2b6cb0;background:#ebf8ff}
+.sortcur{font-size:.68rem;font-weight:500;color:#718096}
+.sortbtn[aria-expanded="true"] .sortcur,.sortbtn.on .sortcur{color:#2b6cb0}
+.sortbtn.on{border-color:#90cdf4;color:#2b6cb0}
+.sortmenu{
+  position:absolute;top:calc(100% + 5px);right:10px;z-index:30;min-width:224px;display:none;
+  background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:5px;
+  box-shadow:0 10px 30px -10px rgba(45,55,72,.45);font-weight:400;color:#2d3748;
+}
+.sortmenu.open{display:block}
+.sortmenu .smh{font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;color:#a0aec0;padding:6px 10px 4px;font-weight:700}
+.sortmenu button{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:none;border:none;text-align:left;padding:6px 10px;border-radius:7px;
+  font-size:.82rem;color:#2d3748;cursor:pointer;font-family:inherit;line-height:1.7;
+}
+.sortmenu button:hover{background:#ebf8ff}
+.sortmenu button .smd{font-size:.76rem;color:#2b6cb0;font-weight:700;opacity:0}
+.sortmenu button[aria-pressed="true"]{color:#2b6cb0;font-weight:700;background:#ebf8ff}
+.sortmenu button[aria-pressed="true"] .smd{opacity:1}
+.sortmenu hr{border:none;border-top:1px solid #e2e8f0;margin:5px 4px}
+.sortmenu .smrev{color:#718096}
+.sortmenu .smrev:disabled{opacity:.4;cursor:default;background:none}
+.sortmenu .smrev:not(:disabled):hover{color:#c53030;background:#fff5f5}
+@media(max-width:500px){
+  .sortbtn{padding:2px 6px;font-size:.7rem}
+  .sortmenu{right:6px;left:6px;min-width:0}
+}
 /* หัวการ์ดไทม์ไลน์มีทั้งชื่อ ป้ายงวด และคำอธิบายสี — ต้องยอมขึ้นบรรทัดใหม่บนจอแคบ */
 .flow-card>.ch{flex-wrap:wrap}
 .flow-per{font-size:.74rem;font-weight:600;color:#4a5568;background:#edf2f7;border-radius:8px;padding:2px 9px;white-space:nowrap}
@@ -572,7 +609,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">☑ จัดการแล้ว | ✕ ลบ</span></div>
+    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">☑ จัดการแล้ว | ✕ ลบ</span><button class="sortbtn" id="sb_a" onclick="sortToggle('a',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_a"></span></button><div class="sortmenu" id="sm_a" role="menu"></div></div>
     <div class="cb"><div class="ckbar" id="ckbar_A"></div><div id="aList"></div><button class="addbtn" onclick="addA()">＋ เพิ่มรายการ</button></div>
   </div>
 
@@ -606,7 +643,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cpu">💰 รายได้อื่นๆ <span class="ch-sub"><span class="no-tax-tag">ไม่คิดภาษี</span> ☑ จัดการแล้ว | ✕ ลบ</span></div>
+    <div class="ch cpu">💰 รายได้อื่นๆ <span class="ch-sub"><span class="no-tax-tag">ไม่คิดภาษี</span> ☑ จัดการแล้ว | ✕ ลบ</span><button class="sortbtn" id="sb_o" onclick="sortToggle('o',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_o"></span></button><div class="sortmenu" id="sm_o" role="menu"></div></div>
     <div class="cb">
       <div class="oth-info">
         รายได้กลุ่มนี้ <strong>ไม่ถูกนำไปคำนวณภาษี</strong> (เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ รายได้เสริม)<br>
@@ -620,7 +657,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cin">💳 วางแผนการผ่อน &amp; ประกัน <span class="ch-sub">Fixed Obligations &nbsp;|&nbsp; ☑ จ่ายงวดนี้แล้ว | ✕ ลบ</span></div>
+    <div class="ch cin">💳 วางแผนการผ่อน &amp; ประกัน <span class="ch-sub">Fixed Obligations &nbsp;|&nbsp; ☑ จ่ายงวดนี้แล้ว | ✕ ลบ</span><button class="sortbtn" id="sb_p" onclick="sortToggle('p',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_p"></span></button><div class="sortmenu" id="sm_p" role="menu"></div></div>
     <div class="cb">
       <div id="pInfo" class="pln-info"></div>
       <div class="ckbar" id="ckbar_P"></div>
@@ -631,7 +668,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">☑ จัดการแล้ว &nbsp;|&nbsp; ฐาน = รายได้รวม − SSO − PVD − ภาษี</span></div>
+    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">☑ จัดการแล้ว &nbsp;|&nbsp; ฐาน = รายได้รวม − SSO − PVD − ภาษี</span><button class="sortbtn" id="sb_i" onclick="sortToggle('i',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_i"></span></button><div class="sortmenu" id="sm_i" role="menu"></div></div>
     <div class="cb">
       <div class="inv-info">
         ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" class="inv-total-val">฿0.00</strong>
@@ -644,7 +681,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cre">➖ รายการหัก <span class="ch-sub">☑ จัดการแล้ว | 📤 ส่งต่อ | ✕ ลบ</span></div>
+    <div class="ch cre">➖ รายการหัก <span class="ch-sub">☑ จัดการแล้ว | 📤 ส่งต่อ | ✕ ลบ</span><button class="sortbtn" id="sb_d" onclick="sortToggle('d',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_d"></span></button><div class="sortmenu" id="sm_d" role="menu"></div></div>
     <div class="cb">
       <div class="fr">
         <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">บัญชี</span></span>
@@ -1944,8 +1981,9 @@ function rI(){
   ge('iList').innerHTML=I.map(inv=>{
     const isP=inv.t==='%';
     const cv=isP?(base*nf(inv.v)/100):nf(inv.v);
-    return `<div class="ir${inv.dn?' done':''}" id="ri_${inv.id}">
+    return `<div class="ir${inv.dn?' done':''}" id="ri_${inv.id}" draggable="true" data-id="${inv.id}" data-list="I">
       ${ckBox('I',inv)}
+      <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text"   id="in_${inv.id}" value="${esc(inv.n)}" placeholder="เช่น หุ้น / กองทุน / คริปโต" oninput="updCkBars()">
       <input type="date" class="dtin" id="idt_${inv.id}" value="${esc(inv.dt||'')}" title="วันที่โอนลงทุน" oninput="updCkBars()" onchange="updCkBars()">
       <div class="itg">
@@ -1958,6 +1996,7 @@ function rI(){
       <button class="delbtn" onclick="delI('${inv.id}')">✕</button>
     </div>`;
   }).join('');
+  bindDrag('iList',I,rI);
   updInv();
 }
 
@@ -1989,8 +2028,9 @@ function rP(){
       : `<span class="pl-rec">🛡️ กันเงินไว้ทุกเดือน — ไม่มีวันหมด (Sinking Fund)</span>`
         +`<input type="hidden" id="pc_${x.id}" value="${cur}"><input type="hidden" id="pt_${x.id}" value="${tot}">`;
     const pmOpt=(k)=>`<option value="${k}"${(x.pm||'bank')===k?' selected':''}>${PM_META[k].icon} ${PM_META[k].label}</option>`;
-    return`<div class="pl${ty==='recurring'?' pl-rec-row':''}${x.dn?' done':''}" id="rp_${x.id}">
+    return`<div class="pl${ty==='recurring'?' pl-rec-row':''}${x.dn?' done':''}" id="rp_${x.id}" draggable="true" data-id="${x.id}" data-list="P">
       ${ckBox('P',x)}
+      <span class="drag-handle" title="ลากเพื่อจัดเรียง">⠿</span>
       <input type="text" class="pl-name" id="pn_${x.id}" value="${esc(x.name)}" placeholder="เช่น ผ่อนรถ / ประกันชีวิต" oninput="dirtP('${x.id}')">
       <select class="pl-type" id="py_${x.id}" onchange="setPTy('${x.id}',this.value)" title="installment = มีวันหมด · recurring = จ่ายเรื่อยๆ">
         <option value="installment"${ty==='installment'?' selected':''}>💳 ผ่อนชำระ</option>
@@ -2006,6 +2046,7 @@ function rP(){
       <div class="pl-row3">${prog}</div>
     </div>`;
   }).join('');
+  bindDrag('pList',P,rP);
   updPlan();updCkBars();
 }
 
@@ -2567,6 +2608,7 @@ function loadM(mi){
 function loadMonth(mi){
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
   if(_blankYm&&_blankYm!==ym)_blankYm=null;   /* ย้ายเดือนแล้ว — สถานะ "เพิ่งล้าง" หมดอายุ */
+  sortResetAll();                            /* ลำดับเดิมของเดือนก่อนใช้กับเดือนนี้ไม่ได้ */
   ge('res').style.display='none';ge('savSt').style.opacity='0';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   formDirty=false;
@@ -2815,6 +2857,138 @@ function rowSyncDom(m){
   });
 }
 let _rowDel=null;
+
+/* ════════════════════════════════════════════════════
+   เรียงรายการ — กลไกกลางชุดเดียว ใช้ร่วมกันทุกกล่องเหมือนปุ่ม ✕ และ 📤
+   กติกาที่ยึด (ตกลงกับผู้ใช้ไว้):
+     1. ช่องที่ยังไม่ได้กรอก (ไม่มียอด / ไม่มีวันที่ / ไม่มีชื่อ) จมท้ายเสมอทั้งสองทิศ
+        ไม่งั้นแถวเปล่าที่เพิ่งกด ＋ จะเด้งขึ้นบนสุดทุกครั้งที่เรียงจากน้อยไปมาก
+     2. เรียงแล้วเปลี่ยนลำดับจริงและบันทึก ไม่ใช่แค่มุมมอง — ลำดับเป็นข้อมูลที่ไหลไปเดือนถัดไป
+        (loadM → blankItems/forwardPlans) และใช้ตอนพิมพ์ ถ้าเรียงแค่บนจอ ของบนจอกับที่บันทึกจะไม่ตรงกัน
+     3. จำลำดับก่อนเรียงครั้งแรกของเดือนนั้นไว้ กด "กลับไปลำดับเดิม" คืนได้จนกว่าจะเปลี่ยนเดือน
+     4. เรียงเฉพาะเดือนที่เปิดอยู่ ไม่ไปแตะเดือนอื่น
+   ════════════════════════════════════════════════════ */
+/* ฟิลด์ที่เรียงได้ของแต่ละกล่อง — มาจากช่องที่กล่องนั้นมีอยู่จริงเท่านั้น */
+const SORT_FIELDS={
+  a:[['n','ชื่อรายการ'],['v','ยอดเงิน'],['dt','วันที่ได้รับ'],['dn','สถานะ ☑ จัดการแล้ว']],
+  d:[['n','ชื่อรายการ'],['v','ยอดเงิน'],['dt','วันที่ตัดเงิน'],['pm','วิธีจ่าย'],['ct','ประเภทต้นทุน'],['dn','สถานะ ☑ จัดการแล้ว']],
+  o:[['n','ชื่อรายการ'],['v','ยอดเงิน'],['dt','วันที่ได้รับ'],['dn','สถานะ ☑ จัดการแล้ว']],
+  i:[['n','ชื่อรายการ'],['v','ยอดจริงเป็นบาท'],['dt','วันที่โอน'],['dn','สถานะ ☑ จัดการแล้ว']],
+  p:[['n','ชื่อรายการ'],['v','ยอดเงิน'],['dt','วันที่ตัดเงิน'],['left','งวดที่เหลือ'],['ty','ประเภท'],['pm','วิธีจ่าย'],['dn','สถานะ ☑ จ่ายงวดนี้แล้ว']]
+};
+const SORT_SHORT={n:'ชื่อ',v:'ยอดเงิน',dt:'วันที่',pm:'วิธีจ่าย',ct:'ประเภทต้นทุน',dn:'สถานะ',left:'งวดที่เหลือ',ty:'ประเภท'};
+/* ลำดับวิธีจ่ายใช้ PM_ORDER ตัวเดียวกับสรุปรายปี (ประกาศอยู่ท้ายไฟล์) — จะได้เรียงเหมือนกันทั้งแอป */
+let _sortSt={};    /* kind → {key,dir} ที่เรียงอยู่ตอนนี้ */
+let _sortOrig={};  /* kind → [id,...] ลำดับก่อนเรียงครั้งแรกของเดือนนี้ */
+
+/* ค่าที่ใช้เทียบ — ต้องคิดจากของที่ผู้ใช้เห็นจริง ไม่ใช่ตัวเลขดิบ
+   แบ่งลงทุนแบบ % ต้องแปลงเป็นบาทก่อน ไม่งั้น "10%" จะไปอยู่ต่ำกว่า "฿500" ทั้งที่เงินจริงมากกว่า */
+function sortVal(m,x,k){
+  if(k==='v'){
+    if(m.key==='i')return x.t==='%'?calcBase()*nf(x.v)/100:nf(x.v);
+    return nf(x[m.vf]);
+  }
+  if(k==='dt')return isDt(x.dt)?x.dt:'';
+  if(k==='dn')return x.dn?1:0;
+  if(k==='pm'){const i=PM_ORDER.indexOf(x.pm||'bank');return i<0?PM_ORDER.length:i;}
+  if(k==='ct')return CT_ORDER.indexOf(dedCt(x));
+  if(k==='ty')return planTy(x.type)==='installment'?0:1;
+  /* งวดที่เหลือ — ประกัน/สะสมไม่มีงวด จึงไปอยู่ท้ายกลุ่มเสมอ */
+  if(k==='left')return planTy(x.type)==='installment'
+    ? Math.max(0,planTerm(x.total_term)-planTerm(x.current_term)) : Number.MAX_SAFE_INTEGER;
+  return String(x[m.nf]||'').trim();
+}
+/* "ยังไม่ได้กรอก" ของแต่ละฟิลด์ — กติกาข้อ 1 */
+function sortBlank(m,x,k){
+  if(k==='v')return sortVal(m,x,'v')<=0;
+  if(k==='dt')return !isDt(x.dt);
+  if(k==='n')return !String(x[m.nf]||'').trim();
+  if(k==='left')return planTy(x.type)!=='installment';
+  return false;
+}
+function sortApply(kind,key,dir){
+  const m=LIST_META[kind];if(!m)return;
+  rowSyncDom(m);                                   /* อ่านค่าล่าสุดจากจอก่อนเสมอ — กติกาเดียวกับปุ่ม ✕ */
+  const arr=(m.get()||[]).slice();
+  if(!_sortOrig[kind])_sortOrig[kind]=arr.map(x=>x&&x.id);   /* จำลำดับเดิมไว้ครั้งเดียวต่อเดือน */
+  arr.sort((a,b)=>{
+    const ba=sortBlank(m,a,key),bb=sortBlank(m,b,key);
+    if(ba!==bb)return ba?1:-1;                     /* ว่าง → ท้ายเสมอ ไม่ขึ้นกับทิศ */
+    const x=sortVal(m,a,key),y=sortVal(m,b,key);
+    if(typeof x==='string'&&typeof y==='string')return x.localeCompare(y,'th')*dir;
+    return (x<y?-1:x>y?1:0)*dir;
+  });
+  _sortSt[kind]={key,dir};
+  m.set(arr);m.re();
+  sortPaint(kind);
+  formDirty=true;ckAutoSave();                     /* ลำดับเป็นข้อมูลจริง — บันทึกแบบเดียวกับ checkpoint */
+}
+function sortRevert(kind){
+  const m=LIST_META[kind],ids=_sortOrig[kind];if(!m||!ids)return;
+  rowSyncDom(m);
+  const cur=(m.get()||[]).slice();
+  const byId=new Map(cur.map(x=>[x&&x.id,x]));
+  const back=[];
+  ids.forEach(id=>{if(byId.has(id)){back.push(byId.get(id));byId.delete(id);}});
+  byId.forEach(x=>back.push(x));                   /* แถวที่เพิ่มมาทีหลังต่อท้าย ไม่ให้หาย */
+  delete _sortOrig[kind];delete _sortSt[kind];
+  m.set(back);m.re();
+  sortPaint(kind);
+  formDirty=true;ckAutoSave();
+  toast('↩︎ กลับไปลำดับเดิมแล้ว');
+}
+/* ล้างสถานะเมื่อเปลี่ยนเดือน — ลำดับเดิมของเดือนก่อนใช้กับเดือนนี้ไม่ได้ (กติกาข้อ 4) */
+function sortResetAll(){
+  _sortSt={};_sortOrig={};
+  Object.keys(LIST_META).forEach(sortPaint);
+}
+function sortPaint(kind){
+  const btn=ge('sb_'+kind),cur=ge('sc_'+kind);if(!btn||!cur)return;
+  const st=_sortSt[kind];
+  cur.textContent=st?` ${SORT_SHORT[st.key]} ${st.dir>0?'↑':'↓'}`:'';
+  btn.classList.toggle('on',!!st);
+}
+function sortCloseAll(){
+  Object.keys(LIST_META).forEach(k=>{
+    ge('sm_'+k)?.classList.remove('open');
+    ge('sb_'+k)?.setAttribute('aria-expanded','false');
+  });
+}
+/* วาดเมนูใหม่จากสถานะปัจจุบัน — เรียกทั้งตอนเปิดและหลังเลือก ลูกศรจึงตรงเสมอ */
+function sortDrawMenu(kind){
+  const menu=ge('sm_'+kind);if(!menu)return;
+  const st=_sortSt[kind];
+  menu.innerHTML='<div class="smh">เรียงตาม</div>'
+    +(SORT_FIELDS[kind]||[]).map(([k,label])=>{
+      const on=st&&st.key===k;
+      return `<button type="button" role="menuitem" aria-pressed="${on?'true':'false'}" onclick="sortPick('${kind}','${k}',event)">`
+        +`<span>${esc(label)}</span><span class="smd">${on?(st.dir>0?'↑':'↓'):''}</span></button>`;
+    }).join('')
+    +'<hr>'
+    +`<button type="button" role="menuitem" class="smrev"${_sortOrig[kind]?'':' disabled'} onclick="sortRevertClick('${kind}',event)">↩︎ กลับไปลำดับเดิม</button>`;
+}
+function sortToggle(kind,e){
+  if(e)e.stopPropagation();
+  const menu=ge('sm_'+kind),btn=ge('sb_'+kind);if(!menu||!btn)return;
+  const open=!menu.classList.contains('open');
+  sortCloseAll();
+  if(!open)return;
+  sortDrawMenu(kind);
+  menu.classList.add('open');btn.setAttribute('aria-expanded','true');
+}
+/* เลือกฟิลด์เดิมซ้ำ = สลับทิศ · เมนูค้างเปิดไว้ให้กดสลับต่อได้ทันที */
+function sortPick(kind,key,e){
+  if(e)e.stopPropagation();
+  const st=_sortSt[kind];
+  sortApply(kind,key,(st&&st.key===key)?-st.dir:1);
+  sortDrawMenu(kind);
+}
+function sortRevertClick(kind,e){
+  if(e)e.stopPropagation();
+  sortRevert(kind);sortCloseAll();
+}
+document.addEventListener('click',()=>sortCloseAll());
+document.addEventListener('keydown',e=>{if(e.key==='Escape')sortCloseAll();});
 
 const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
 function rowSame(m,x,id,name){
