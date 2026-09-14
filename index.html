@@ -1292,9 +1292,19 @@ let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
 let fbLastKnownTs=null;
+/* ts + เวลาที่ "เครื่องนี้เขียนขึ้น Firebase เอง" ครั้งล่าสุด — ใช้กรอง echo ของตัวเองตอนวนเขียนหลายเดือน
+   (รายละเอียดเหตุผลอยู่ที่ตัวกรองใน fbStartListener) */
+let fbOwnTs=null,fbOwnAt=0;
+const fbMarkOwn=ts=>{if(ts){fbOwnTs=ts;fbOwnAt=Date.now();}return ts;};
+const FB_ECHO_MS=60000;   /* พ้นช่วงนี้ถือว่าไม่มี echo ค้างแล้ว กลับไปเทียบ ts ตรงๆ แบบเดิม */
 let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
 let fbKnownMonths=new Set();  /* เดือนที่เห็นใน Firebase แล้ว — ใช้ตัดสินใจว่าควรลบ local หรือไม่ */
 let formDirty=false;  /* true เมื่อมีการแก้ใน form แต่ยังไม่ save */
+/* เดือนที่เพิ่งถูก "ล้างข้อมูล" ไป และผู้ใช้ยังไม่ได้แตะอะไรต่อ
+   loadM() ของเดือนเปล่าจะดึงเงินเดือนฐานจากเดือนก่อนหน้ามาโชว์เป็นค่าเริ่มต้นเสมอ
+   พอ switchTab() เรียก saveM() อัตโนมัติ เดือนที่เพิ่งลบไปก็ถูกเขียนกลับเข้า DB ทันที
+   (จุดบนแท็บติดกลับมา + ถูก sync ขึ้น cloud) = ล้างแล้วเหมือนไม่ได้ล้าง */
+let _blankYm=null;
 let pendingRemote=null;  /* { ym } — มี remote update ค้างให้ user ตัดสินใจ */
 
 /* ── Defaults ── */
@@ -1555,7 +1565,7 @@ function copyFbShareLink(){
 
 async function fbSave(){
   if(!fbDb)return;
-  const ts=fbTs();
+  const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   return ts;
@@ -1563,7 +1573,7 @@ async function fbSave(){
 
 async function fbSaveMonth(ym){
   if(!fbDb||!ym)return;
-  const ts=fbTs();
+  const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.add(ym);
   const ref=fbDb.collection('salary_data').doc(fbDocId);
@@ -1577,7 +1587,7 @@ async function fbSaveMonth(ym){
 
 async function fbDeleteMonth(ym){
   if(!fbDb||!ym)return;
-  const ts=fbTs();
+  const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.delete(ym);
   try{
@@ -1605,8 +1615,17 @@ function fbStartListener(){
     const d=snap.data();
     if(!d||!d.data)return;
     const remoteMonths=new Set(Object.keys(d.data));
-    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว แต่อย่าลืม sync known-months ด้วย */
-    if(d.lastSaved&&d.lastSaved===fbLastKnownTs){fbKnownMonths=remoteMonths;return;}
+    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว แต่อย่าลืม sync known-months ด้วย
+       เงื่อนไขที่สอง (echoWindow) แก้อาการ "ลบหลายเดือนแล้วไม่หมด":
+       ตอนวนเขียนทีละเดือน (ลบรายการข้ามเดือน / ล้างทั้งปี / ส่งต่อ / ไหลเงินเดือนฐาน)
+       fbLastKnownTs ถูกทับเป็น ts ของรอบล่าสุดไปแล้ว ส่วน Firestore ยุบ snapshot แล้วส่งกลับมาทีหลัง
+       การเทียบ === จึงพลาด แล้วตีความว่า "มีคนแก้จากอีกเครื่อง" → fbSyncFromRemote() เอา DB
+       เวอร์ชันเก่าจาก cloud มาทับ เดือนที่ยังไม่ได้ push จึงได้รายการที่เพิ่งลบกลับคืนมา
+       แล้ววนเขียนขึ้น cloud ซ้ำ = ลบไม่หมด
+       ts รูปแบบ 'YYYY-MM-DD HH:MM:SS.mmm' ความกว้างคงที่ เทียบสตริง = เทียบเวลา
+       จำกัดไว้แค่ 1 นาทีหลังเราเขียนเอง เพื่อไม่ให้เครื่องที่นาฬิกาเดินช้ากว่าถูกเมินถาวร */
+    const echoWindow=fbOwnTs&&(Date.now()-fbOwnAt<FB_ECHO_MS)&&d.lastSaved<=fbOwnTs;
+    if(d.lastSaved&&(d.lastSaved===fbLastKnownTs||echoWindow)){fbKnownMonths=remoteMonths;return;}
     /* timestamp ใหม่ — มาจากเครื่องอื่น */
     fbLastKnownTs=d.lastSaved||null;
     fbSyncFromRemote(d.data,d.lastSaved,remoteMonths);
@@ -2437,6 +2456,8 @@ function saveM(fb=false){
     if(fb){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อนบันทึก');ge('conflictBanner')?.scrollIntoView({behavior:'smooth',block:'center'});}
     return;
   }
+  /* autosave ห้ามชุบชีวิตเดือนที่เพิ่งล้างไป — กดปุ่ม 💾 เอง (fb=true) ยังบันทึกได้ตามปกติ */
+  if(!fb&&_blankYm===ymCur&&!formDirty&&!DB[ymCur])return;
   A=colA();D=colD();I=colI();O=colO();P=colP();
   const ym=ymCur;
   const cnt=new Date(CY,CT+1,0).getDate();
@@ -2523,6 +2544,7 @@ async function basePropYes(){
 let _planDone=[];
 function loadM(mi){
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
+  if(_blankYm&&_blankYm!==ym)_blankYm=null;   /* ย้ายเดือนแล้ว — สถานะ "เพิ่งล้าง" หมดอายุ */
   ge('res').style.display='none';ge('savSt').style.opacity='0';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   formDirty=false;
@@ -2746,13 +2768,27 @@ async function planFwdYes(){
 /* pay = ผูกกับวันเงินเดือนออกไหม — กติกาเดียวกับพารามิเตอร์ payday ของ anchorDates()
         true  → ช่องวันที่ว่างเมื่อไหร่ก็เติมวันที่ 5 กลับให้
         false → รายได้อื่นๆ / แบ่งลงทุน ปล่อยว่างไว้ให้กรอกเอง ห้ามเติมแทน */
+/* vp = prefix ของช่องยอดเงินบนจอ — ต้องมีคู่กับ np ไม่งั้นด่านลบอ่านได้แต่ชื่อ ส่วนยอดอ่านจาก
+       object ที่ยัง sync ไม่ถึง (ค่าใน A/D/O/I/P อัปเดตตอน re-render เท่านั้น ไม่ใช่ทุกตัวอักษร) */
 const LIST_META={
-  a:{key:'a',label:'ค่าเพิ่มเติม',      icon:'➕',nf:'n',   vf:'v',     np:'an_',pay:true, get:()=>A,set:v=>{A=v;},re:()=>rA(),        lock:[BONUS_ID]},
-  d:{key:'d',label:'รายการหัก',         icon:'➖',nf:'n',   vf:'v',     np:'dn_',pay:true, get:()=>D,set:v=>{D=v;},re:()=>rD(),        lock:[BONUS_TAX_ID]},
-  o:{key:'o',label:'รายได้อื่นๆ',        icon:'💰',nf:'n',   vf:'v',     np:'on_',pay:false,get:()=>O,set:v=>{O=v;},re:()=>{rO();updInv();},lock:[]},
-  i:{key:'i',label:'แบ่งเงินลงทุน',      icon:'📈',nf:'n',   vf:'v',     np:'in_',pay:false,get:()=>I,set:v=>{I=v;},re:()=>rI(),        lock:[]},
-  p:{key:'p',label:'แผนผ่อน & ประกัน',  icon:'💳',nf:'name',vf:'amount',np:'pn_',pay:true, get:()=>P,set:v=>{P=v;},re:()=>rP(),        lock:[]}
+  a:{key:'a',label:'ค่าเพิ่มเติม',      icon:'➕',nf:'n',   vf:'v',     np:'an_',vp:'av_',pay:true, get:()=>A,set:v=>{A=v;},re:()=>rA(),        lock:[BONUS_ID]},
+  d:{key:'d',label:'รายการหัก',         icon:'➖',nf:'n',   vf:'v',     np:'dn_',vp:'dv_',pay:true, get:()=>D,set:v=>{D=v;},re:()=>rD(),        lock:[BONUS_TAX_ID]},
+  o:{key:'o',label:'รายได้อื่นๆ',        icon:'💰',nf:'n',   vf:'v',     np:'on_',vp:'ov_',pay:false,get:()=>O,set:v=>{O=v;},re:()=>{rO();updInv();},lock:[]},
+  i:{key:'i',label:'แบ่งเงินลงทุน',      icon:'📈',nf:'n',   vf:'v',     np:'in_',vp:'iv_',pay:false,get:()=>I,set:v=>{I=v;},re:()=>rI(),        lock:[]},
+  p:{key:'p',label:'แผนผ่อน & ประกัน',  icon:'💳',nf:'name',vf:'amount',np:'pn_',vp:'pv_',pay:true, get:()=>P,set:v=>{P=v;},re:()=>rP(),        lock:[]}
 };
+/* ดึงชื่อ/ยอดล่าสุดจากหน้าจอกลับเข้า array ก่อนตัดสินใจลบ — กติกาเดียวกับ pre-sync ใน rA/rD/rO/rI/rP
+   ไม่ทำก่อน จะเจอสามอาการ: (1) แถวที่พิมพ์ยอดไว้แต่ยังไม่ตั้งชื่อถูกลบเงียบๆ ไม่ถามสักคำ
+   (2) กล่องยืนยันขึ้นว่า "ยังไม่ได้กรอกยอด" ทั้งที่กรอกแล้ว (3) แถวที่เพิ่งเปลี่ยนชื่อบนจอ
+   ยังถูกจับคู่ด้วยชื่อเก่า → ลบผิดแถว/ลบพ่วงไปด้วยตอนลบข้ามเดือน */
+function rowSyncDom(m){
+  (m.get()||[]).forEach(x=>{
+    if(!x)return;
+    const nEl=ge(m.np+x.id);if(nEl)x[m.nf]=nEl.value;
+    const vEl=ge(m.vp+x.id);
+    if(vEl&&vEl.type!=='hidden')x[m.vf]=vEl.value;   /* โบนัสใช้ช่องซ่อนที่คำนวณเอง ห้ามทับ */
+  });
+}
 let _rowDel=null;
 
 const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
@@ -2797,9 +2833,10 @@ function rowDelCount(m,k,id,name,curYm){
 
 function openRowDel(kind,id){
   const m=LIST_META[kind];if(!m)return;
+  rowSyncDom(m);                                        /* ต้องมาก่อนทุกการอ่านค่า — ดูหมายเหตุที่ rowSyncDom() */
   const it=m.get().find(x=>x&&x.id===id);
   if(!it||CT<0||CT>=12){if(m)rowDelNow(m,id);return;}   /* หลุดกรณีแปลกๆ — ลบตรงๆ แบบเดิม */
-  const name=String(gvf(m.np+id,it[m.nf])||'').trim();  /* ชื่อล่าสุดบนจอ ไม่ใช่ค่าที่ยังไม่ sync */
+  const name=String(it[m.nf]||'').trim();               /* sync มาจากจอแล้วโดย rowSyncDom() */
   const ym=ymk(CT);
   const locked=m.lock.includes(id);
   const others=locked?[]:rowDelFind(m,id,name,ym);
@@ -2873,7 +2910,10 @@ function rowDelPreview(){
   const t=rowDelTargets();
   /* บางเดือนมีแถวชื่อซ้ำกันมากกว่าหนึ่งแถว — บอกจำนวนแถวด้วย ไม่งั้นตัวเลข "กี่เดือน"
      จะทำให้เข้าใจว่าลบแค่เดือนละแถว */
-  const rows=t.reduce((sum,k)=>sum+rowDelCount(d.m,k,d.id,d.name,d.ym),0);
+  /* โหมด "เฉพาะเดือนนี้" ลบตามแถวที่ผู้ใช้ชี้ (rowDelNow ตาม id) แถวชื่อซ้ำในเดือนเดียวกัน
+     จึงไม่โดนด้วย — ต้องนับ 1 ไม่งั้น preview สัญญาไว้เกินจริง = "ลบแล้วไม่หมด" อีกแบบ */
+  const rows=rowDelMode()==='one'?1
+    :t.reduce((sum,k)=>sum+rowDelCount(d.m,k,d.id,d.name,d.ym),0);
   ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน`
     +(rows>t.length?` (${rows} แถว)`:'')+`</div>`
     +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
@@ -3308,6 +3348,7 @@ async function doClearYear(){
   /* ล้างหน้าจอให้ตรงกับข้อมูลที่เพิ่งลบ — เดือนที่เปิดอยู่จะกลับเป็นฟอร์มเปล่า */
   if(CT===12)renderSum();else switchTab(CT,true);
   formDirty=false;
+  _blankYm=CT===12?null:ymk(CT);   /* ตั้งหลัง switchTab เพราะ loadM() ล้างค่านี้ */
   toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
 
   /* sync การลบขึ้น cloud ทีละเดือน — แบบเดียวกับ doCopyYear() */
@@ -4126,6 +4167,7 @@ function doResetM(){
   ['aList','dList','iList','oList','pList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();rP();buildOT();reOT();updateDots();
   formDirty=false;
+  _blankYm=ym;
   /* บันทึก localStorage */
   try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
@@ -4838,7 +4880,7 @@ document.addEventListener('visibilitychange',()=>{
   ge('mv')?.addEventListener(ev,e=>{
     if(CT===12)return;
     const t=e.target;
-    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'))formDirty=true;
+    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA')){formDirty=true;_blankYm=null;}
   });
 });
 
