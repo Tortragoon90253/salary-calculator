@@ -2382,6 +2382,11 @@ function onBonusMthChg(){
   const amt=base*mth;
   if(dispEl)dispEl.textContent=mth&&base?`= ฿${fmt(amt)}`:'';
   if(hidEl)hidEl.value=amt?amt.toFixed(2):'';
+  /* ยอดโบนัสเปลี่ยน = ภาษีหัก ณ ที่จ่ายของโบนัสต้องเปลี่ยนตามทันที
+     เดิมคำนวณให้เฉพาะตอนกดปุ่ม ✓ ที่แถวโบนัสเท่านั้น ใครกรอกจำนวนเดือนแล้วกด "คำนวณเงินเดือน" เลย
+     จะได้ยอดรับจริงสูงเกินจริงทั้งเดือน เพราะภาษีโบนัสยังเป็น 0 อยู่
+     ข้ามระหว่าง loadM() เพราะตอนนั้นช่องกรอกบนจอยังเป็นของเดือนก่อน */
+  if(!_loadingM)applyBonusTax(true);
   updInv();
 }
 function onBaseChg(){
@@ -2567,7 +2572,12 @@ async function basePropYes(){
 /* ── LOAD ── */
 /* รายการผ่อนที่ "ผ่อนครบ" จากการข้ามเดือนรอบล่าสุด — เก็บไว้แจ้งหลัง render เสร็จ */
 let _planDone=[];
+let _loadingM=false;   /* true ระหว่าง loadM() — DOM ยังเป็นของเดือนก่อน ห้ามคำนวณอะไรจากมัน */
 function loadM(mi){
+  _loadingM=true;
+  try{loadMonth(mi);}finally{_loadingM=false;}
+}
+function loadMonth(mi){
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
   if(_blankYm&&_blankYm!==ym)_blankYm=null;   /* ย้ายเดือนแล้ว — สถานะ "เพิ่งล้าง" หมดอายุ */
   ge('res').style.display='none';ge('savSt').style.opacity='0';
@@ -4353,23 +4363,31 @@ function calcTax(){
     lastTax=mTax;
   }
 }
+/* เขียนยอดลงช่องกรอกบนจอ "ก่อน" เรียก rD()/rA() วาดใหม่
+   เพราะ r*() จะ pre-sync ค่าจากช่องกรอกกลับเข้า array เป็นอย่างแรกเสมอ
+   ถ้าตั้งแต่ใน array อย่างเดียว ค่าเก่าบนจอจะทับกลับทันที
+   เดิมแก้ด้วย setTimeout 50 ms ซึ่งแพ้การสลับเดือน/บันทึกที่เกิดขึ้นก่อนครบเวลา
+   → ยอดภาษีที่เพิ่งกดบันทึกหายเงียบๆ กลายเป็น 0 */
+const setRowVal=(id,v)=>{const e=ge(id);if(e)e.value=v;};
+
 function applyTax(){
-  if(lastTax===undefined){alert('กรุณากดคำนวณก่อนครับ');return;}
+  if(lastTax===undefined){toast('กรุณากดคำนวณก่อนครับ','te');return;}
   /* หาจากธงประเภทต้นทุน ไม่ใช่จากชื่อ — เดิมแถวชื่อ "ภาษีโรงเรือน" ถูกเขียนทับยอดหายได้
      และต้องข้ามแถวภาษีโบนัส ซึ่งมีปุ่มคำนวณของตัวเองอยู่แล้ว (applyBonusTax) */
   const it=D.find(x=>x.id!==BONUS_TAX_ID&&dedCt({id:x.id,n:gv(`dn_${x.id}`)||x.n,ct:gv(`dc_${x.id}`)||x.ct})==='tax');
-  if(it){it.v=lastTax.toFixed(2);it.ok=true;it.ct='tax';rD();setTimeout(()=>{const e=ge(`dv_${it.id}`);if(e)e.value=lastTax.toFixed(2);},50);}
+  if(it){const v=lastTax.toFixed(2);it.v=v;it.ok=true;it.ct='tax';setRowVal(`dv_${it.id}`,v);rD();}
   else{const id=uid();D.push({id,n:'ภาษีหัก ณ ที่จ่าย',v:lastTax.toFixed(2),pm:'bank',ct:'tax',ok:true,dn:false,dt:payDate(gv('fPrd'))});rD();}
   updInv();toast(`✓ บันทึกภาษี ฿${lastTax.toFixed(2)}/เดือน`);
 }
-function applyBonusTax(){
+/* quiet = อัปเดตเงียบๆ ตอนยอดโบนัสเปลี่ยนเอง (ไม่ต้องเด้ง toast ทุกตัวอักษรที่พิมพ์) */
+function applyBonusTax(quiet){
   const bt=calcBonusTax();
   const existing=D.find(x=>x.id===BONUS_TAX_ID);
   if(bt>0){
     if(existing){existing.v=bt.toFixed(2);existing.ok=true;}
     else D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:bt.toFixed(2),pm:'bank',ct:'tax',ok:true,dn:false});
-    rD();setTimeout(()=>{const e=ge(`dv_${BONUS_TAX_ID}`);if(e)e.value=bt.toFixed(2);},50);
-    toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
+    setRowVal(`dv_${BONUS_TAX_ID}`,bt.toFixed(2));rD();
+    if(!quiet)toast(`✓ คำนวณภาษีโบนัส ฿${bt.toFixed(2)}`);
   }else if(existing){D=D.filter(x=>x.id!==BONUS_TAX_ID);rD();}
   updInv();
 }
@@ -6450,14 +6468,20 @@ init();
       const parts=describeChanges(previewYm?fFor(previewYm):f);
       let where;
       if(months.length){
+        /* กัน race แบบเดียวกับปุ่มอื่นที่เขียนหลายเดือน — cloud ยังโหลดไม่เสร็จ/มีข้อขัดแย้งค้าง ห้ามเขียนทับ */
+        if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+        if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
         const curYm=(CT>=0&&CT<12)?ymk(CT):null;
         months.forEach(ym=>{ const fm=fFor(ym); if(ym===curYm)applyToForm(fm); else applyToRecord(ym,fm); });
         if(curYm&&months.includes(curYm))saveM();          /* บันทึกเดือนปัจจุบันที่แก้ผ่านฟอร์ม */
         try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
         updateDots();if(CT===12)renderSum();
-        (async()=>{ for(const ym of months){ if(ym===curYm)continue; try{ if(fbDb)await fbSaveMonth(ym); else if(gsUrl)await gsPost({action:'saveMonth',ym,record:DB[ym]}); }catch(e){console.warn('sync',ym,e);} } })();
+        /* ใช้ syncMonths() เหมือนปุ่มอื่น — เดิม fire-and-forget แล้ว console.warn เฉยๆ
+           ซิงค์ล้มเหลวกี่เดือนก็ไม่มีใครรู้ ทั้งที่ toast บอกว่าแก้เรียบร้อยแล้ว */
+        syncMonths(months.filter(ym=>ym!==curYm),'ai apply').then(fail=>{
+          toast('✅ แก้ไข '+months.length+' เดือนเรียบร้อย'+syncFailTxt(fail),fail?'te':'ts');
+        });
         where=months.map(monthLabelFull).join(', ');
-        toast('✅ แก้ไข '+months.length+' เดือนเรียบร้อย');
       }else{
         if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
         applyToForm(f);
