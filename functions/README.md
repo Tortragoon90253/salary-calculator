@@ -69,6 +69,8 @@ https://asia-southeast1-<project-id>.cloudfunctions.net/askAI
 | `MAX_BODY` | `256KB` | ขนาดคำขอสูงสุด (กันรูปยักษ์) |
 | `ALLOWED_MODELS` | 4 โมเดล | โมเดลที่อนุญาต |
 | `ALLOWED_ORIGINS` | `['*']` | ใส่โดเมนเว็บคุณเพื่อล็อกให้เรียกได้เฉพาะที่นั่น |
+| `MAX_OUTPUT_TOKENS` | `16384` | เพดานความยาวคำตอบ — client ขอเกินนี้ไม่ได้ (กันบิลบาน) |
+| `MAX_THINKING_BUDGET` | `8192` | เพดานโทเคนที่ให้โมเดลใช้คิด |
 
 แก้แล้ว deploy ใหม่ด้วย `firebase deploy --only functions`
 
@@ -76,9 +78,11 @@ https://asia-southeast1-<project-id>.cloudfunctions.net/askAI
 
 ## 🔒 หมายเหตุความปลอดภัย
 
-- ตัวนับโควตาเก็บใน Firestore คอลเลกชัน `ai_usage` — ถ้า Firestore Rules ของคุณยังเป็น **Test mode (เปิดหมด)** client ที่มี config Firebase อาจแก้ตัวนับได้ แนะนำให้ล็อก Rules ให้เขียน `ai_usage` ได้เฉพาะฝั่งเซิร์ฟเวอร์ (admin SDK ข้าม Rules อยู่แล้ว) เช่น:
+- **`ACCESS_CODES` ว่าง = ปฏิเสธทุกคำขอ (fail-closed)** — endpoint นี้เปิดสาธารณะ และหลังยามคือ Gemini key จริงที่คิดเงินตามใช้ ถ้าไม่ตั้งรหัสไว้จะตอบ `503` ทุกคำขอแทนที่จะเปิดให้ใครก็เรียกได้
+- ตัวนับโควตาเก็บใน Firestore คอลเลกชัน `ai_usage` (doc id เป็น hash ของรหัส ไม่ใช่ตัวรหัส) — ถ้า Firestore Rules ของคุณยังเป็น **Test mode (เปิดหมด)** client ที่มี config Firebase อาจแก้ตัวนับได้ แนะนำให้ล็อก Rules ให้เขียน `ai_usage` ได้เฉพาะฝั่งเซิร์ฟเวอร์ (admin SDK ข้าม Rules อยู่แล้ว) เช่น:
   ```
   match /ai_usage/{doc} { allow read, write: if false; }
   ```
-- อยากปิดใช้ชั่วคราว: ลบ/แก้ค่า `ACCESS_CODES` แล้ว deploy ใหม่ หรือ `firebase functions:delete askAI`
+- โควตาถูก**คืนให้อัตโนมัติ**เมื่อเรียก Gemini ไม่สำเร็จ (Google ล่ม / หมดเวลา / 429) — คำถามที่ไม่เคยได้คำตอบจึงไม่กินโควตา
+- อยากปิดใช้ชั่วคราว: ลบค่า `ACCESS_CODES` แล้ว deploy ใหม่ หรือ `firebase functions:delete askAI`
 - ดู log: `firebase functions:log`
