@@ -306,6 +306,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .tyr-h{font-size:.82rem;font-weight:700;color:#4a5568;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0}
 .tyr-sub{font-size:.66rem;color:#a0aec0;font-weight:500}
 .tyr-note{margin-top:12px;font-size:.74rem;color:#718096;padding-top:8px;border-top:1px dashed #cbd5e0}
+.tyr-rec{margin-top:16px;background:#fffaf0;border:1px solid #fbd38d;border-radius:9px;padding:12px 14px}
+.tyr-rec .li{border-bottom-color:#feebc8}
+.tyr-rec-tot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:2px solid #fbd38d}
+.tyr-rec-lbl{font-size:.82rem;font-weight:700}
+.tyr-rec-val{font-size:1.25rem;font-weight:800;white-space:nowrap}
+.tyr-rec-pay{color:#c53030}.tyr-rec-ref{color:#276749}.tyr-rec-even{color:#4a5568}
+.tyr-rec-warn{margin-top:9px;font-size:.71rem;color:#975a16;line-height:1.7}
 .ded-stat-item{background:#f7fafc;border-radius:8px;padding:10px 12px;border-left:4px solid #e2e8f0}
 .ded-stat-lbl{font-size:.68rem;color:#718096;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ded-stat-val{font-size:1rem;font-weight:800;color:#2d3748}
@@ -532,14 +539,20 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .tx-deduct-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
 .tx-row{display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px}
 .tx-row-full{grid-column:1/-1}
+/* จอแคบ: สองคอลัมน์ทำให้ป้ายไทยตกบรรทัดจนอ่านยาก เรียงลงมาเป็นคอลัมน์เดียวแทน */
+@media(max-width:560px){.tx-deduct-grid{grid-template-columns:1fr}}
 .tx-lbl{font-size:.77rem;flex:1}
 .tx-val{font-size:.75rem;font-weight:700;color:#276749}
 .tx-hint{font-size:.7rem;color:#718096}
 .tx-sub{color:#a0aec0;font-size:.7rem}
 .tx-chk{width:15px;height:15px;accent-color:#276749}
-.tx-num-sm{width:48px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
-.tx-num-md{width:110px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
-.tx-num-lg{width:130px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+/* ต้องเจาะจงกว่า input[type=number]{width:100%} ข้างบน (0,1,1 > 0,1,0 ของคลาสเปล่า)
+   ไม่งั้นช่องตัวเลขจะยืดเต็มแถวแล้วบีบป้ายจนตัวอักษรไทยตกบรรทัดทีละตัว
+   + flex:none กันไม่ให้ยืด/หดตามพื้นที่ที่เหลือ */
+input.tx-num-sm{width:56px;flex:0 0 56px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+input.tx-num-md{width:110px;flex:0 0 110px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+.tx-hint{flex:none;white-space:nowrap}
 .tax-btns{display:flex;gap:8px;margin-top:10px}
 .tax-apply{flex:1;padding:9px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer}
 .tax-dismiss{padding:9px 14px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;color:#718096;cursor:pointer;font-weight:600}
@@ -746,6 +759,12 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
               <span class="tx-lbl">บุตร (คน)</span>
               <input type="number" id="tx3" value="0" min="0" max="10" onchange="calcTax()" class="tx-num-sm">
               <span class="tx-hint">×30,000</span>
+            </div>
+            <div class="tx-row tx-row-full">
+              <span class="tx-lbl">↳ ในนั้นเป็น<strong>บุตรคนที่ 2 ขึ้นไป ที่เกิดตั้งแต่ปี 2561</strong> <span class="tx-sub">(กลุ่มนี้ลดหย่อนได้ 60,000 — บุตรคนแรกไม่เข้าเกณฑ์)</span></span>
+              <input type="number" id="tx3b" value="0" min="0" max="9" onchange="calcTax()" class="tx-num-sm"
+                     title="บุตรคนที่ 2 เป็นต้นไปที่เกิดตั้งแต่ปี 2561 ลดหย่อนได้ 60,000 แทน 30,000">
+              <span class="tx-hint">+30,000/คน</span>
             </div>
             <div class="tx-row">
               <span class="tx-lbl">เลี้ยงดูบิดา/มารดา (คน)</span>
@@ -1360,6 +1379,24 @@ const planAmt=x=>nf(x&&x.amount);
 const planTotal=arr=>(arr||[]).reduce((s,x)=>s+planAmt(x),0);
 const planTerm=v=>Math.max(1,parseInt(v,10)||1);
 
+/* ── localStorage ที่ "รู้ตัวเมื่อเขียนไม่ลง" ──
+   เดิมทุกจุดเป็น try{...}catch(e){} เปล่าๆ พื้นที่เต็ม / โหมดส่วนตัว / เบราว์เซอร์บล็อกคุกกี้
+   = เขียนไม่ลงจริง แต่ผู้ใช้เห็นแถบ "บันทึกล่าสุด" ขึ้นตามปกติแล้วเชื่อว่าเซฟแล้ว
+   เตือนครั้งเดียวต่อรอบการใช้งาน ไม่ให้ toast เด้งรัวทุกครั้งที่พิมพ์ */
+let _lsWarned=false;
+function lsSet(k,v){
+  try{localStorage.setItem(k,v);return true;}
+  catch(e){
+    console.warn('localStorage write failed:',k,e);
+    if(!_lsWarned){
+      _lsWarned=true;
+      toast('⚠️ บันทึกลงเครื่องไม่สำเร็จ (พื้นที่เต็ม หรือเบราว์เซอร์ปิดการเก็บข้อมูลไว้) — '
+        +(fbDb?'ข้อมูลยังถูกซิงค์ขึ้น Firebase ตามปกติ':'ข้อมูลจะหายเมื่อปิดหน้านี้ แนะนำให้กด ⬇️ Export เก็บไว้'),'te');
+    }
+    return false;
+  }
+}
+
 /* ── Toast ── */
 let _tt;
 function toast(msg,type='ts'){
@@ -1451,7 +1488,7 @@ async function saveFbCfg(){
   }
   fbCfg=cfg;
   fbReady=false;fbLoaded=false;  /* บล็อก save ระหว่างโหลด */
-  try{localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));}catch(e){}
+  lsSet(FB_CFG_KEY,JSON.stringify(cfg));
   showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
   try{
     const result=await fbLoad();
@@ -1588,7 +1625,7 @@ function loadAllFromFB(data,lastSaved){
       normDays(rec);
       DB[ym]=rec;
     });
-    try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+    lsSet(SK,JSON.stringify(DB));
   }
   fbLastKnownTs=lastSaved||null;
   setSyncSt('fb_ok');
@@ -1617,7 +1654,7 @@ function fbSyncFromRemote(data,lastSaved,remoteMonths){
     if(fbKnownMonths.has(ym)&&!remoteMonths.has(ym))delete DB[ym];
   });
   fbKnownMonths=remoteMonths;
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   updateDots();
@@ -1660,14 +1697,14 @@ function dismissRemote(){
    ════════════════════════════════════════════════════ */
 async function persist(){
   /* 1. บันทึกลง localStorage เสมอ (backup) */
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   const now=new Date();
   const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
-  try{localStorage.setItem(SKM,ts);}catch(e){}
+  lsSet(SKM,ts);
   setBadge(ts,'local');
 
-  /* 2. Firebase sync (ถ้ามี config) — priority สูงกว่า GS */
-  if(fbDb&&CT!==12){
+  /* 2. Firebase sync (ถ้ามี config) — saveM() กัน CT===12 ไว้ตั้งแต่ต้นแล้ว */
+  if(fbDb){
     setSyncSt('fb_saving');
     try{
       const savedTs=await fbSaveMonth(ymk(CT));
@@ -1695,7 +1732,7 @@ async function restore(){
         const cfg={apiKey:parsed.k,projectId:parsed.p,docId:parsed.d||'default'};
         fbCfg=cfg;
         fbInit(cfg);
-        localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));
+        lsSet(FB_CFG_KEY,JSON.stringify(cfg));
         history.replaceState(null,'',location.href.split('#')[0]);
         toast('🔗 โหลด Firebase Config จาก Link สำเร็จ!','ts');
       }
@@ -1801,7 +1838,7 @@ function rA(){
       <button class="delbtn" onclick="delA('${a.id}')">✕</button>
     </div>`;
   }).join('');
-  bindDrag('aList',A,rA);
+  bindDrag('aList','a');
   updCkBars();
 }
 function rD(){
@@ -1830,7 +1867,7 @@ function rD(){
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
     </div>`;
   }).join('');
-  bindDrag('dList',D,rD);
+  bindDrag('dList','d');
   updPaySummary();
   updCkBars();
 }
@@ -1847,7 +1884,7 @@ function rO(){
       <button class="fwdbtn" onclick="openRowFwd('o','${o.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>
       <button class="delbtn" onclick="delO('${o.id}')">✕</button>
     </div>`).join('');
-  bindDrag('oList',O,rO);
+  bindDrag('oList','o');
   updOth();
   updCkBars();
 }
@@ -1873,7 +1910,7 @@ function rI(){
       <button class="delbtn" onclick="delI('${inv.id}')">✕</button>
     </div>`;
   }).join('');
-  bindDrag('iList',I,rI);
+  bindDrag('iList','i');
   updInv();
 }
 
@@ -1924,7 +1961,7 @@ function rP(){
       <div class="pl-row3">${prog}</div>
     </div>`;
   }).join('');
-  bindDrag('pList',P,rP);
+  bindDrag('pList','p');
   updPlan();updCkBars();
 }
 
@@ -1946,34 +1983,47 @@ function updPlan(){
     +(varDed>0?` &nbsp;(ยังไม่หักผันแปร 🔄 ${fmt(varDed)} ซึ่งจ่ายจากก้อนนี้)`:'')+`</span>`;
 }
 
-/* ── Drag & Drop reorder ── */
-let _dragId=null,_dragArr=null,_dragRe=null;
-function bindDrag(listId,arr,reFn){
+/* ── Drag & Drop reorder ──
+   จำแค่ "กล่องไหน" ไม่ใช่ตัว array — ห้ามจับ reference ของ array ไว้ตอน bind เด็ดขาด
+   เพราะ saveM() ทำ A=colA() (และ D/I/O/P) = แทนด้วย array ใหม่ทั้งก้อน โดยไม่วาดลิสต์ใหม่
+   ตัวฟังที่ผูกไว้จึงค้างอยู่กับก้อนเก่าที่ถูกทิ้งแล้ว พอ drop ก็ splice ลงก้อนนั้น
+   แล้ว re-render อ่านจากก้อนใหม่ = ลำดับไม่ขยับ เงียบสนิท ไม่มี error
+   เส้นทางที่ทำให้พังมีเต็มไปหมด: กด 🧮 คำนวณ · กด 💾 บันทึก · ติ๊ก ☑ (ckAutoSave)
+   · สลับแท็บเบราว์เซอร์ออกแล้วกลับมา (visibilitychange) — ทั้งหมดเรียก saveM() โดยไม่วาดใหม่ */
+let _dragId=null,_dragKind=null;
+function bindDrag(listId,kind){
+  if(!LIST_META[kind])return;
   const rows=ge(listId).querySelectorAll('[draggable]');
   rows.forEach(row=>{
     row.addEventListener('dragstart',e=>{
-      _dragId=row.dataset.id;_dragArr=arr;_dragRe=reFn;
+      _dragId=row.dataset.id;_dragKind=kind;
       row.classList.add('dragging');
       e.dataTransfer.effectAllowed='move';
     });
     row.addEventListener('dragend',()=>{
       row.classList.remove('dragging');
+      _dragId=null;_dragKind=null;
       ge(listId).querySelectorAll('.drag-over').forEach(r=>r.classList.remove('drag-over'));
     });
     row.addEventListener('dragover',e=>{
+      if(_dragKind!==kind)return;              /* ลากข้ามกล่องไม่ได้ — อย่าไฮไลต์ให้เข้าใจผิด */
       e.preventDefault();e.dataTransfer.dropEffect='move';
       if(row.dataset.id!==_dragId)row.classList.add('drag-over');
     });
     row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
     row.addEventListener('drop',e=>{
       e.preventDefault();row.classList.remove('drag-over');
-      if(!_dragId||row.dataset.id===_dragId)return;
-      const fromIdx=_dragArr.findIndex(x=>x.id===_dragId);
-      const toIdx=_dragArr.findIndex(x=>x.id===row.dataset.id);
+      if(!_dragId||_dragKind!==kind||row.dataset.id===_dragId)return;
+      const m=LIST_META[kind];
+      const arr=(m.get()||[]).slice();          /* อ่านสดตอน drop ไม่ใช่ตอน bind */
+      const fromIdx=arr.findIndex(x=>x&&x.id===_dragId);
+      const toIdx=arr.findIndex(x=>x&&x.id===row.dataset.id);
       if(fromIdx<0||toIdx<0)return;
-      const [item]=_dragArr.splice(fromIdx,1);
-      _dragArr.splice(toIdx,0,item);
-      _dragRe();updInv();
+      const [item]=arr.splice(fromIdx,1);
+      arr.splice(toIdx,0,item);
+      m.set(arr);
+      formDirty=true;ckAutoSave();              /* ลำดับเป็นข้อมูลจริง — กติกาเดียวกับปุ่มเรียง */
+      m.re();updInv();
     });
   });
 }
@@ -2188,6 +2238,13 @@ const CT_TITLE='🧾 ภาษี = ภาษีหัก ณ ที่จ่า
 /* แถวที่ผูกกับวันเงินเดือนออกโดยธรรมชาติ — ใช้เกณฑ์เดียวกับ getTaxFromD() */
 const isTaxRow=x=>!!x&&(x.id===BONUS_TAX_ID||dedCt(x)==='tax');
 function getTaxFromD(arr){return (arr||[]).reduce((s,x)=>isTaxRow(x)?s+nf(x.v):s,0);}
+/* ภาษีของ "เงินเดือนล้วน" — ไม่รวมภาษีโบนัส
+   โบนัสมีกลไกภาษีของตัวเองอยู่แล้ว (calcBonusTax คิดแบบส่วนเพิ่ม ครั้งเดียวตอนจ่าย)
+   วิธีสะสม YTD จึงต้องไม่เอาภาษีก้อนนั้นมาปนกับภาษีรายเดือน ไม่งั้นสองฝั่งคนละเกณฑ์กัน:
+   ฐานรายได้ตัดโบนัสออก แต่ฐานภาษีกลับรวมภาษีโบนัสไว้ → ภาษีที่ยังต้องหักดูเหมือนติดลบ
+   แล้วทุกเดือนที่เหลือของปีกลายเป็น 0 ทั้งที่ยังต้องหักอยู่ */
+const getBonusTaxFromD=arr=>(arr||[]).reduce((s,x)=>(x&&x.id===BONUS_TAX_ID)?s+nf(x.v):s,0);
+const getRegularTaxFromD=arr=>getTaxFromD(arr)-getBonusTaxFromD(arr);
 /* แยกรายการหัก (ที่ไม่ใช่ภาษี) เป็นคงที่ / ผันแปร
    ต้องใช้เกณฑ์ตัวเดียวกับ getTaxFromD() เพราะภาษีถูกหักไปแล้วใน takeHome
    ถ้านับซ้ำที่นี่จะหักสองรอบ — และ fix+var ต้องเท่ากับ "รายการหักอื่นๆ" เป๊ะเสมอ
@@ -2493,7 +2550,7 @@ async function basePropYes(){
   if(!d)return;
   await saveM();                                   /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
   d.targets.forEach(k=>{if(DB[k])DB[k].base=String(d.newBase);});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   const fail=await syncMonths(d.targets,'propagate');
   if(CT===12)renderSum();
@@ -2547,7 +2604,10 @@ function loadMonth(mi){
         const dv=rec.days[dk];
         const ea=ge(`ota_${dk}`),e3=ge(`ot3_${dk}`);
         if(ea)ea.value=dv.ac||'';
-        if(e3)e3.value=dv.o3||'';
+        /* ช่อง ×3.0 ของวันธรรมดาถูก disable ไว้ และตัวคำนวณไม่นับให้อยู่แล้ว (ดู isN3Dow)
+           ถ้ายังเขียนค่าเก่าลงไป ผู้ใช้จะเห็นตัวเลขในกล่องเทาที่ลบเองไม่ได้ และเข้าใจว่าได้เงินเพิ่ม
+           ปล่อยว่างไว้ แล้ว saveM() รอบถัดไปจะล้างค่าค้างออกจากข้อมูลให้เอง */
+        if(e3)e3.value=e3.disabled?'':(dv.o3||'');
       });
     }
     onBaseChg();reOT();
@@ -2721,7 +2781,7 @@ async function planFwdYes(){
     const doneIds=new Set(fw.done.map(x=>x.id));
     rec.p=mergePlans((rec.p||[]).filter(x=>x&&!doneIds.has(x.id)),fw.list);
   });
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   const fail=await syncMonths(d.targets,'plan propagate');
   if(CT===12)renderSum();
@@ -2901,6 +2961,23 @@ function sortRevertClick(kind,e){
 document.addEventListener('click',()=>sortCloseAll());
 document.addEventListener('keydown',e=>{if(e.key==='Escape')sortCloseAll();});
 
+/* ── ขังโฟกัสไว้ในกล่องยืนยันที่เปิดอยู่ ──
+   overlay (z-index 10000, inset 0) บังการคลิกไว้แล้ว แต่กด Tab ยังวิ่งไปโดนปุ่มหลังฉากได้
+   เช่นแท็บเดือน — สลับเดือนทั้งที่กล่องยังค้าง แล้วกดยืนยันทีหลังจะไปลงมือกับเดือนที่ไม่ใช่
+   เดือนที่กล่องนั้นสรุปไว้ (ตัวแปร _rowDel/_rowFwd/_baseProp ถูกตั้งไว้ตั้งแต่ตอนเปิด) */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Tab')return;
+  const box=document.querySelector('.modal-overlay.open .modal-box');
+  if(!box)return;
+  const f=[...box.querySelectorAll('button,input,select,textarea,a[href]')]
+    .filter(el=>!el.disabled&&el.tabIndex!==-1&&el.offsetParent!==null);
+  if(!f.length)return;
+  const first=f[0],last=f[f.length-1];
+  if(!box.contains(document.activeElement)){e.preventDefault();first.focus();return;}
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+});
+
 const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
 function rowSame(m,x,id,name){
   if(!x)return false;
@@ -3062,7 +3139,7 @@ async function rowDelYes(){
 
   await saveM();                 /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
   others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   const fail=await syncMonths(others,'row delete');
   if(CT===12)renderSum();
   toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
@@ -3222,11 +3299,20 @@ async function rowFwdYes(){
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   ge('rowFwdModal').classList.remove('open');_rowFwd=null;
   if(!sc.hit.length)return;
+  /* แผนผ่อนที่ครบงวดก่อนถึงเดือนไหน จะไม่ถูกเขียนลงเดือนนั้น (rowPut ถอดของเก่าออกให้แทน)
+     ข้อความสรุปจึงต้องนับเฉพาะเดือนที่ได้รับจริง ไม่ใช่ทุกเดือนที่แตะ */
+  const fin=rowFwdFinished(m,d.item,d.ym,sc.hit);
+  const wrote=sc.hit.filter(t=>!fin.includes(t));
   sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   const fail=await syncMonths(sc.hit,'row propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
+  const nm=String(d.item[m.nf]||'');
+  const skipTxt=fin.length?` · ข้าม ${fin.length} เดือนที่ผ่อนครบก่อนแล้ว`:'';
+  toast(wrote.length
+    ? `✅ ส่ง "${nm}" ไป ${wrote.length} เดือนถัดไปแล้ว${skipTxt}`+syncFailTxt(fail)
+    : `🎉 "${nm}" ผ่อนครบก่อนถึงทุกเดือนที่เลือก — ไม่ได้ส่งไป (ถอดรายการเก่าออกให้แล้ว ${fin.length} เดือน)`+syncFailTxt(fail),
+    fail?'te':'ts');
 }
 
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
@@ -3424,7 +3510,7 @@ async function doCopyYear(){
   if(!p.copy.length){go.disabled=false;renderCopyPreview();cpyStep(1);toast('ไม่มีเดือนที่ต้องลอก');return;}
 
   p.copy.forEach(c=>{DB[ymk(c.mi)]=buildCopyRec(c.rec,c.mi,c.srcYm,keepAmt);});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   closeCopyYear();
   if(CT===12)renderSum();else switchTab(CT,true);
@@ -3477,7 +3563,7 @@ async function doClearYear(){
   const yms=ms.map(mi=>`${yr}-${p2(mi+1)}`);
 
   yms.forEach(ym=>{delete DB[ym];});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   closeClearYear();
   /* ล้างหน้าจอให้ตรงกับข้อมูลที่เพิ่งลบ — เดือนที่เปิดอยู่จะกลับเป็นฟอร์มเปล่า */
@@ -3722,18 +3808,25 @@ function adoptWkbDef(){
   const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]&&DB[k].wkbDef).sort();
   if(keys.length){
     _wkbDef=String(DB[keys[keys.length-1]].wkbDef);
-    try{localStorage.setItem(WKBD_KEY,_wkbDef);}catch(e){}
+    lsSet(WKBD_KEY,_wkbDef);
   }
 }
 /* กรอกค่าใหม่ = ตั้งเฉพาะเดือนนี้ (ถ้าเท่ากับค่าเริ่มต้นก็ถือว่าไม่ได้ override) */
 function setWkb(v){_wkb=String(v??'').trim();setTimeout(doCalc,0);}
-/* เลื่อนขั้นค่าปัจจุบันเป็นค่าเริ่มต้นถาวร แล้วประทับลงทุกเดือนที่บันทึกไว้ ให้ทุกเครื่องเห็นตรงกัน */
-function setWkbDefault(){
+/* เลื่อนขั้นค่าปัจจุบันเป็นค่าเริ่มต้นถาวร แล้วประทับลงทุกเดือนที่บันทึกไว้ ให้ทุกเครื่องเห็นตรงกัน
+   ★ ต้องซิงค์ "ทุกเดือนที่ประทับ" ขึ้น cloud ด้วย ไม่ใช่ปล่อยให้ doCalc→saveM จัดการ
+   เพราะ persist() เรียก fbSaveMonth() ของเดือนที่เปิดอยู่เดือนเดียว อีก 11 เดือนบน cloud
+   จึงยังเป็นค่าเก่า แล้ว adoptWkbDef() ของเครื่องอื่นหยิบ "เดือนล่าสุดที่มี wkbDef"
+   ซึ่งมักเป็นเดือนท้ายปีที่ยังไม่ถูกอัปเดต = ได้ค่าเก่ากลับมา แถมเขียนทับ localStorage ด้วย */
+async function setWkbDefault(){
   _wkbDef=_wkb;
-  try{localStorage.setItem(WKBD_KEY,_wkbDef);}catch(e){}
-  Object.keys(DB).forEach(k=>{if(/^\d{4}-\d{2}$/.test(k)&&DB[k])DB[k].wkbDef=_wkbDef;});
-  toast(`⭐ จำงบวันหยุด ${_wkbDef?'฿'+_wkbDef+'/วัน':'(ว่าง)'} เป็นค่าเริ่มต้นแล้ว`);
-  setTimeout(doCalc,0);
+  lsSet(WKBD_KEY,_wkbDef);
+  const months=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]);
+  months.forEach(k=>{DB[k].wkbDef=_wkbDef;});
+  lsSet(SK,JSON.stringify(DB));
+  const fail=await syncMonths(months,'wkbDef');
+  doCalc();                       /* วาดการ์ดใหม่หลัง event ของปุ่มจบแล้ว จึงไม่ถอดปุ่มกลางคัน */
+  toast(`⭐ จำงบวันหยุด ${_wkbDef?'฿'+_wkbDef+'/วัน':'(ว่าง)'} เป็นค่าเริ่มต้นแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 function resetWkbToDefault(){_wkb=_wkbDef;setTimeout(doCalc,0);}
 
@@ -4316,7 +4409,7 @@ function doResetM(){
   _blankYm=ym;
   sortResetAll();   /* ไม่ได้ผ่าน loadM() — ต้องล้างสถานะเรียงเอง ไม่งั้น "ลำดับเดิม" ชี้ไปแถวที่ถูกล้างไปแล้ว */
   /* บันทึก localStorage */
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
   if(fbDb){
     setSyncSt('fb_saving');
@@ -4327,6 +4420,21 @@ function doResetM(){
 }
 
 /* ── Tax Calc ── */
+/* ค่าลดหย่อนส่วนตัวรวม — แหล่งเดียว ใช้ทั้ง calcTax() และ calcBonusTax()
+   เดิมคัดลอกสูตรไว้สองที่ แก้ที่หนึ่งอีกที่จะเพี้ยนตามโดยไม่มีใครรู้
+   ★ บุตรคนที่ 2 เป็นต้นไปที่เกิดตั้งแต่ปี 2561 ลดหย่อนได้ 60,000 ไม่ใช่ 30,000
+     เดิมคิด 30,000 เท่ากันทุกคน ครอบครัวที่มีลูกตั้งแต่ 2 คนจึงถูกคำนวณภาษีสูงเกินจริง
+     บุตรคนแรกไม่เข้าเกณฑ์เสมอ จึงตัดจำนวนที่กรอกไม่ให้เกิน (จำนวนบุตร − 1) */
+function personalDeduct(){
+  const p1=ge('tx1')?.checked?60000:0;
+  const p2v=ge('tx2')?.checked?60000:0;
+  const nKid=Math.max(0,parseInt(gv('tx3'),10)||0);
+  const nKid60=Math.min(Math.max(0,parseInt(gv('tx3b'),10)||0),Math.max(0,nKid-1));
+  const p3=nKid*30000+nKid60*30000;
+  const p4=Math.max(0,parseInt(gv('tx4'),10)||0)*30000;
+  const p5=nf(gv('tx5'));
+  return p1+p2v+p3+p4+p5;
+}
 function progTax(inc){if(inc<=0)return 0;let t=0;for(const b of BRAK){if(inc>b.a)t+=(Math.min(inc,b.b)-b.a)*b.r;}return t;}
 function calcBonusTax(){
   const bonusItem=A.find(x=>x.id===BONUS_ID);
@@ -4337,9 +4445,7 @@ function calcBonusTax(){
   const totOT=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
   const regularA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const ssoA=getSso()*12,pvdA=getPvd()*12;
-  const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
-  const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
-  const p5=nf(gv('tx5'));const perD=p1+p2v+p3+p4+p5;
+  const perD=personalDeduct();
   const annualReg=(base+regularA+totOT)*12;
   const empDReg=Math.min(annualReg*.5,100000);
   const taxableReg=Math.max(0,annualReg-empDReg-ssoA-pvdA-perD);
@@ -4365,10 +4471,7 @@ function calcTax(){
   const totA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const totInc=base+totA+totOT;
   const mode=gv('txMode');
-  const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
-  const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
-  const p5=nf(gv('tx5'));
-  const perD=p1+p2v+p3+p4+p5;
+  const perD=personalDeduct();
   const ssoA=getSso()*12,pvdA=getPvd()*12;
   const f2=n=>n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
   let bRows='',annTax=0,mTax=0,taxable=0,empD=0,topR=0;
@@ -4378,25 +4481,34 @@ function calcTax(){
     if(!pv){res.innerHTML='<div style="color:#e53e3e;font-size:.78rem;text-align:center;padding:8px">กรุณาเลือกเดือนก่อนครับ</div>';return;}
     const[cy,cm]=pv.split('-').map(Number);
     const ntx=nf(gv('txNonTax'));
-    let ytdInc=0,ytdTax=0,ytdRows='';
+    let ytdInc=0,ytdTax=0,ytdBonusTax=0,ytdRows='';
+    const missing=[];               /* เดือนที่ผ่านไปแล้วแต่ยังไม่มีข้อมูลในโปรแกรม */
+    let filled=0;                   /* เดือนที่นับเข้าฐานสะสมได้จริง (ไม่รวมเดือนนี้) */
     for(let m=1;m<cm;m++){
       const ym=`${cy}-${String(m).padStart(2,'0')}`;
       const mr=compM(ym);
-      if(mr){
-        const bonusPrev=nf(DB[ym]?.a?.find(x=>x.id===BONUS_ID)?.v);
-        /* หัก "รายได้อื่นๆ (ไม่คิดภาษี)" ของเดือนนั้นออกจากฐานสะสม — totInc รวมมันไว้ */
-        const mInc=mr.totInc-bonusPrev-mr.totO-ntx;
-        const mTaxPaid=getTaxFromD(DB[ym]?.d||[]);
-        ytdInc+=mInc;ytdTax+=mTaxPaid;
-        ytdRows+=`<div style="display:grid;grid-template-columns:60px 1fr auto auto;gap:4px;font-size:.71rem;padding:3px 0;border-bottom:1px solid #e2e8f0;color:#718096">
-          <span>${String(m).padStart(2,'0')}/${cy}</span><span></span>
-          <span style="text-align:right">฿${f2(mInc)}</span>
-          <span style="color:#c53030;text-align:right;min-width:80px">ภาษี ฿${f2(mTaxPaid)}</span></div>`;
-      }
+      if(!mr){missing.push(MS[m-1]);continue;}
+      filled++;
+      const bonusPrev=nf(DB[ym]?.a?.find(x=>x.id===BONUS_ID)?.v);
+      /* หัก "รายได้อื่นๆ (ไม่คิดภาษี)" ของเดือนนั้นออกจากฐานสะสม — totInc รวมมันไว้ */
+      const mInc=mr.totInc-bonusPrev-mr.totO-ntx;
+      /* ตัดโบนัสออกจากฐานรายได้แล้ว ก็ต้องตัดภาษีโบนัสออกจากฐานภาษีด้วย ให้เป็นเกณฑ์เดียวกัน */
+      const mTaxPaid=getRegularTaxFromD(DB[ym]?.d||[]);
+      const mBonusTax=getBonusTaxFromD(DB[ym]?.d||[]);
+      ytdInc+=mInc;ytdTax+=mTaxPaid;ytdBonusTax+=mBonusTax;
+      ytdRows+=`<div style="display:grid;grid-template-columns:60px 1fr auto auto;gap:4px;font-size:.71rem;padding:3px 0;border-bottom:1px solid #e2e8f0;color:#718096">
+        <span>${String(m).padStart(2,'0')}/${cy}</span><span>${bonusPrev?`<span style="color:#c05621">โบนัส ฿${f2(bonusPrev)} (คิดภาษีแยก)</span>`:''}</span>
+        <span style="text-align:right">฿${f2(mInc)}</span>
+        <span style="color:#c53030;text-align:right;min-width:80px">ภาษี ฿${f2(mTaxPaid)}</span></div>`;
     }
     const curInc=totInc-ntx;
     const totalYtdInc=ytdInc+curInc;
-    const totalMonths=cm;
+    /* ตัวหาร = เดือนที่ "มีข้อมูลจริง" ไม่ใช่เลขเดือนปัจจุบัน
+       เดิมใช้ cm เสมอ เดือนที่ยังไม่ได้กรอกจึงถูกนับเป็นรายได้ 0 แล้วถ่วงค่าเฉลี่ยลง
+       เช่น กรอกไว้แค่ ส.ค. เดือนเดียวแล้วเปิดโหมดนี้ในเดือน ส.ค. → หารด้วย 8
+       ได้ประมาณการทั้งปีเหลือ 1/8 ของความจริง ภาษีที่ควรหักจึงต่ำกว่าความจริงมาก
+       (ถ้ากรอกครบทุกเดือน ตัวหารจะเท่ากับ cm พอดี = ตรงกับวิธีที่ฝ่ายบุคคลใช้เหมือนเดิม) */
+    const totalMonths=Math.max(1,filled+1);
     const remaining=Math.max(1,13-cm);
     const projAnnual=totalYtdInc/totalMonths*12;
     empD=Math.min(projAnnual*.5,100000);
@@ -4407,8 +4519,10 @@ function calcTax(){
     for(const b of BRAK){if(taxable<=b.a)break;const seg=Math.min(taxable,b.b)-b.a;const st=seg*b.r;
       if(seg>0&&b.r>0)bRows+=`<div style="display:grid;grid-template-columns:1fr auto auto;gap:4px;font-size:.72rem;padding:2px 0;border-bottom:1px solid #feebc8"><span style="color:#718096">${(b.a/1000).toFixed(0)}K–${b.b===Infinity?'∞':(b.b/1000).toFixed(0)+'K'} (${b.r*100}%)</span><span style="text-align:right">฿${f2(seg)}</span><span style="color:#c53030;font-weight:600;text-align:right">฿${f2(st)}</span></div>`;}
     res.innerHTML=`<div style="background:white;border-radius:8px;border:1px solid #fbd38d;padding:12px;font-size:.78rem">
-      <div style="font-weight:700;color:#c05621;margin-bottom:8px;border-bottom:1px solid #feebc8;padding-bottom:6px">📊 วิธีสะสม YTD — เดือน 1–${cm}/${cy}</div>
-      ${ytdRows?`<div style="margin-bottom:10px;padding:8px;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0"><div style="font-size:.71rem;font-weight:700;color:#4a5568;margin-bottom:4px">รายได้เดือนก่อนหน้า (จากที่บันทึกไว้)</div>${ytdRows}</div>`:'<div style="font-size:.72rem;color:#a0aec0;margin-bottom:10px;padding:6px;text-align:center;background:#f7fafc;border-radius:6px">เดือนแรกของปี — ไม่มีข้อมูลสะสมก่อนหน้า</div>'}
+      <div style="font-weight:700;color:#c05621;margin-bottom:8px;border-bottom:1px solid #feebc8;padding-bottom:6px">📊 วิธีสะสม YTD — ใช้ข้อมูล ${totalMonths} เดือน</div>
+      ${ytdRows?`<div style="margin-bottom:10px;padding:8px;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0"><div style="font-size:.71rem;font-weight:700;color:#4a5568;margin-bottom:4px">รายได้เดือนก่อนหน้า (จากที่บันทึกไว้)</div>${ytdRows}</div>`:(cm>1?'':'<div style="font-size:.72rem;color:#a0aec0;margin-bottom:10px;padding:6px;text-align:center;background:#f7fafc;border-radius:6px">เดือนแรกของปี — ไม่มีข้อมูลสะสมก่อนหน้า</div>')}
+      ${missing.length?`<div style="margin-bottom:10px;padding:8px 10px;background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;font-size:.72rem;color:#975a16;line-height:1.7">⚠️ <strong>ยังไม่ได้กรอก ${missing.length} เดือน</strong> — ${esc(missing.join(' · '))}<br>เดือนพวกนี้ถูก<strong>ข้ามไป</strong> ไม่ได้นับเป็นรายได้ 0 · ถ้าเดือนนั้นมีรายได้จริง ให้กรอกก่อนเพื่อให้ประมาณการแม่นขึ้น</div>`:''}
+      ${ytdBonusTax>0?`<div style="margin-bottom:10px;padding:8px 10px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;font-size:.72rem;color:#276749;line-height:1.7">🎁 <strong>ภาษีโบนัส ฿${f2(ytdBonusTax)}</strong> ที่หักไปแล้ว <strong>ไม่ถูกนำมาคิดในนี้</strong> — โบนัสคิดภาษีแบบส่วนเพิ่มแยกต่างหากตอนจ่าย ทั้งรายได้และภาษีของโบนัสจึงถูกกันออกจากฐานสะสมทั้งคู่</div>`:''}
       <div style="display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-bottom:8px">
         <span style="color:#4a5568;font-weight:600">รายได้สะสม ${totalMonths} เดือน (รวมเดือนนี้)</span><span style="font-weight:700;text-align:right">฿${f2(totalYtdInc)}</span>
         <span style="color:#718096">ฉายภาพทั้งปี (÷${totalMonths}×12)</span><span style="font-weight:600;text-align:right">฿${f2(projAnnual)}</span>
@@ -4422,7 +4536,7 @@ function calcTax(){
       <div style="display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-top:8px;padding-top:6px;border-top:1.5px solid #e2e8f0">
         <span style="color:#718096">อัตราสูงสุดที่ถึง</span><span style="font-weight:700;color:#c05621;text-align:right">${topR}%</span>
         <span style="font-weight:700">ภาษีทั้งปี (ประมาณการ)</span><span style="font-weight:700;color:#c53030;text-align:right">฿${f2(annTax)}</span>
-        <span style="color:#718096">ภาษีที่หักไปแล้ว (${cm-1} เดือน)</span><span style="color:#718096;text-align:right">−฿${f2(ytdTax)}</span>
+        <span style="color:#718096">ภาษีเงินเดือนที่หักไปแล้ว (${filled} เดือน)</span><span style="color:#718096;text-align:right">−฿${f2(ytdTax)}</span>
         <span style="color:#718096">เดือนที่เหลือ (รวมเดือนนี้)</span><span style="color:#718096;text-align:right">${remaining} เดือน</span>
       </div>
       <div style="margin-top:10px;background:linear-gradient(135deg,#fff7ed,#feebc8);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
@@ -4490,19 +4604,20 @@ function applyBonusTax(quiet){
 }
 function clrTax(){
   ge('tx2').checked=false;ge('tx1').checked=true;
-  ['tx3','tx4','tx5'].forEach(id=>sv(id,'0'));
+  ['tx3','tx3b','tx4','tx5'].forEach(id=>sv(id,'0'));
   ge('txRes').innerHTML='';lastTax=undefined;
 }
 
-/* ── Print Monthly ── */
-function printMonthly(){
-  document.body.classList.add('print-monthly');
-  window.addEventListener('afterprint',function h(){
-    document.body.classList.remove('print-monthly');
-    window.removeEventListener('afterprint',h);
-  });
-  window.print();
-}
+/* ── Print ──
+   print CSS ตั้งต้นบังคับ #mv{display:none} #sv{display:block} = พิมพ์หน้าสรุปปีเสมอ
+   แต่ renderSum() ทำงานเฉพาะตอนเข้าแท็บ 📊 ถ้าผู้ใช้ยังไม่เคยเปิด ตาราง #sv จะว่าง
+   กด Ctrl+P เองจากหน้าเดือนจึงได้กระดาษเปล่า — จัดโหมดให้ตรงกับแท็บที่เปิดอยู่เสมอ
+   ครอบคลุมทั้งปุ่มในแอปและการสั่งพิมพ์จากเบราว์เซอร์/ระบบปฏิบัติการ */
+window.addEventListener('beforeprint',()=>{
+  document.body.classList.toggle('print-monthly',CT!==12);
+});
+window.addEventListener('afterprint',()=>document.body.classList.remove('print-monthly'));
+function printMonthly(){window.print();}
 
 /* ── CSV Export ── */
 const ce=v=>{v=String(v??'');return(v.includes(',')||v.includes('"')||v.includes('\n'))?`"${v.replace(/"/g,'""')}"`:v;};
@@ -4516,7 +4631,11 @@ function doExport(){
   yrs.forEach(yr=>{
     for(let mi=0;mi<12;mi++){
       const ym=`${yr}-${p2(mi+1)}`;const rec=DB[ym];if(!rec)continue;const m=mi+1;
-      rows.push(cr('BASE',yr,m,'','',rec.base||'',rec.baseDt||'',rec.wkb||'',rec.wkbDef||''));
+      /* baseDt เป็นช่องเดียวที่ "เคารพการล้างค่า" (loadMonth เทียบ !==undefined ไม่ใช่ falsy)
+         แต่ '' ในไฟล์แยกไม่ออกระหว่าง "ล้างทิ้ง" กับ "ไฟล์เก่าไม่มีคอลัมน์นี้"
+         จึงเขียน '-' แทนค่าที่ถูกล้างทิ้ง (ไฟล์เก่าไม่เคยมี '-' จึง import ได้เหมือนเดิม) */
+      const baseDtCsv=rec.baseDt===undefined?'':(rec.baseDt||'-');
+      rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',rec.wkbDef||''));
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
@@ -4562,7 +4681,7 @@ function doImport(input){
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],p:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
-        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=extra;if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
+        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
@@ -4581,7 +4700,7 @@ function doImport(input){
       Object.assign(DB,tmp);
       adoptWkbDef();
       /* บันทึก localStorage */
-      try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+      lsSet(SK,JSON.stringify(DB));
       const first=Object.keys(tmp).sort()[0];
       if(first){CY=parseInt(first.split('-')[0]);ge('ySel').value=CY;buildTabs();}
       updateDots();switchTab(CT,true);
@@ -4923,7 +5042,24 @@ function renderTaxYear(){
   }
   if(!months){box.innerHTML='<div style="color:#a0aec0;font-style:italic;font-size:.78rem">— ยังไม่มีข้อมูล —</div>';return;}
   const row=(l,v,cls,sub)=>`<div class="li"><span>${l}${sub?` <span class="tyr-sub">${sub}</span>`:''}</span><span class="${cls||''}">${fmt(v)}</span></div>`;
-  const ssoNote=sso>9000?'เกินเพดานลดหย่อน — ใช้ได้สูงสุด 9,000 ฿/ปี':'เพดานลดหย่อน 9,000 ฿/ปี';
+  /* เดิมเขียนตายตัวว่า "เพดานลดหย่อน 9,000 ฿/ปี" (= 750×12 ของเพดานค่าจ้างเดิม 15,000)
+     แต่ calcTax() หักออกจากเงินได้เต็มจำนวนที่จ่ายจริง — สองหน้าจึงบอกคนละอย่าง
+     ประกันสังคมลดหย่อนได้ "ตามที่จ่ายจริง" ยอดจึงเปลี่ยนตามเพดานค่าจ้างของแต่ละปี
+     บอกยอดจริงที่โปรแกรมใช้ไปเลย จะได้ไม่ขัดกับตัวเลขในกล่องคำนวณภาษี */
+  const ssoNote=`ลดหย่อนได้ตามที่จ่ายจริง — กล่องคำนวณภาษีหักให้เต็ม ${fN(sso)} ฿`;
+  /* ── ภาษีที่ต้องเสียจริงทั้งปี เทียบกับที่ถูกหักไปแล้ว ──
+     เดิมหน้านี้บอกแต่ "หัก ณ ที่จ่ายรวมทั้งปี" โดยไม่เคยคิดว่าจริงๆ ต้องเสียเท่าไหร่
+     ทั้งที่ข้อมูลครบอยู่แล้ว — ตัวเลขที่อยากรู้ตอนยื่นภาษีคือ "ต้องจ่ายเพิ่มหรือได้คืน"
+     ใช้สูตรและค่าลดหย่อนชุดเดียวกับกล่องคำนวณภาษี (personalDeduct) จึงไม่มีทางขัดกันเอง
+     ต่างกันตรงที่ตัวนี้คิดจากเงินได้ "ที่กรอกไว้จริง" ไม่ใช่ประมาณการจากเดือนเดียว */
+  const expDed=Math.min(taxable*.5,100000);
+  const perD=personalDeduct();
+  const netTaxable=Math.max(0,taxable-expDed-sso-pvd-perD);
+  const dueTax=progTax(netTaxable);
+  const gap=dueTax-tax;                       /* >0 ต้องจ่ายเพิ่ม · <0 ได้คืน */
+  const gapCls=Math.abs(gap)<0.5?'tyr-rec-even':(gap>0?'tyr-rec-pay':'tyr-rec-ref');
+  const gapTxt=Math.abs(gap)<0.5?'พอดี ไม่ต้องจ่ายเพิ่มและไม่ได้คืน'
+    :(gap>0?'ต้องจ่ายเพิ่มตอนยื่น':'ได้คืนตอนยื่น');
   box.innerHTML=`<div class="tyr-grid">
       <div>
         <div class="tyr-h">🧾 สำหรับยื่นภาษี</div>
@@ -4939,6 +5075,25 @@ function renderTaxYear(){
         ${plan?row('ผ่อน/ประกันรวมทั้งปี',plan,'vad','ภาระผูกพันคงที่ — หักออกก่อนถึง Free Cash Flow'):''}
         ${row('เงินใช้จริงรวมทั้งปี',fin,'vai')}
         ${wkbMonths?row('เหลือหลังหักงบวันหยุด',fin-wkbTot,(fin-wkbTot)<0?'vad':'vai'):''}
+      </div>
+    </div>
+    <div class="tyr-rec">
+      <div class="tyr-h">🧮 ประมาณการตอนยื่นภาษี <span class="tyr-sub">คิดจากข้อมูลที่กรอกไว้จริง ${months} เดือน</span></div>
+      ${row('เงินได้ที่เข้าฐานภาษี',taxable,'vai')}
+      ${row('− ค่าใช้จ่ายพนักงาน',expDed,'vad','50% สูงสุด 100,000')}
+      ${row('− ประกันสังคม + กองทุนสำรองฯ',sso+pvd,'vad','ตามที่จ่ายจริงทั้งปี')}
+      ${row('− ค่าลดหย่อนส่วนตัวรวม',perD,'vad','ตามที่ตั้งไว้ในกล่องคำนวณภาษี')}
+      ${row('= เงินได้สุทธิที่ต้องเสียภาษี',netTaxable,'')}
+      ${row('ภาษีที่ต้องเสียทั้งปี',dueTax,'vad')}
+      ${row('หัก ณ ที่จ่ายไปแล้ว',tax,'vai')}
+      <div class="tyr-rec-tot">
+        <span class="tyr-rec-lbl ${gapCls}">${gapTxt}</span>
+        <span class="tyr-rec-val ${gapCls}">${fmt(Math.abs(gap))}</span>
+      </div>
+      <div class="tyr-rec-warn">
+        ${months<12?`⚠️ มีข้อมูลแค่ ${months} เดือน — ตัวเลขนี้คิดจากเท่าที่กรอกไว้ ยังไม่ใช่ทั้งปี<br>`:''}
+        • ใช้ค่าลดหย่อนจาก<strong>กล่อง 🧮 คำนวณภาษี</strong> ในหน้าเดือน — ยังไม่ได้ใส่ประกันชีวิต / ดอกเบี้ยบ้าน / เงินบริจาค ฯลฯ ให้ใส่รวมในช่อง <strong>LTF / RMF / SSF</strong> ถ้าต้องการให้ครบ<br>
+        • เป็นการประมาณการเพื่อวางแผน ไม่ใช่ยอดตามแบบ ภ.ง.ด.91 อย่างเป็นทางการ
       </div>
     </div>
     <div class="tyr-note">${months<12?`⚠️ มีข้อมูล ${months} เดือน จาก 12 เดือน — ตัวเลขยังไม่ครบปี`:'✅ ข้อมูลครบ 12 เดือน'}</div>`;
@@ -5784,7 +5939,7 @@ init();
       if(!apiKey){st.className='gs-status-bar show err';st.textContent='กรุณากรอก API Key';return;}
       aiCfg={mode:'key',apiKey,model,proxyUrl:'',accessCode:''};
     }
-    try{localStorage.setItem(AI_CFG_KEY,JSON.stringify(aiCfg));}catch(e){}
+    lsSet(AI_CFG_KEY,JSON.stringify(aiCfg));
     updFab();
     st.className='gs-status-bar show ok';st.textContent='บันทึกแล้ว! เปิดผู้ช่วย AI ได้เลย';
     setTimeout(()=>{aiCloseCfg();if(!ge('ai-panel').classList.contains('open'))aiToggle();},900);
@@ -5817,7 +5972,7 @@ init();
     if(!aiChats.list.find(x=>x.id===aiChats.cur))aiChats.cur=aiChats.list[0].id;
     aiHistory=(curChat().msgs||[]).slice();
   }
-  function saveChats(){try{localStorage.setItem(AI_CHATS_KEY,JSON.stringify(aiChats));}catch(e){}}
+  function saveChats(){lsSet(AI_CHATS_KEY,JSON.stringify(aiChats));}
   function curChat(){return aiChats.list.find(x=>x.id===aiChats.cur)||aiChats.list[0];}
   function persistCurrentChat(){
     if(!aiChats)loadChats();
@@ -6490,6 +6645,13 @@ init();
     names.forEach(nm=>{const it=arr.find(x=>x.n===nm&&!used.has(x));if(it){head.push(it);used.add(it);}});
     return head.concat(arr.filter(x=>!used.has(x)));
   }
+  /* ปลดธง "เดือนนี้เพิ่งถูกล้างและยังไม่มีใครแตะ" ก่อนลงมือเขียนค่า
+     ตัวฟัง input/change ที่ #mv ปลดให้เฉพาะตอนผู้ใช้พิมพ์เอง แต่เราเขียนด้วยโค้ด (el.value=...)
+     ซึ่งไม่ยิง event และช่องแชทก็อยู่นอก #mv — ถ้าไม่ปลดเอง ด่านกัน autosave ใน saveM()
+     (_blankYm===ymCur && !formDirty && !DB[ymCur]) จะข้ามการบันทึกทั้งหมด
+     แล้วของที่เพิ่งกรอกให้หายเกลี้ยงตอนสลับเดือน — รวมถึง saveM() ที่เราเรียกเองข้างล่างด้วย */
+  function markFormTouched(){_blankYm=null;formDirty=true;}
+
   /* แก้ "ฟอร์มเดือนที่เปิดอยู่" (เห็นผลสด) — sync DOM→array ก่อน แล้ว render ใหม่จาก array */
   function applyToForm(f){
     if(f.base!=null){sv('fBase',String(r(f.base)));}
@@ -6610,9 +6772,10 @@ init();
         if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
         if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
         const curYm=(CT>=0&&CT<12)?ymk(CT):null;
+        if(curYm&&months.includes(curYm))markFormTouched();
         months.forEach(ym=>{ const fm=fFor(ym); if(ym===curYm)applyToForm(fm); else applyToRecord(ym,fm); });
         if(curYm&&months.includes(curYm))saveM();          /* บันทึกเดือนปัจจุบันที่แก้ผ่านฟอร์ม */
-        try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+        lsSet(SK,JSON.stringify(DB));
         updateDots();if(CT===12)renderSum();
         /* ใช้ syncMonths() เหมือนปุ่มอื่น — เดิม fire-and-forget แล้ว console.warn เฉยๆ
            ซิงค์ล้มเหลวกี่เดือนก็ไม่มีใครรู้ ทั้งที่ toast บอกว่าแก้เรียบร้อยแล้ว */
@@ -6622,6 +6785,7 @@ init();
         where=months.map(monthLabelFull).join(', ');
       }else{
         if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
+        markFormTouched();
         applyToForm(f);
         where=MF[CT]+' '+CY+' (ตรวจแล้วกด “คำนวณ/บันทึก”)';
         toast('✅ แก้ไขเรียบร้อย — ตรวจแล้วกด “คำนวณ”');
