@@ -306,6 +306,13 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .tyr-h{font-size:.82rem;font-weight:700;color:#4a5568;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0}
 .tyr-sub{font-size:.66rem;color:#a0aec0;font-weight:500}
 .tyr-note{margin-top:12px;font-size:.74rem;color:#718096;padding-top:8px;border-top:1px dashed #cbd5e0}
+.tyr-rec{margin-top:16px;background:#fffaf0;border:1px solid #fbd38d;border-radius:9px;padding:12px 14px}
+.tyr-rec .li{border-bottom-color:#feebc8}
+.tyr-rec-tot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:2px solid #fbd38d}
+.tyr-rec-lbl{font-size:.82rem;font-weight:700}
+.tyr-rec-val{font-size:1.25rem;font-weight:800;white-space:nowrap}
+.tyr-rec-pay{color:#c53030}.tyr-rec-ref{color:#276749}.tyr-rec-even{color:#4a5568}
+.tyr-rec-warn{margin-top:9px;font-size:.71rem;color:#975a16;line-height:1.7}
 .ded-stat-item{background:#f7fafc;border-radius:8px;padding:10px 12px;border-left:4px solid #e2e8f0}
 .ded-stat-lbl{font-size:.68rem;color:#718096;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ded-stat-val{font-size:1rem;font-weight:800;color:#2d3748}
@@ -532,14 +539,20 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .tx-deduct-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
 .tx-row{display:flex;align-items:center;gap:7px;background:white;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px}
 .tx-row-full{grid-column:1/-1}
+/* จอแคบ: สองคอลัมน์ทำให้ป้ายไทยตกบรรทัดจนอ่านยาก เรียงลงมาเป็นคอลัมน์เดียวแทน */
+@media(max-width:560px){.tx-deduct-grid{grid-template-columns:1fr}}
 .tx-lbl{font-size:.77rem;flex:1}
 .tx-val{font-size:.75rem;font-weight:700;color:#276749}
 .tx-hint{font-size:.7rem;color:#718096}
 .tx-sub{color:#a0aec0;font-size:.7rem}
 .tx-chk{width:15px;height:15px;accent-color:#276749}
-.tx-num-sm{width:48px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
-.tx-num-md{width:110px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
-.tx-num-lg{width:130px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+/* ต้องเจาะจงกว่า input[type=number]{width:100%} ข้างบน (0,1,1 > 0,1,0 ของคลาสเปล่า)
+   ไม่งั้นช่องตัวเลขจะยืดเต็มแถวแล้วบีบป้ายจนตัวอักษรไทยตกบรรทัดทีละตัว
+   + flex:none กันไม่ให้ยืด/หดตามพื้นที่ที่เหลือ */
+input.tx-num-sm{width:56px;flex:0 0 56px;text-align:center;font-size:.78rem;padding:3px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+input.tx-num-md{width:110px;flex:0 0 110px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;padding:4px 7px;border:1px solid #cbd5e0;border-radius:4px;background:#f7fafc}
+.tx-hint{flex:none;white-space:nowrap}
 .tax-btns{display:flex;gap:8px;margin-top:10px}
 .tax-apply{flex:1;padding:9px;background:linear-gradient(135deg,#c05621,#ed8936);color:white;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer}
 .tax-dismiss{padding:9px 14px;background:white;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;color:#718096;cursor:pointer;font-weight:600}
@@ -746,6 +759,12 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
               <span class="tx-lbl">บุตร (คน)</span>
               <input type="number" id="tx3" value="0" min="0" max="10" onchange="calcTax()" class="tx-num-sm">
               <span class="tx-hint">×30,000</span>
+            </div>
+            <div class="tx-row tx-row-full">
+              <span class="tx-lbl">↳ ในนั้นเป็น<strong>บุตรคนที่ 2 ขึ้นไป ที่เกิดตั้งแต่ปี 2561</strong> <span class="tx-sub">(กลุ่มนี้ลดหย่อนได้ 60,000 — บุตรคนแรกไม่เข้าเกณฑ์)</span></span>
+              <input type="number" id="tx3b" value="0" min="0" max="9" onchange="calcTax()" class="tx-num-sm"
+                     title="บุตรคนที่ 2 เป็นต้นไปที่เกิดตั้งแต่ปี 2561 ลดหย่อนได้ 60,000 แทน 30,000">
+              <span class="tx-hint">+30,000/คน</span>
             </div>
             <div class="tx-row">
               <span class="tx-lbl">เลี้ยงดูบิดา/มารดา (คน)</span>
@@ -4401,6 +4420,21 @@ function doResetM(){
 }
 
 /* ── Tax Calc ── */
+/* ค่าลดหย่อนส่วนตัวรวม — แหล่งเดียว ใช้ทั้ง calcTax() และ calcBonusTax()
+   เดิมคัดลอกสูตรไว้สองที่ แก้ที่หนึ่งอีกที่จะเพี้ยนตามโดยไม่มีใครรู้
+   ★ บุตรคนที่ 2 เป็นต้นไปที่เกิดตั้งแต่ปี 2561 ลดหย่อนได้ 60,000 ไม่ใช่ 30,000
+     เดิมคิด 30,000 เท่ากันทุกคน ครอบครัวที่มีลูกตั้งแต่ 2 คนจึงถูกคำนวณภาษีสูงเกินจริง
+     บุตรคนแรกไม่เข้าเกณฑ์เสมอ จึงตัดจำนวนที่กรอกไม่ให้เกิน (จำนวนบุตร − 1) */
+function personalDeduct(){
+  const p1=ge('tx1')?.checked?60000:0;
+  const p2v=ge('tx2')?.checked?60000:0;
+  const nKid=Math.max(0,parseInt(gv('tx3'),10)||0);
+  const nKid60=Math.min(Math.max(0,parseInt(gv('tx3b'),10)||0),Math.max(0,nKid-1));
+  const p3=nKid*30000+nKid60*30000;
+  const p4=Math.max(0,parseInt(gv('tx4'),10)||0)*30000;
+  const p5=nf(gv('tx5'));
+  return p1+p2v+p3+p4+p5;
+}
 function progTax(inc){if(inc<=0)return 0;let t=0;for(const b of BRAK){if(inc>b.a)t+=(Math.min(inc,b.b)-b.a)*b.r;}return t;}
 function calcBonusTax(){
   const bonusItem=A.find(x=>x.id===BONUS_ID);
@@ -4411,9 +4445,7 @@ function calcBonusTax(){
   const totOT=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
   const regularA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const ssoA=getSso()*12,pvdA=getPvd()*12;
-  const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
-  const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
-  const p5=nf(gv('tx5'));const perD=p1+p2v+p3+p4+p5;
+  const perD=personalDeduct();
   const annualReg=(base+regularA+totOT)*12;
   const empDReg=Math.min(annualReg*.5,100000);
   const taxableReg=Math.max(0,annualReg-empDReg-ssoA-pvdA-perD);
@@ -4439,10 +4471,7 @@ function calcTax(){
   const totA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const totInc=base+totA+totOT;
   const mode=gv('txMode');
-  const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
-  const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
-  const p5=nf(gv('tx5'));
-  const perD=p1+p2v+p3+p4+p5;
+  const perD=personalDeduct();
   const ssoA=getSso()*12,pvdA=getPvd()*12;
   const f2=n=>n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
   let bRows='',annTax=0,mTax=0,taxable=0,empD=0,topR=0;
@@ -4575,7 +4604,7 @@ function applyBonusTax(quiet){
 }
 function clrTax(){
   ge('tx2').checked=false;ge('tx1').checked=true;
-  ['tx3','tx4','tx5'].forEach(id=>sv(id,'0'));
+  ['tx3','tx3b','tx4','tx5'].forEach(id=>sv(id,'0'));
   ge('txRes').innerHTML='';lastTax=undefined;
 }
 
@@ -5018,6 +5047,19 @@ function renderTaxYear(){
      ประกันสังคมลดหย่อนได้ "ตามที่จ่ายจริง" ยอดจึงเปลี่ยนตามเพดานค่าจ้างของแต่ละปี
      บอกยอดจริงที่โปรแกรมใช้ไปเลย จะได้ไม่ขัดกับตัวเลขในกล่องคำนวณภาษี */
   const ssoNote=`ลดหย่อนได้ตามที่จ่ายจริง — กล่องคำนวณภาษีหักให้เต็ม ${fN(sso)} ฿`;
+  /* ── ภาษีที่ต้องเสียจริงทั้งปี เทียบกับที่ถูกหักไปแล้ว ──
+     เดิมหน้านี้บอกแต่ "หัก ณ ที่จ่ายรวมทั้งปี" โดยไม่เคยคิดว่าจริงๆ ต้องเสียเท่าไหร่
+     ทั้งที่ข้อมูลครบอยู่แล้ว — ตัวเลขที่อยากรู้ตอนยื่นภาษีคือ "ต้องจ่ายเพิ่มหรือได้คืน"
+     ใช้สูตรและค่าลดหย่อนชุดเดียวกับกล่องคำนวณภาษี (personalDeduct) จึงไม่มีทางขัดกันเอง
+     ต่างกันตรงที่ตัวนี้คิดจากเงินได้ "ที่กรอกไว้จริง" ไม่ใช่ประมาณการจากเดือนเดียว */
+  const expDed=Math.min(taxable*.5,100000);
+  const perD=personalDeduct();
+  const netTaxable=Math.max(0,taxable-expDed-sso-pvd-perD);
+  const dueTax=progTax(netTaxable);
+  const gap=dueTax-tax;                       /* >0 ต้องจ่ายเพิ่ม · <0 ได้คืน */
+  const gapCls=Math.abs(gap)<0.5?'tyr-rec-even':(gap>0?'tyr-rec-pay':'tyr-rec-ref');
+  const gapTxt=Math.abs(gap)<0.5?'พอดี ไม่ต้องจ่ายเพิ่มและไม่ได้คืน'
+    :(gap>0?'ต้องจ่ายเพิ่มตอนยื่น':'ได้คืนตอนยื่น');
   box.innerHTML=`<div class="tyr-grid">
       <div>
         <div class="tyr-h">🧾 สำหรับยื่นภาษี</div>
@@ -5033,6 +5075,25 @@ function renderTaxYear(){
         ${plan?row('ผ่อน/ประกันรวมทั้งปี',plan,'vad','ภาระผูกพันคงที่ — หักออกก่อนถึง Free Cash Flow'):''}
         ${row('เงินใช้จริงรวมทั้งปี',fin,'vai')}
         ${wkbMonths?row('เหลือหลังหักงบวันหยุด',fin-wkbTot,(fin-wkbTot)<0?'vad':'vai'):''}
+      </div>
+    </div>
+    <div class="tyr-rec">
+      <div class="tyr-h">🧮 ประมาณการตอนยื่นภาษี <span class="tyr-sub">คิดจากข้อมูลที่กรอกไว้จริง ${months} เดือน</span></div>
+      ${row('เงินได้ที่เข้าฐานภาษี',taxable,'vai')}
+      ${row('− ค่าใช้จ่ายพนักงาน',expDed,'vad','50% สูงสุด 100,000')}
+      ${row('− ประกันสังคม + กองทุนสำรองฯ',sso+pvd,'vad','ตามที่จ่ายจริงทั้งปี')}
+      ${row('− ค่าลดหย่อนส่วนตัวรวม',perD,'vad','ตามที่ตั้งไว้ในกล่องคำนวณภาษี')}
+      ${row('= เงินได้สุทธิที่ต้องเสียภาษี',netTaxable,'')}
+      ${row('ภาษีที่ต้องเสียทั้งปี',dueTax,'vad')}
+      ${row('หัก ณ ที่จ่ายไปแล้ว',tax,'vai')}
+      <div class="tyr-rec-tot">
+        <span class="tyr-rec-lbl ${gapCls}">${gapTxt}</span>
+        <span class="tyr-rec-val ${gapCls}">${fmt(Math.abs(gap))}</span>
+      </div>
+      <div class="tyr-rec-warn">
+        ${months<12?`⚠️ มีข้อมูลแค่ ${months} เดือน — ตัวเลขนี้คิดจากเท่าที่กรอกไว้ ยังไม่ใช่ทั้งปี<br>`:''}
+        • ใช้ค่าลดหย่อนจาก<strong>กล่อง 🧮 คำนวณภาษี</strong> ในหน้าเดือน — ยังไม่ได้ใส่ประกันชีวิต / ดอกเบี้ยบ้าน / เงินบริจาค ฯลฯ ให้ใส่รวมในช่อง <strong>LTF / RMF / SSF</strong> ถ้าต้องการให้ครบ<br>
+        • เป็นการประมาณการเพื่อวางแผน ไม่ใช่ยอดตามแบบ ภ.ง.ด.91 อย่างเป็นทางการ
       </div>
     </div>
     <div class="tyr-note">${months<12?`⚠️ มีข้อมูล ${months} เดือน จาก 12 เดือน — ตัวเลขยังไม่ครบปี`:'✅ ข้อมูลครบ 12 เดือน'}</div>`;
