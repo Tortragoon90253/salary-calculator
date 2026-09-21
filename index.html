@@ -20,7 +20,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;color:#2d3748;f
 header{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:white;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{font-size:1.1rem;font-weight:700;flex:1}
 .hbtn{padding:5px 12px;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
-.hbtn.exp{background:#48bb78;color:white}.hbtn.imp{background:#ed8936;color:white}.hbtn.gs{background:#805ad5;color:white}.hbtn.fb{background:#dd6b20;color:white}
+.hbtn.exp{background:#48bb78;color:white}.hbtn.imp{background:#ed8936;color:white}.hbtn.fb{background:#dd6b20;color:white}
 .hactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hgrp{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:9px;padding:5px 10px}
 .hgrp-lbl{font-size:.68rem;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.05em;margin-right:3px;text-transform:uppercase;white-space:nowrap}
@@ -28,9 +28,7 @@ header h1{font-size:1.1rem;font-weight:700;flex:1}
 .ynav label{color:#a0aec0;font-size:.82rem;font-weight:600}
 #ySel{padding:5px 10px;border-radius:6px;border:none;font-size:.85rem;font-weight:700;color:#2d3748;width:110px}
 .cpybtn{padding:5px 12px;border-radius:7px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#553c9a,#805ad5);color:white}
-.cpybtn:disabled{opacity:.5;cursor:not-allowed}
 .clrbtn{padding:5px 12px;border-radius:7px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#9b2c2c,#e53e3e);color:white}
-.clrbtn:disabled{opacity:.5;cursor:not-allowed}
 #ageBdg{font-size:.78rem;font-weight:700;color:#fbd38d;background:rgba(255,255,255,.1);padding:3px 10px;border-radius:10px;white-space:nowrap}
 #bdg{font-size:.78rem;color:#68d391;margin-left:auto}
 #syncSt{font-size:.76rem;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.1);white-space:nowrap}
@@ -59,7 +57,7 @@ input[type=text],input[type=number],input[type=month],input[type=date],select{wi
 .dtin{font-size:.74rem;padding:4px 4px;min-width:0;color:#4a5568}
 .ir input.dtin{font-size:.74rem}
 input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
-.dr{display:grid;grid-template-columns:20px 18px 1fr 134px 148px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
+.dr{display:grid;grid-template-columns:20px 18px 1fr 134px 148px 28px 28px;gap:5px;align-items:center;margin-bottom:5px;padding:4px 6px;border-radius:7px;border:1px solid transparent;transition:background .15s}
 .dr input[type=text]{font-size:.83rem}.dr input[type=number]{font-size:.83rem;text-align:right}
 .drag-handle{cursor:grab;color:#cbd5e0;font-size:1rem;line-height:1;user-select:none;display:flex;align-items:center;justify-content:center;padding:2px}
 .drag-handle:hover{color:#a0aec0}
@@ -109,7 +107,7 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .pln-total-val{color:#434190;font-size:.85rem}
 .pln-fcf-val{color:#2b6cb0;font-size:.85rem}
 .pln-fcf-val.neg{color:#c53030}
-.pl{display:grid;grid-template-columns:20px 16px 1fr 124px 110px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#ebf4ff;border-radius:8px;padding:8px 10px;border:1px solid #c3dafe}
+.pl{display:grid;grid-template-columns:20px 16px 1fr 124px 110px 28px 28px;gap:6px;align-items:center;margin-bottom:8px;background:#ebf4ff;border-radius:8px;padding:8px 10px;border:1px solid #c3dafe}
 .pl.pl-rec-row{background:#faf5ff;border-color:#d6bcfa}
 .pl input,.pl select{font-size:.8rem;background:white}
 .pl input[type=number]{text-align:right}
@@ -126,13 +124,14 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .pl-rec{font-size:.72rem;color:#553c9a;background:#faf5ff;border:1px dashed #d6bcfa;border-radius:9px;padding:2px 9px;white-space:nowrap}
 .pl-note{flex:1 1 150px;min-width:110px;font-size:.76rem}
 @media(max-width:640px){
-  .pl{grid-template-columns:20px 1fr 104px 28px;grid-template-rows:auto auto auto auto}
+  .pl{grid-template-columns:20px 1fr 76px 28px 28px;grid-template-rows:auto auto auto auto}
   .pl>.ckpt{grid-column:1;grid-row:1}
   .pl>.drag-handle{display:none}
   .pl>.pl-name{grid-column:2/4;grid-row:1}
-  .pl>.delbtn{grid-column:4;grid-row:1}
+  .pl>.fwdbtn{grid-column:4;grid-row:1}
+  .pl>.delbtn{grid-column:5;grid-row:1}
   .pl>.pl-type{grid-column:1/3;grid-row:2}
-  .pl>.pl-amt{grid-column:3/5;grid-row:2}
+  .pl>.pl-amt{grid-column:3/6;grid-row:2}
   .pl>.pl-row2{grid-row:3}
   .pl>.pl-row3{grid-row:4}
 }
@@ -294,8 +293,6 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ded-flt-btn.on{opacity:1}.ded-flt-btn.off{opacity:.3;filter:grayscale(.7)}
 .ded-flt-btn.solo{box-shadow:0 0 0 3px white,0 0 0 5px rgba(0,0,0,.35);transform:scale(1.06)}
 .ded-stat-item.dimmed{opacity:.3}
-.ded-show-all{padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #a0aec0;background:white;color:#718096}
-.ded-show-all:hover{background:#f7fafc}
 .ict-btn{padding:3px 11px;border-radius:14px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid #cbd5e0;background:white;color:#718096;transition:all .15s}
 .ict-btn:hover{border-color:#90cdf4;color:#2b6cb0}
 .ict-btn.on{background:#ebf8ff;border-color:#4299e1;color:#2b6cb0}
@@ -345,16 +342,16 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 .ct-fix{font-size:.68rem;background:#ebf4ff;color:#434190;border-radius:9px;padding:1px 7px;white-space:nowrap}
 .ct-var{font-size:.68rem;background:#fffaf0;color:#c05621;border-radius:9px;padding:1px 7px;white-space:nowrap}
 /* แถวโบนัส — เป็นคลาสแทน inline style เพื่อให้ media query ปรับคอลัมน์บนจอแคบได้ */
-.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px;grid-template-rows:auto auto}
+.dr.drb{border-left:3px solid #ed8936;background:#fffaf0;grid-template-columns:20px 18px 1fr 134px 110px auto 28px 28px;grid-template-rows:auto auto}
 .bm-disp{grid-column:3/-1;font-size:.8rem;color:#c05621;font-weight:700;padding:2px 2px 0;min-height:.9rem}
 /* จอกลาง-แคบ: ช่องวันที่ตกลงบรรทัดที่ 2 แทนการบีบคอลัมน์เพิ่ม */
 @media(max-width:640px){
-  .dr{grid-template-columns:20px 18px 1fr 130px 28px;grid-template-rows:auto auto;row-gap:4px}
+  .dr{grid-template-columns:20px 18px 1fr 130px 28px 28px;grid-template-rows:auto auto;row-gap:4px}
   .dr>.dtin{grid-column:3/-1;grid-row:2}
   .drd{grid-template-columns:20px 18px 1fr 88px 95px 28px 28px!important;grid-template-rows:auto auto;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   .drd>.ctsel{grid-column:5/-1;grid-row:2}
-  .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px;grid-template-rows:auto auto auto}
+  .dr.drb{grid-template-columns:20px 18px 1fr 110px auto 28px 28px;grid-template-rows:auto auto auto}
   .dr.drb>.dtin{grid-column:3/-1;grid-row:2}
   .dr.drb>.bm-disp{grid-column:3/-1;grid-row:3}
   .ir{grid-template-columns:20px 16px 1fr 72px 100px auto 28px 28px;row-gap:6px}
@@ -363,13 +360,17 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
 @media(max-width:500px){
   /* จอแคบ: บีบคอลัมน์ตัวเลข/ปุ่ม เพื่อให้ช่องชื่อยังกว้างพอพิมพ์ได้หลังเพิ่มคอลัมน์ checkpoint */
   .dr{grid-template-columns:18px 18px 1fr 100px 26px;gap:4px;row-gap:4px}
+  .dr>.dtin{grid-column:3/5;grid-row:2}
+  .dr>.fwdbtn{grid-column:5/-1;grid-row:2}
   .drd{grid-template-columns:18px 18px 1fr 68px 66px 26px!important;gap:4px;row-gap:4px}
   .drd>.dtin{grid-column:3/5;grid-row:2}
   /* จอแคบสุด: ปุ่ม 📤 ลงไปอยู่ท้ายบรรทัด 2 แทนการกินคอลัมน์บรรทัดแรก
      ช่องชื่อรายการจึงกว้างเท่าเดิมก่อนมีปุ่มนี้ */
   .drd>.ctsel{grid-column:5/6;grid-row:2}
   .drd>.fwdbtn{grid-column:6/-1;grid-row:2}
+  /* แถวโบนัสผูกกับเดือน ปุ่ม 📤 เป็น disabled อยู่แล้ว — จอแคบสุดซ่อนไปเลย ไม่ต้องเสียคอลัมน์ */
   .dr.drb{grid-template-columns:18px 18px 1fr 78px auto 26px}
+  .dr.drb>.fwdbtn{display:none}
   .delbtn,.fwdbtn{width:24px;height:24px}
   /* แผนลงทุน: ชื่อขึ้นบรรทัดเดียวเต็มความกว้าง แล้วค่อยเป็นแถวควบคุม */
   .ir{grid-template-columns:18px 72px 1fr auto 26px 26px;row-gap:6px;gap:5px;grid-template-rows:auto auto auto}
@@ -578,7 +579,6 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   <div class="hactions">
     <div class="hgrp">
       <span class="hgrp-lbl">ซิงค์</span>
-      <button class="hbtn gs" id="gsBtn" onclick="openCfg()">☁️ Sheets</button>
       <button class="hbtn fb" onclick="openFbCfg()">🔥 Firebase</button>
     </div>
     <div class="hgrp">
@@ -622,7 +622,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">☑ จัดการแล้ว | ✕ ลบ</span><button class="sortbtn" id="sb_a" onclick="sortToggle('a',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_a"></span></button><div class="sortmenu" id="sm_a" role="menu"></div></div>
+    <div class="ch cgr">💵 ค่าเพิ่มเติม / เบี้ยต่างๆ <span class="ch-sub">☑ จัดการแล้ว | 📤 ส่งต่อ | ✕ ลบ</span><button class="sortbtn" id="sb_a" onclick="sortToggle('a',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_a"></span></button><div class="sortmenu" id="sm_a" role="menu"></div></div>
     <div class="cb"><div class="ckbar" id="ckbar_A"></div><div id="aList"></div><button class="addbtn" onclick="addA()">＋ เพิ่มรายการ</button></div>
   </div>
 
@@ -656,7 +656,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cpu">💰 รายได้อื่นๆ <span class="ch-sub"><span class="no-tax-tag">ไม่คิดภาษี</span> ☑ จัดการแล้ว | ✕ ลบ</span><button class="sortbtn" id="sb_o" onclick="sortToggle('o',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_o"></span></button><div class="sortmenu" id="sm_o" role="menu"></div></div>
+    <div class="ch cpu">💰 รายได้อื่นๆ <span class="ch-sub"><span class="no-tax-tag">ไม่คิดภาษี</span> ☑ จัดการแล้ว | 📤 ส่งต่อ | ✕ ลบ</span><button class="sortbtn" id="sb_o" onclick="sortToggle('o',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_o"></span></button><div class="sortmenu" id="sm_o" role="menu"></div></div>
     <div class="cb">
       <div class="oth-info">
         รายได้กลุ่มนี้ <strong>ไม่ถูกนำไปคำนวณภาษี</strong> (เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ รายได้เสริม)<br>
@@ -670,7 +670,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cin">💳 วางแผนการผ่อน &amp; ประกัน <span class="ch-sub">Fixed Obligations &nbsp;|&nbsp; ☑ จ่ายงวดนี้แล้ว | ✕ ลบ</span><button class="sortbtn" id="sb_p" onclick="sortToggle('p',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_p"></span></button><div class="sortmenu" id="sm_p" role="menu"></div></div>
+    <div class="ch cin">💳 วางแผนการผ่อน &amp; ประกัน <span class="ch-sub">Fixed Obligations &nbsp;|&nbsp; ☑ จ่ายงวดนี้แล้ว | 📤 ส่งต่อ | ✕ ลบ</span><button class="sortbtn" id="sb_p" onclick="sortToggle('p',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_p"></span></button><div class="sortmenu" id="sm_p" role="menu"></div></div>
     <div class="cb">
       <div id="pInfo" class="pln-info"></div>
       <div class="ckbar" id="ckbar_P"></div>
@@ -681,7 +681,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 
   <div class="card">
-    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">☑ จัดการแล้ว &nbsp;|&nbsp; ฐาน = รายได้รวม − SSO − PVD − ภาษี</span><button class="sortbtn" id="sb_i" onclick="sortToggle('i',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_i"></span></button><div class="sortmenu" id="sm_i" role="menu"></div></div>
+    <div class="ch cte">📈 แบ่งเงินลงทุน <span class="ch-sub">☑ จัดการแล้ว | 📤 ส่งต่อ &nbsp;|&nbsp; ฐาน = รายได้รวม − SSO − PVD − ภาษี</span><button class="sortbtn" id="sb_i" onclick="sortToggle('i',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_i"></span></button><div class="sortmenu" id="sm_i" role="menu"></div></div>
     <div class="cb">
       <div class="inv-info">
         ฐานคำนวณ = <strong id="iBase">฿0.00</strong> &nbsp;|&nbsp; แบ่งลงทุนรวม = <strong id="iTotal" class="inv-total-val">฿0.00</strong>
@@ -939,41 +939,6 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   </div>
 </div>
 
-<!-- ── Google Sheets Config Modal ── -->
-<div id="cfgModal" class="modal-overlay" onclick="if(event.target===this)closeCfg()">
-  <div class="modal-box">
-    <div class="modal-title">☁️ ตั้งค่า Google Sheets</div>
-    <div class="modal-sub">เชื่อมต่อกับ Google Sheets เพื่อบันทึกข้อมูลบน Cloud<br>เข้าถึงได้จากทุกเครื่องและทุก Browser</div>
-
-    <div class="steps">
-      <div class="steps-title">📋 วิธีตั้งค่าครั้งแรก (ทำครั้งเดียว)</div>
-      <ol>
-        <li>สร้าง <strong>Google Spreadsheet</strong> ใหม่ (ไม่ต้องสร้าง Sheet เอง ระบบสร้างให้อัตโนมัติ)</li>
-        <li>คลิก <strong>Extensions → Apps Script</strong></li>
-        <li>วาง code จากไฟล์ <code>AppsScript_Code.js</code> ที่อยู่ในโฟลเดอร์เดียวกัน แล้ว Save</li>
-        <li>คลิก <strong>Deploy → New Deployment → Web App</strong>
-          <br>&nbsp;&nbsp;• Execute as: <strong>Me</strong>
-          <br>&nbsp;&nbsp;• Who has access: <strong>Anyone</strong>
-        </li>
-        <li>Copy <strong>Deployment URL</strong> (ขึ้นต้นด้วย script.google.com) แล้ววางด้านล่าง</li>
-        <li>กด <strong>บันทึก URL</strong> — ระบบจะโหลดข้อมูลจาก Sheets ทันที</li>
-      </ol>
-    </div>
-
-    <label class="modal-lbl">Apps Script Deployment URL</label>
-    <input id="gsUrlIn" class="gsin" type="url" placeholder="https://script.google.com/macros/s/AKfy.../exec">
-    <div class="gs-hint">URL นี้เก็บไว้ใน Browser นี้เท่านั้น (localStorage) — ต้องกรอกใหม่ถ้าเปลี่ยน Browser</div>
-
-    <div id="cfgStatus" class="gs-status-bar"></div>
-
-    <div class="modal-btns">
-      <button class="mbtn-save" onclick="saveGsCfg()">✅ บันทึก URL</button>
-      <button class="mbtn-cancel" onclick="closeCfg()">ยกเลิก</button>
-      <button class="mbtn-clear" onclick="clearGsUrl()">🗑️ ล้าง (ใช้ Local)</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── Base salary propagation confirm ── -->
 <!-- ── Modal: ลอกรายการจากปีก่อน ── -->
 <div id="copyYearModal" class="modal-overlay" onclick="if(event.target===this)closeCopyYear()">
@@ -1212,7 +1177,6 @@ const MS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.�
 const MF=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const SK='sol_v5';
 const SKM='sol_v5_meta';
-const GS_URL_KEY='sol_gs_url';
 const FB_CFG_KEY='sol_fb_cfg';
 const FB_APP_NAME='salary-calc-fb';
 const BONUS_ID='bonus';
@@ -1344,7 +1308,6 @@ let _incLbs=[],_dInc=[],_dTH=[],_dFin=[],_dDed=[];
 let dedActive={};
 const DED_COLORS=['rgba(66,153,225,.8)','rgba(56,178,172,.8)','rgba(245,101,101,.8)','rgba(237,137,54,.8)','rgba(104,211,145,.8)','rgba(154,117,217,.8)','rgba(237,100,166,.8)','rgba(251,211,141,.9)'];
 const DED_BORDERS=['#4299e1','#38b2ac','#f56565','#ed8936','#48bb78','#9b72cf','#ed64a6','#f6ad55'];
-let gsUrl='';
 let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
@@ -1404,39 +1367,10 @@ function toast(msg,type='ts'){
   clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-/* ════════════════════════════════════════════════════
-   Google Sheets Integration
-   ════════════════════════════════════════════════════ */
-
-/* ── GS HTTP helpers ── */
-async function gsGet(params){
-  const url=new URL(gsUrl);
-  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,String(v)));
-  const res=await fetch(url.toString(),{redirect:'follow'});
-  if(!res.ok)throw new Error('HTTP '+res.status);
-  return res.json();
-}
-
-async function gsPost(data){
-  /* ใช้ Content-Type: text/plain เพื่อหลีกเลี่ยง CORS preflight */
-  const res=await fetch(gsUrl,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(data),
-    redirect:'follow'
-  });
-  if(!res.ok)throw new Error('HTTP '+res.status);
-  return res.json();
-}
-
 /* ── Sync Status UI ── */
 function setSyncSt(state,msg){
   const el=ge('syncSt');if(!el)return;
   const map={
-    loading:   {txt:'🔄 กำลังโหลด GS...',          color:'#90cdf4'},
-    saving:    {txt:'🔄 กำลังบันทึก GS...',         color:'#90cdf4'},
-    ok:        {txt:'☁️ GS ซิงค์แล้ว',              color:'#68d391'},
-    error:     {txt:'❌ GS: '+(msg||'error'),        color:'#fc8181'},
     local:     {txt:'💾 Local เท่านั้น',             color:'#f6ad55'},
     fb_loading:{txt:'🔄 กำลังโหลด Firebase...',     color:'#90cdf4'},
     fb_saving: {txt:'🔄 กำลังบันทึก Firebase...',   color:'#fbd38d'},
@@ -1450,75 +1384,10 @@ function setSyncSt(state,msg){
   el.style.background=s.txt?'rgba(255,255,255,.1)':'transparent';
 }
 
-/* ── Config Modal ── */
-function openCfg(){
-  ge('gsUrlIn').value=gsUrl;
-  showCfgStatus('');
-  ge('cfgModal').classList.add('open');
-}
-function closeCfg(){ge('cfgModal').classList.remove('open');}
-function showCfgStatus(msg,type='info'){
-  const el=ge('cfgStatus');
-  el.textContent=msg;
-  el.className='gs-status-bar'+(msg?' show '+type:'');
-}
-function saveGsCfg(){
-  const url=ge('gsUrlIn').value.trim();
-  if(url&&!url.startsWith('https://script.google.com')){
-    showCfgStatus('URL ไม่ถูกต้อง ต้องขึ้นต้นด้วย https://script.google.com/...','err');
-    return;
-  }
-  gsUrl=url;
-  try{localStorage.setItem(GS_URL_KEY,url);}catch(e){}
-  if(url){
-    showCfgStatus('กำลังทดสอบการเชื่อมต่อ...','info');
-    gsGet({action:'getAll'}).then(r=>{
-      if(r.ok){
-        showCfgStatus('เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล...','ok');
-        loadAllFromGS(r.data,r.lastSaved);
-        setTimeout(closeCfg,1200);
-      }else{
-        showCfgStatus('Apps Script ตอบกลับแต่มี error: '+(r.error||'unknown'),'err');
-      }
-    }).catch(e=>{
-      showCfgStatus('เชื่อมต่อไม่ได้: '+e.message+' — ตรวจสอบ URL และ Deploy settings','err');
-    });
-  }else{
-    closeCfg();
-    toast('ล้าง GS URL แล้ว — ใช้ localStorage แทน');
-    setSyncSt('local');
-  }
-}
-function clearGsUrl(){
-  ge('gsUrlIn').value='';
-  saveGsCfg();
-}
-
-function loadAllFromGS(data,lastSaved){
-  if(data&&typeof data==='object'){
-    Object.keys(data).forEach(ym=>{
-      const rec=data[ym];
-      normDays(rec);
-      DB[ym]=rec;
-    });
-    try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
-  }
-  setSyncSt('ok');
-  setBadge(lastSaved||null,'gs');
-  buildTabs();updateDots();switchTab(CT,true);
-  toast('☁️ โหลดข้อมูลจาก Google Sheets สำเร็จ!');
-}
-
 /* ════════════════════════════════════════════════════
    Firebase / Firestore Integration
    ════════════════════════════════════════════════════ */
 
-/* Google Sheets เป็น backend สำรอง — ทุกจุดที่ซิงค์เขียนว่า "ถ้ามี Firebase ใช้ Firebase ก่อน"
-   พอตั้ง Firebase แล้ว ปุ่ม ☁️ Sheets จึงกดไปก็ไม่มีผลอะไร ซ่อนทิ้งไปเลยให้แถบบนไม่รก
-   (ไม่ได้ถอดตัวระบบออก — ล้าง Firebase เมื่อไหร่ปุ่มก็กลับมา ใครยังใช้ Sheets อยู่จึงไม่กระทบ) */
-function updCloudBtns(){
-  const b=ge('gsBtn');if(b)b.style.display=fbDb?'none':'';
-}
 function fbInit(cfg){
   if(!cfg||!cfg.apiKey||!cfg.projectId)return false;
   try{
@@ -1526,7 +1395,6 @@ function fbInit(cfg){
     if(existing){
       fbDb=firebase.firestore(existing);
       fbDocId=cfg.docId||'default';
-      updCloudBtns();
       return true;
     }
     const app=firebase.initializeApp({
@@ -1536,12 +1404,10 @@ function fbInit(cfg){
     },FB_APP_NAME);
     fbDb=firebase.firestore(app);
     fbDocId=cfg.docId||'default';
-    updCloudBtns();
     return true;
   }catch(e){
     console.warn('Firebase init error:',e);
     fbDb=null;
-    updCloudBtns();
     return false;
   }
 }
@@ -1607,13 +1473,13 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
-  fbDb=null;updCloudBtns();fbCfg=null;fbDocId='default';fbLastKnownTs=null;fbLoaded=false;
+  fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;fbLoaded=false;
   fbKnownMonths=new Set();pendingRemote=null;
   const cb=ge('conflictBanner');if(cb)cb.style.display='none';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
   closeFbCfg();
   toast('ล้าง Firebase Config แล้ว — ใช้ localStorage แทน');
-  if(!gsUrl)setSyncSt('local');
+  setSyncSt('local');
 }
 
 function copyFbShareLink(){
@@ -1814,22 +1680,8 @@ async function persist(){
     return;
   }
 
-  /* 3. GS sync (ถ้ามี URL และไม่มี Firebase) */
-  if(!gsUrl||CT===12){
-    if(!gsUrl&&!fbDb)setSyncSt('local');
-    return;
-  }
-  const ym=ymk(CT);
-  setSyncSt('saving');
-  try{
-    const r=await gsPost({action:'saveMonth',ym,record:DB[ym]});
-    if(!r.ok)throw new Error(r.error||'unknown');
-    setSyncSt('ok');
-    setBadge(ts,'gs');
-  }catch(e){
-    setSyncSt('error',e.message);
-    console.warn('GS saveMonth failed:',e);
-  }
+  /* 3. ไม่มี Firebase — เก็บในเครื่องอย่างเดียว */
+  setSyncSt('local');
 }
 
 async function restore(){
@@ -1855,7 +1707,6 @@ async function restore(){
     const raw=localStorage.getItem(FB_CFG_KEY);
     if(raw&&!fbDb){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
   }catch(e){fbDb=null;}
-  updCloudBtns();
 
   /* 1. ลอง Firebase ก่อน (priority สูงสุด) */
   if(fbDb){
@@ -1879,25 +1730,7 @@ async function restore(){
     }
   }
 
-  /* 2. โหลด GS URL จาก localStorage */
-  try{gsUrl=localStorage.getItem(GS_URL_KEY)||'';}catch(e){gsUrl='';}
-
-  if(gsUrl&&!fbDb){
-    setSyncSt('loading');
-    try{
-      const r=await gsGet({action:'getAll'});
-      if(r.ok){
-        loadAllFromGS(r.data,r.lastSaved);
-        return true;
-      }
-      throw new Error(r.error||'unknown');
-    }catch(e){
-      setSyncSt('error','โหลด GS ไม่ได้ — ใช้ข้อมูล local แทน');
-      console.warn('GS restore failed:',e);
-    }
-  }
-
-  /* 3. Fallback: localStorage */
+  /* 2. Fallback: localStorage */
   try{
     const raw=localStorage.getItem(SK);
     if(raw){
@@ -1913,12 +1746,12 @@ async function restore(){
     const ts=localStorage.getItem(SKM);
     setBadge(ts||null,'local');
   }catch(e){setBadge(null,'local');}
-  if(!gsUrl&&!fbDb)setSyncSt('local');
+  if(!fbDb)setSyncSt('local');
   return false;
 }
 
 function setBadge(ts,source){
-  const src=source==='gs'?' ☁️':source==='fb'?' 🔥':source==='local'?' 💾':'';
+  const src=source==='fb'?' 🔥':source==='local'?' 💾':'';
   ge('bdg').innerHTML=ts
     ?`บันทึกล่าสุด${src}: <strong>${ts}</strong>`
     :`${src||'💾'} ยังไม่มีข้อมูลที่บันทึกไว้`;
@@ -1952,6 +1785,7 @@ function rA(){
         <input type="date" class="dtin" id="adt_${a.id}" value="${esc(a.dt||'')}" title="วันที่ได้รับ" oninput="dirtA('${a.id}')" onchange="dirtA('${a.id}')">
         <input type="number" id="abm_${a.id}" value="${esc(bm)}" placeholder="จำนวนเดือน" step="0.5" min="0" oninput="onBonusMthChg();dirtA('${a.id}')">
         <span style="font-size:.74rem;color:#718096;padding:0 3px;white-space:nowrap;align-self:center">เดือน</span>
+        <button class="fwdbtn" disabled title="โบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
         <span class="bm-disp" id="abm_disp_${a.id}">${amtDisp}</span>
         <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
@@ -1963,6 +1797,7 @@ function rA(){
       <input type="text"   id="an_${a.id}" value="${esc(a.n)}" placeholder="ชื่อค่าเพิ่มเติม" oninput="dirtA('${a.id}')">
       <input type="date" class="dtin" id="adt_${a.id}" value="${esc(a.dt||'')}" title="วันที่ได้รับ" oninput="dirtA('${a.id}')" onchange="dirtA('${a.id}')">
       <input type="number" id="av_${a.id}" value="${esc(a.v)}" placeholder="0.00" min="0" oninput="dirtA('${a.id}');updInv()">
+      <button class="fwdbtn" onclick="openRowFwd('a','${a.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>
       <button class="delbtn" onclick="delA('${a.id}')">✕</button>
     </div>`;
   }).join('');
@@ -2009,6 +1844,7 @@ function rO(){
       <input type="text"   id="on_${o.id}" value="${esc(o.n)}" placeholder="ชื่อรายได้อื่นๆ (ไม่คิดภาษี)" oninput="dirtO('${o.id}')">
       <input type="date" class="dtin" id="odt_${o.id}" value="${esc(o.dt||'')}" title="วันที่ได้รับ" oninput="dirtO('${o.id}')" onchange="dirtO('${o.id}')">
       <input type="number" id="ov_${o.id}" value="${esc(o.v)}" placeholder="0.00" min="0" oninput="dirtO('${o.id}');updInv()">
+      <button class="fwdbtn" onclick="openRowFwd('o','${o.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>
       <button class="delbtn" onclick="delO('${o.id}')">✕</button>
     </div>`).join('');
   bindDrag('oList',O,rO);
@@ -2078,6 +1914,7 @@ function rP(){
         <option value="recurring"${ty==='recurring'?' selected':''}>🛡️ ประกัน/สะสม</option>
       </select>
       <input type="number" class="pl-amt" id="pv_${x.id}" value="${esc(x.amount)}" placeholder="0.00" min="0" oninput="dirtP('${x.id}')">
+      <button class="fwdbtn" onclick="openRowFwd('p','${x.id}')" title="ส่งเฉพาะรายการนี้ไปเดือนถัดๆ ไป (งวดเดินหน้าให้เอง)">📤</button>
       <button class="delbtn" onclick="delP('${x.id}')">✕</button>
       <div class="pl-row2">
         <input type="date" class="dtin" id="pdt_${x.id}" value="${esc(x.dt||'')}" title="วันที่ตัดเงิน" oninput="dirtP('${x.id}')" onchange="dirtP('${x.id}')">
@@ -2222,8 +2059,12 @@ function updCkBars(){
     const pct=Math.round(s.done/s.n*100);
     el.innerHTML=`<div class="ckb-top"><span class="ckb-lbl">✅ จัดการแล้ว <b>${s.done}/${s.n}</b> รายการ`
       +`<span class="ckb-amt">${fmt(s.dtot)} / ${fmt(s.tot)}</span></span>`
-      +`<span class="ckb-act"><button type="button" onclick="ckAll('${k}',1)">ติ๊กทั้งหมด</button>`
-      +`<button type="button" onclick="ckAll('${k}',0)">ล้างทั้งหมด</button></span></div>`
+      /* ปุ่มเดียวสลับตามสถานะ แทนที่จะวางคู่กันทั้ง 5 กล่อง (เคยกินได้ถึง 10 ปุ่ม)
+         ยังไม่ครบ → เสนอ "ติ๊กทั้งหมด" ซึ่งเป็นสิ่งที่อยากทำจริงเกือบตลอด
+         ครบแล้ว → เหลือแต่ "ล้างทั้งหมด" ให้กดแก้ · ไม่มีจังหวะไหนที่ปุ่มกดแล้วไม่เกิดอะไร */
+      +`<span class="ckb-act"><button type="button" onclick="ckAll('${k}',${s.done===s.n?0:1})"`
+      +` title="${s.done===s.n?'เอาเครื่องหมาย ☑ ออกทั้งกล่อง':'ติ๊ก ☑ ให้ทุกรายการในกล่องนี้ (ติ๊กครบแล้วปุ่มจะเปลี่ยนเป็นล้างทั้งหมด)'}">`
+      +`${s.done===s.n?'ล้างทั้งหมด':'ติ๊กทั้งหมด'}</button></span></div>`
       +`<div class="ckb-track"><div class="ckb-fill${pct===100?' full':''}" style="width:${pct}%"></div></div>`;
   });
   /* กล่องสรุปในผลลัพธ์ตามไปด้วย ถ้าเปิดค้างอยู่ */
@@ -2599,17 +2440,15 @@ function saveM(fb=false){
    คืนจำนวนเดือนที่ล้มเหลว ให้ผู้เรียกเอาไปบอกผู้ใช้เสมอ
    ════════════════════════════════════════════════════ */
 async function syncMonths(yms,label){
-  if(!yms||!yms.length||(!fbDb&&!gsUrl))return 0;
-  setSyncSt(fbDb?'fb_saving':'saving');
+  if(!yms||!yms.length||!fbDb)return 0;
+  setSyncSt('fb_saving');
   let fail=0;
   for(const ym of yms){
-    try{
-      if(fbDb)await fbSaveMonth(ym);
-      else await gsPost({action:'saveMonth',ym,record:DB[ym]});
-    }catch(e){fail++;console.warn(label+' sync failed',ym,e);}
+    try{await fbSaveMonth(ym);}
+    catch(e){fail++;console.warn(label+' sync failed',ym,e);}
   }
-  if(fail)setSyncSt(fbDb?'fb_error':'error',`ซิงค์ไม่สำเร็จ ${fail} เดือน`);
-  else setSyncSt(fbDb?'fb_ok':'ok');
+  if(fail)setSyncSt('fb_error',`ซิงค์ไม่สำเร็จ ${fail} เดือน`);
+  else setSyncSt('fb_ok');
   return fail;
 }
 /* ท้าย toast เมื่อ sync ไม่ครบ — ต้องเห็นพร้อมข้อความสำเร็จเสมอ ไม่ใช่ซ่อนไว้ใน console */
@@ -3274,14 +3113,27 @@ function rowFwdScan(ym,span){
    ทั้งหมดยึดกติกาเดียวกับ anchorDates() */
 function rowPut(m,arr,item,srcYm,dstYm){
   const n=ymDelta(srcYm,dstYm);
+  const out=(arr||[]).slice();
+  /* แผนผ่อน/ประกันเป็นกล่องเดียวที่ลอกไปตรงๆ ไม่ได้ — งวดต้องเดินหน้าตามระยะเดือน
+     ไม่งั้นส่ง "งวด 3/48" ไปซ้ำทุกเดือนปลายทาง ให้ forwardPlans() ตัวเดียวกับปุ่มส่งทั้งกล่อง
+     จัดการ แล้วรายการที่ผ่อนครบก่อนถึงเดือนนั้นจะถูกถอดออก (กติกาเดียวกับ planFwdYes) */
+  if(m.key==='p'){
+    const fw=forwardPlans([item],srcYm,dstYm);
+    const i=out.findIndex(x=>x&&x.id===item.id);
+    if(!fw.list.length){if(i>=0)out.splice(i,1);return dedupeIds(out);}
+    if(i>=0)out[i]={...out[i],...fw.list[0]};else out.push(fw.list[0]);
+    return dedupeIds(out);
+  }
   const it={...item,ok:false,dn:false};
   if(m.key==='d'){it.ct=dedCt(item);it.pm=PM_META[item.pm]?item.pm:'bank';}
   it.dt=item.dt?shiftDt(item.dt,n):(m.pay?payDate(dstYm):'');
-  const out=(arr||[]).slice();
   const i=out.findIndex(x=>x&&x.id===it.id);
   if(i>=0)out[i]={...out[i],...it};else out.push(it);
   return dedupeIds(out);
 }
+/* เดือนปลายทางที่แผนนี้ "ผ่อนครบไปแล้ว" จึงจะไม่ได้รับ — ใช้บอกผู้ใช้ก่อนกดยืนยัน */
+const rowFwdFinished=(m,item,srcYm,list)=>
+  (m.key==='p')?(list||[]).filter(t=>!forwardPlans([item],srcYm,t).list.length):[];
 
 function openRowFwd(kind,id){
   const m=LIST_META[kind];if(!m)return;
@@ -3307,10 +3159,13 @@ function openRowFwd(kind,id){
   const dtNote=m.pay
     ?'วันที่เลื่อนตามเดือนให้เอง'
     :'วันที่ว่างไว้ให้กรอกเอง (ตามกติกาเดิมของกล่องนี้)';
-  ge('xfNote').innerHTML=pctNote
+  /* แผนผ่อน/ประกันไม่ได้ลอกไปเฉยๆ — งวดเดินหน้าตามระยะเดือน และหยุดส่งเมื่อผ่อนครบ */
+  const planNote=(m.key==='p')
+    ?'• <strong>งวดเดินหน้าให้เอง</strong>ตามระยะเดือน — เดือนที่ผ่อนครบไปแล้วจะไม่ถูกส่งไป<br>':'';
+  ge('xfNote').innerHTML=pctNote+planNote
     +`• ส่ง<strong>ชื่อ · ยอด · ตัวเลือกของรายการ</strong> ไปให้ · ${dtNote}<br>`
     +'• รายการเดิมที่ id ตรงกันจะถูก<strong>อัปเดต ไม่สร้างซ้ำ</strong><br>'
-    +'• เครื่องหมาย ☑ จัดการแล้ว <strong>ไม่ถูกส่งไป</strong> — เป็นของจริงรายเดือน';
+    +`• เครื่องหมาย ☑ ${m.key==='p'?'จ่ายงวดนี้แล้ว':'จัดการแล้ว'} <strong>ไม่ถูกส่งไป</strong> — เป็นของจริงรายเดือน`;
 
   /* ธ.ค. ไม่มีเดือนเหลือในปีแล้ว — ปิดตัวเลือกแรก แล้วเด้งไปโหมดระบุจำนวนเดือนแทน */
   const restOfYear=11-CT;
@@ -3338,13 +3193,21 @@ function rowFwdPreview(){
   }
   const sc=rowFwdScan(d.ym,span);
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(ymLabel).join(' · ')}</div>`;
-  let h=`<div style="font-weight:700;color:#276749">✅ เขียนลง ${sc.hit.length} เดือน</div>`;
-  if(sc.hit.length)h+=mlist(sc.hit);
+  /* แผนผ่อนที่ครบงวดก่อนถึงเดือนปลายทาง จะไม่ถูกส่งไป — ต้องเห็นก่อนกด ไม่ใช่หายเงียบๆ */
+  const fin=rowFwdFinished(d.m,d.item,d.ym,sc.hit);
+  const write=sc.hit.filter(t=>!fin.includes(t));
+  let h=`<div style="font-weight:700;color:#276749">✅ เขียนลง ${write.length} เดือน</div>`;
+  if(write.length)h+=mlist(write);
+  if(fin.length){
+    h+=`<div style="font-weight:700;color:#c05621;margin-top:10px">🎉 ผ่อนครบก่อนถึง ${fin.length} เดือน</div>`+mlist(fin)
+      +`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">งวดสุดท้ายจบก่อนเดือนพวกนี้ จึง<strong>ไม่ถูกส่งไป</strong> (ถ้าเคยส่งไปแล้วรอบก่อน จะถูกถอดออกให้)</div>`;
+  }
   if(sc.miss.length){
     h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ยังไม่เคยเปิด ${sc.miss.length} เดือน</div>`+mlist(sc.miss)
       +`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">เดือนพวกนี้จะได้โครงรายการนี้เองตอนเปิด แต่<strong>ยอดต้องกรอกเอง</strong> — เปิดแล้วกดปุ่มนี้ซ้ำก็ได้ครบ</div>`;
   }
   el.innerHTML=h;
+  /* เปิดปุ่มไว้ถ้ายังมีเดือนที่ "ต้องถอดของเก่าออก" ด้วย ไม่ใช่เฉพาะเดือนที่เขียนใหม่ */
   go.disabled=!sc.hit.length;
 }
 
@@ -3568,20 +3431,8 @@ async function doCopyYear(){
   toast(`✅ ลอก ${p.copy.length} เดือนจากปี ${srcYr} แล้ว${keepAmt?' พร้อมจำนวนเงิน':''}`+(p.skip.length?` (ข้าม ${p.skip.length} เดือนที่มีข้อมูลอยู่)`:''));
 
   /* sync ขึ้น cloud ทีละเดือน — แบบเดียวกับ basePropYes() */
-  if(fbDb||gsUrl){
-    setSyncSt(fbDb?'fb_saving':'saving');
-    let fail=0;
-    for(const c of p.copy){
-      const ym=ymk(c.mi);
-      try{
-        if(fbDb)await fbSaveMonth(ym);
-        else await gsPost({action:'saveMonth',ym,record:DB[ym]});
-      }catch(e){fail++;console.warn('copyYear sync failed',ym,e);}
-    }
-    if(fail)setSyncSt(fbDb?'fb_error':'error',`sync ไม่สำเร็จ ${fail} เดือน`);
-    else setSyncSt(fbDb?'fb_ok':'ok');
-    if(fail)toast(`⚠️ ลอกลงเครื่องแล้ว แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${fail} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำ`,'te');
-  }
+  const fail=await syncMonths(p.copy.map(c=>ymk(c.mi)),'copyYear');
+  if(fail)toast(`⚠️ ลอกลงเครื่องแล้ว แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${fail} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำ`,'te');
   go.disabled=false;
 }
 
@@ -3635,17 +3486,15 @@ async function doClearYear(){
   _blankYm=CT===12?null:ymk(CT);   /* ตั้งหลัง switchTab เพราะ loadM() ล้างค่านี้ */
 
   /* sync การลบขึ้น cloud ทีละเดือน — แบบเดียวกับ doCopyYear() */
-  if(fbDb||gsUrl){
-    setSyncSt(fbDb?'fb_saving':'saving');
+  if(fbDb){
+    setSyncSt('fb_saving');
     let fail=0,lastTs=null;
     for(const ym of yms){
-      try{
-        if(fbDb)lastTs=(await fbDeleteMonth(ym))||lastTs;
-        else await gsPost({action:'deleteMonth',ym});
-      }catch(e){fail++;console.warn('clearYear sync failed',ym,e);}
+      try{lastTs=(await fbDeleteMonth(ym))||lastTs;}
+      catch(e){fail++;console.warn('clearYear sync failed',ym,e);}
     }
-    if(fail)setSyncSt(fbDb?'fb_error':'error',`ลบไม่สำเร็จ ${fail} เดือน`);
-    else{setSyncSt(fbDb?'fb_ok':'ok');if(fbDb&&lastTs)setBadge(lastTs,'fb');}
+    if(fail)setSyncSt('fb_error',`ลบไม่สำเร็จ ${fail} เดือน`);
+    else{setSyncSt('fb_ok');if(lastTs)setBadge(lastTs,'fb');}
     toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`
       +(fail?` ⚠️ แต่ลบบน cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลอาจกลับมาเมื่อเปิดใหม่ ลองสั่งซ้ำ`:''),fail?'te':'ts');
   }else toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`);
@@ -4474,11 +4323,6 @@ function doResetM(){
     fbDeleteMonth(ym)
       .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');})
       .catch(e=>setSyncSt('fb_error',e.message));
-  }else if(gsUrl){
-    setSyncSt('saving');
-    gsPost({action:'deleteMonth',ym})
-      .then(r=>setSyncSt(r.ok?'ok':'error',r.error))
-      .catch(e=>setSyncSt('error',e.message));
   }
 }
 
@@ -4756,14 +4600,6 @@ function doImport(input){
             .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
             .catch(e=>setSyncSt('fb_error',e.message));
         }
-      }else if(gsUrl){
-        setSyncSt('saving');
-        gsPost({action:'saveAll',db:DB})
-          .then(r=>{
-            if(r.ok){setSyncSt('ok');toast(`☁️ Sync ${r.count||cnt} เดือนไป Google Sheets แล้ว`);}
-            else setSyncSt('error',r.error);
-          })
-          .catch(e=>setSyncSt('error',e.message));
       }
     }catch(err){toast('❌ '+err.message,'te');}
     input.value='';
@@ -4926,7 +4762,9 @@ function renderDedSum(){
     const active=dedActive[c.key];
     const solo=isSolo&&c.key===soloKey;
     return`<button class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" onclick="toggleDed(${JSON.stringify(c.key).replace(/"/g,'&quot;')})" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'&#10003; ':''}${esc(c.label)}</button>`;
-  }).join('')+(isSolo?`<button class="ded-show-all" onclick="showAllDed()">✕ แสดงทั้งหมด</button>`:'');
+  /* ไม่มีปุ่ม "✕ แสดงทั้งหมด" แยกแล้ว — คลิกปุ่มหมวดที่ solo อยู่ซ้ำก็กลับมาแสดงทั้งหมดเหมือนกัน
+     (toggleDed() เช็ค isSolo ให้ และ title ของปุ่มก็บอกไว้ตรงๆ) ปุ่มเดิมเป็นทางที่สองไปที่เดิม */
+  }).join('');
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
   /* ตาข่ายนิรภัย — ยอดกล่องนี้ต้องเท่ากับ Σ หักรวม + Σ แบ่งลงทุน ของตารางสรุปเสมอ */
@@ -4942,12 +4780,16 @@ function renderDedSum(){
 
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
   if(CH.c5){CH.c5.destroy();CH.c5=null;}
-  const coBar={responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
+  /* legend ของ Chart.js ถูกปิด — กราฟนี้มีปุ่มควบคุมของตัวเองอยู่แล้ว (สีปุ่มตรงกับสีชุดข้อมูล = เป็น legend ในตัว)
+     เปิดทั้งคู่จะได้ตัวควบคุมสองชุดที่ไม่คุยกัน: ซ่อนจาก legend แล้วปุ่มยังขึ้นว่าเปิดอยู่
+     พอกดปุ่มตัวอื่นกราฟถูกสร้างใหม่ ของที่ซ่อนไว้ก็เด้งกลับมา และ legend ยังซ่อนได้หมดทุกชุด
+     ทั้งที่ปุ่มกันไว้ไม่ให้ปิดตัวสุดท้าย (เหลือกราฟเปล่าโดยปุ่มไม่มีอะไรเปลี่ยน) */
+  const coBar={responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>'฿'+v.toLocaleString()}}}};
   CH.c4=mkChart('cDedBar',{type:'bar',data:{labels:MS,datasets:[...activeCats].sort((a,b)=>b.total-a.total).map(c=>({label:c.label,data:c.data.map(v=>+v.toFixed(2)),backgroundColor:c.color,borderColor:c.border,borderWidth:1,stack:'s'}))},options:coBar});
   if(activeCats.length){
     const sortedPie=[...activeCats].sort((a,b)=>b.total-a.total);
     const pieData=sortedPie.map(c=>+c.total.toFixed(2));
-    CH.c5=mkChart('cDedPie',{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
+    CH.c5=mkChart('cDedPie',{type:'doughnut',data:{labels:sortedPie.map(c=>c.label),datasets:[{data:pieData,backgroundColor:sortedPie.map(c=>c.color),borderColor:sortedPie.map(c=>c.border),borderWidth:2,hoverOffset:8}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ฿${c.parsed.toLocaleString('th-TH',{minimumFractionDigits:2})} (${grandTotal?(c.parsed/grandTotal*100).toFixed(1):0}%)`}}}}});
   }
 }
 
@@ -4957,10 +4799,6 @@ function toggleDed(key){
   const isSolo=activeKeys.length===1&&activeKeys[0]===key;
   if(isSolo){cats.forEach(c=>{dedActive[c.key]=true;});}
   else{cats.forEach(c=>{dedActive[c.key]=(c.key===key);});}
-  renderDedSum();
-}
-function showAllDed(){
-  buildDedCats().forEach(c=>{dedActive[c.key]=true;});
   renderDedSum();
 }
 
@@ -4985,7 +4823,11 @@ function togIncSeries(k){
 }
 function rebuildIncChart(){
   if(CH.c1){CH.c1.destroy();CH.c1=null;}
-  const co={responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}}};
+  /* legend ของ Chart.js ถูกปิด — กราฟนี้มีปุ่มควบคุมของตัวเองอยู่แล้ว (สีปุ่มตรงกับสีชุดข้อมูล = เป็น legend ในตัว)
+     เปิดทั้งคู่จะได้ตัวควบคุมสองชุดที่ไม่คุยกัน: ซ่อนจาก legend แล้วปุ่มยังขึ้นว่าเปิดอยู่
+     พอกดปุ่มตัวอื่นกราฟถูกสร้างใหม่ ของที่ซ่อนไว้ก็เด้งกลับมา และ legend ยังซ่อนได้หมดทุกชุด
+     ทั้งที่ปุ่มกันไว้ไม่ให้ปิดตัวสุดท้าย (เหลือกราฟเปล่าโดยปุ่มไม่มีอะไรเปลี่ยน) */
+  const co={responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString('th-TH',{minimumFractionDigits:2})}}}};
   const isLine=incChartType==='line'||incChartType==='area';
   const isStacked=incChartType==='stacked';
   const dataMap={inc:_dInc,th:_dTH,fin:_dFin,ded:_dDed};
@@ -5481,7 +5323,6 @@ init();
       _cur=_cur.length>1?_cur.slice(0,-1):'0';
     }
     else if(fn==='sign'){_cur=fmt(-parseFloat(_cur));}
-    else if(fn==='pct'){_cur=fmt(parseFloat(_cur)/100);}
     upd();
   };
   window.calcMem=function(action){
