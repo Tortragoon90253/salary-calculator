@@ -2219,6 +2219,13 @@ const CT_TITLE='🧾 ภาษี = ภาษีหัก ณ ที่จ่า
 /* แถวที่ผูกกับวันเงินเดือนออกโดยธรรมชาติ — ใช้เกณฑ์เดียวกับ getTaxFromD() */
 const isTaxRow=x=>!!x&&(x.id===BONUS_TAX_ID||dedCt(x)==='tax');
 function getTaxFromD(arr){return (arr||[]).reduce((s,x)=>isTaxRow(x)?s+nf(x.v):s,0);}
+/* ภาษีของ "เงินเดือนล้วน" — ไม่รวมภาษีโบนัส
+   โบนัสมีกลไกภาษีของตัวเองอยู่แล้ว (calcBonusTax คิดแบบส่วนเพิ่ม ครั้งเดียวตอนจ่าย)
+   วิธีสะสม YTD จึงต้องไม่เอาภาษีก้อนนั้นมาปนกับภาษีรายเดือน ไม่งั้นสองฝั่งคนละเกณฑ์กัน:
+   ฐานรายได้ตัดโบนัสออก แต่ฐานภาษีกลับรวมภาษีโบนัสไว้ → ภาษีที่ยังต้องหักดูเหมือนติดลบ
+   แล้วทุกเดือนที่เหลือของปีกลายเป็น 0 ทั้งที่ยังต้องหักอยู่ */
+const getBonusTaxFromD=arr=>(arr||[]).reduce((s,x)=>(x&&x.id===BONUS_TAX_ID)?s+nf(x.v):s,0);
+const getRegularTaxFromD=arr=>getTaxFromD(arr)-getBonusTaxFromD(arr);
 /* แยกรายการหัก (ที่ไม่ใช่ภาษี) เป็นคงที่ / ผันแปร
    ต้องใช้เกณฑ์ตัวเดียวกับ getTaxFromD() เพราะภาษีถูกหักไปแล้วใน takeHome
    ถ้านับซ้ำที่นี่จะหักสองรอบ — และ fix+var ต้องเท่ากับ "รายการหักอื่นๆ" เป๊ะเสมอ
@@ -4445,25 +4452,34 @@ function calcTax(){
     if(!pv){res.innerHTML='<div style="color:#e53e3e;font-size:.78rem;text-align:center;padding:8px">กรุณาเลือกเดือนก่อนครับ</div>';return;}
     const[cy,cm]=pv.split('-').map(Number);
     const ntx=nf(gv('txNonTax'));
-    let ytdInc=0,ytdTax=0,ytdRows='';
+    let ytdInc=0,ytdTax=0,ytdBonusTax=0,ytdRows='';
+    const missing=[];               /* เดือนที่ผ่านไปแล้วแต่ยังไม่มีข้อมูลในโปรแกรม */
+    let filled=0;                   /* เดือนที่นับเข้าฐานสะสมได้จริง (ไม่รวมเดือนนี้) */
     for(let m=1;m<cm;m++){
       const ym=`${cy}-${String(m).padStart(2,'0')}`;
       const mr=compM(ym);
-      if(mr){
-        const bonusPrev=nf(DB[ym]?.a?.find(x=>x.id===BONUS_ID)?.v);
-        /* หัก "รายได้อื่นๆ (ไม่คิดภาษี)" ของเดือนนั้นออกจากฐานสะสม — totInc รวมมันไว้ */
-        const mInc=mr.totInc-bonusPrev-mr.totO-ntx;
-        const mTaxPaid=getTaxFromD(DB[ym]?.d||[]);
-        ytdInc+=mInc;ytdTax+=mTaxPaid;
-        ytdRows+=`<div style="display:grid;grid-template-columns:60px 1fr auto auto;gap:4px;font-size:.71rem;padding:3px 0;border-bottom:1px solid #e2e8f0;color:#718096">
-          <span>${String(m).padStart(2,'0')}/${cy}</span><span></span>
-          <span style="text-align:right">฿${f2(mInc)}</span>
-          <span style="color:#c53030;text-align:right;min-width:80px">ภาษี ฿${f2(mTaxPaid)}</span></div>`;
-      }
+      if(!mr){missing.push(MS[m-1]);continue;}
+      filled++;
+      const bonusPrev=nf(DB[ym]?.a?.find(x=>x.id===BONUS_ID)?.v);
+      /* หัก "รายได้อื่นๆ (ไม่คิดภาษี)" ของเดือนนั้นออกจากฐานสะสม — totInc รวมมันไว้ */
+      const mInc=mr.totInc-bonusPrev-mr.totO-ntx;
+      /* ตัดโบนัสออกจากฐานรายได้แล้ว ก็ต้องตัดภาษีโบนัสออกจากฐานภาษีด้วย ให้เป็นเกณฑ์เดียวกัน */
+      const mTaxPaid=getRegularTaxFromD(DB[ym]?.d||[]);
+      const mBonusTax=getBonusTaxFromD(DB[ym]?.d||[]);
+      ytdInc+=mInc;ytdTax+=mTaxPaid;ytdBonusTax+=mBonusTax;
+      ytdRows+=`<div style="display:grid;grid-template-columns:60px 1fr auto auto;gap:4px;font-size:.71rem;padding:3px 0;border-bottom:1px solid #e2e8f0;color:#718096">
+        <span>${String(m).padStart(2,'0')}/${cy}</span><span>${bonusPrev?`<span style="color:#c05621">โบนัส ฿${f2(bonusPrev)} (คิดภาษีแยก)</span>`:''}</span>
+        <span style="text-align:right">฿${f2(mInc)}</span>
+        <span style="color:#c53030;text-align:right;min-width:80px">ภาษี ฿${f2(mTaxPaid)}</span></div>`;
     }
     const curInc=totInc-ntx;
     const totalYtdInc=ytdInc+curInc;
-    const totalMonths=cm;
+    /* ตัวหาร = เดือนที่ "มีข้อมูลจริง" ไม่ใช่เลขเดือนปัจจุบัน
+       เดิมใช้ cm เสมอ เดือนที่ยังไม่ได้กรอกจึงถูกนับเป็นรายได้ 0 แล้วถ่วงค่าเฉลี่ยลง
+       เช่น กรอกไว้แค่ ส.ค. เดือนเดียวแล้วเปิดโหมดนี้ในเดือน ส.ค. → หารด้วย 8
+       ได้ประมาณการทั้งปีเหลือ 1/8 ของความจริง ภาษีที่ควรหักจึงต่ำกว่าความจริงมาก
+       (ถ้ากรอกครบทุกเดือน ตัวหารจะเท่ากับ cm พอดี = ตรงกับวิธีที่ฝ่ายบุคคลใช้เหมือนเดิม) */
+    const totalMonths=Math.max(1,filled+1);
     const remaining=Math.max(1,13-cm);
     const projAnnual=totalYtdInc/totalMonths*12;
     empD=Math.min(projAnnual*.5,100000);
@@ -4474,8 +4490,10 @@ function calcTax(){
     for(const b of BRAK){if(taxable<=b.a)break;const seg=Math.min(taxable,b.b)-b.a;const st=seg*b.r;
       if(seg>0&&b.r>0)bRows+=`<div style="display:grid;grid-template-columns:1fr auto auto;gap:4px;font-size:.72rem;padding:2px 0;border-bottom:1px solid #feebc8"><span style="color:#718096">${(b.a/1000).toFixed(0)}K–${b.b===Infinity?'∞':(b.b/1000).toFixed(0)+'K'} (${b.r*100}%)</span><span style="text-align:right">฿${f2(seg)}</span><span style="color:#c53030;font-weight:600;text-align:right">฿${f2(st)}</span></div>`;}
     res.innerHTML=`<div style="background:white;border-radius:8px;border:1px solid #fbd38d;padding:12px;font-size:.78rem">
-      <div style="font-weight:700;color:#c05621;margin-bottom:8px;border-bottom:1px solid #feebc8;padding-bottom:6px">📊 วิธีสะสม YTD — เดือน 1–${cm}/${cy}</div>
-      ${ytdRows?`<div style="margin-bottom:10px;padding:8px;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0"><div style="font-size:.71rem;font-weight:700;color:#4a5568;margin-bottom:4px">รายได้เดือนก่อนหน้า (จากที่บันทึกไว้)</div>${ytdRows}</div>`:'<div style="font-size:.72rem;color:#a0aec0;margin-bottom:10px;padding:6px;text-align:center;background:#f7fafc;border-radius:6px">เดือนแรกของปี — ไม่มีข้อมูลสะสมก่อนหน้า</div>'}
+      <div style="font-weight:700;color:#c05621;margin-bottom:8px;border-bottom:1px solid #feebc8;padding-bottom:6px">📊 วิธีสะสม YTD — ใช้ข้อมูล ${totalMonths} เดือน</div>
+      ${ytdRows?`<div style="margin-bottom:10px;padding:8px;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0"><div style="font-size:.71rem;font-weight:700;color:#4a5568;margin-bottom:4px">รายได้เดือนก่อนหน้า (จากที่บันทึกไว้)</div>${ytdRows}</div>`:(cm>1?'':'<div style="font-size:.72rem;color:#a0aec0;margin-bottom:10px;padding:6px;text-align:center;background:#f7fafc;border-radius:6px">เดือนแรกของปี — ไม่มีข้อมูลสะสมก่อนหน้า</div>')}
+      ${missing.length?`<div style="margin-bottom:10px;padding:8px 10px;background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;font-size:.72rem;color:#975a16;line-height:1.7">⚠️ <strong>ยังไม่ได้กรอก ${missing.length} เดือน</strong> — ${esc(missing.join(' · '))}<br>เดือนพวกนี้ถูก<strong>ข้ามไป</strong> ไม่ได้นับเป็นรายได้ 0 · ถ้าเดือนนั้นมีรายได้จริง ให้กรอกก่อนเพื่อให้ประมาณการแม่นขึ้น</div>`:''}
+      ${ytdBonusTax>0?`<div style="margin-bottom:10px;padding:8px 10px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;font-size:.72rem;color:#276749;line-height:1.7">🎁 <strong>ภาษีโบนัส ฿${f2(ytdBonusTax)}</strong> ที่หักไปแล้ว <strong>ไม่ถูกนำมาคิดในนี้</strong> — โบนัสคิดภาษีแบบส่วนเพิ่มแยกต่างหากตอนจ่าย ทั้งรายได้และภาษีของโบนัสจึงถูกกันออกจากฐานสะสมทั้งคู่</div>`:''}
       <div style="display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-bottom:8px">
         <span style="color:#4a5568;font-weight:600">รายได้สะสม ${totalMonths} เดือน (รวมเดือนนี้)</span><span style="font-weight:700;text-align:right">฿${f2(totalYtdInc)}</span>
         <span style="color:#718096">ฉายภาพทั้งปี (÷${totalMonths}×12)</span><span style="font-weight:600;text-align:right">฿${f2(projAnnual)}</span>
@@ -4489,7 +4507,7 @@ function calcTax(){
       <div style="display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-top:8px;padding-top:6px;border-top:1.5px solid #e2e8f0">
         <span style="color:#718096">อัตราสูงสุดที่ถึง</span><span style="font-weight:700;color:#c05621;text-align:right">${topR}%</span>
         <span style="font-weight:700">ภาษีทั้งปี (ประมาณการ)</span><span style="font-weight:700;color:#c53030;text-align:right">฿${f2(annTax)}</span>
-        <span style="color:#718096">ภาษีที่หักไปแล้ว (${cm-1} เดือน)</span><span style="color:#718096;text-align:right">−฿${f2(ytdTax)}</span>
+        <span style="color:#718096">ภาษีเงินเดือนที่หักไปแล้ว (${filled} เดือน)</span><span style="color:#718096;text-align:right">−฿${f2(ytdTax)}</span>
         <span style="color:#718096">เดือนที่เหลือ (รวมเดือนนี้)</span><span style="color:#718096;text-align:right">${remaining} เดือน</span>
       </div>
       <div style="margin-top:10px;background:linear-gradient(135deg,#fff7ed,#feebc8);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
@@ -4995,7 +5013,11 @@ function renderTaxYear(){
   }
   if(!months){box.innerHTML='<div style="color:#a0aec0;font-style:italic;font-size:.78rem">— ยังไม่มีข้อมูล —</div>';return;}
   const row=(l,v,cls,sub)=>`<div class="li"><span>${l}${sub?` <span class="tyr-sub">${sub}</span>`:''}</span><span class="${cls||''}">${fmt(v)}</span></div>`;
-  const ssoNote=sso>9000?'เกินเพดานลดหย่อน — ใช้ได้สูงสุด 9,000 ฿/ปี':'เพดานลดหย่อน 9,000 ฿/ปี';
+  /* เดิมเขียนตายตัวว่า "เพดานลดหย่อน 9,000 ฿/ปี" (= 750×12 ของเพดานค่าจ้างเดิม 15,000)
+     แต่ calcTax() หักออกจากเงินได้เต็มจำนวนที่จ่ายจริง — สองหน้าจึงบอกคนละอย่าง
+     ประกันสังคมลดหย่อนได้ "ตามที่จ่ายจริง" ยอดจึงเปลี่ยนตามเพดานค่าจ้างของแต่ละปี
+     บอกยอดจริงที่โปรแกรมใช้ไปเลย จะได้ไม่ขัดกับตัวเลขในกล่องคำนวณภาษี */
+  const ssoNote=`ลดหย่อนได้ตามที่จ่ายจริง — กล่องคำนวณภาษีหักให้เต็ม ${fN(sso)} ฿`;
   box.innerHTML=`<div class="tyr-grid">
       <div>
         <div class="tyr-h">🧾 สำหรับยื่นภาษี</div>
