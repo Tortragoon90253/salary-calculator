@@ -1360,6 +1360,24 @@ const planAmt=x=>nf(x&&x.amount);
 const planTotal=arr=>(arr||[]).reduce((s,x)=>s+planAmt(x),0);
 const planTerm=v=>Math.max(1,parseInt(v,10)||1);
 
+/* ── localStorage ที่ "รู้ตัวเมื่อเขียนไม่ลง" ──
+   เดิมทุกจุดเป็น try{...}catch(e){} เปล่าๆ พื้นที่เต็ม / โหมดส่วนตัว / เบราว์เซอร์บล็อกคุกกี้
+   = เขียนไม่ลงจริง แต่ผู้ใช้เห็นแถบ "บันทึกล่าสุด" ขึ้นตามปกติแล้วเชื่อว่าเซฟแล้ว
+   เตือนครั้งเดียวต่อรอบการใช้งาน ไม่ให้ toast เด้งรัวทุกครั้งที่พิมพ์ */
+let _lsWarned=false;
+function lsSet(k,v){
+  try{localStorage.setItem(k,v);return true;}
+  catch(e){
+    console.warn('localStorage write failed:',k,e);
+    if(!_lsWarned){
+      _lsWarned=true;
+      toast('⚠️ บันทึกลงเครื่องไม่สำเร็จ (พื้นที่เต็ม หรือเบราว์เซอร์ปิดการเก็บข้อมูลไว้) — '
+        +(fbDb?'ข้อมูลยังถูกซิงค์ขึ้น Firebase ตามปกติ':'ข้อมูลจะหายเมื่อปิดหน้านี้ แนะนำให้กด ⬇️ Export เก็บไว้'),'te');
+    }
+    return false;
+  }
+}
+
 /* ── Toast ── */
 let _tt;
 function toast(msg,type='ts'){
@@ -1451,7 +1469,7 @@ async function saveFbCfg(){
   }
   fbCfg=cfg;
   fbReady=false;fbLoaded=false;  /* บล็อก save ระหว่างโหลด */
-  try{localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));}catch(e){}
+  lsSet(FB_CFG_KEY,JSON.stringify(cfg));
   showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
   try{
     const result=await fbLoad();
@@ -1588,7 +1606,7 @@ function loadAllFromFB(data,lastSaved){
       normDays(rec);
       DB[ym]=rec;
     });
-    try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+    lsSet(SK,JSON.stringify(DB));
   }
   fbLastKnownTs=lastSaved||null;
   setSyncSt('fb_ok');
@@ -1617,7 +1635,7 @@ function fbSyncFromRemote(data,lastSaved,remoteMonths){
     if(fbKnownMonths.has(ym)&&!remoteMonths.has(ym))delete DB[ym];
   });
   fbKnownMonths=remoteMonths;
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   updateDots();
@@ -1660,14 +1678,14 @@ function dismissRemote(){
    ════════════════════════════════════════════════════ */
 async function persist(){
   /* 1. บันทึกลง localStorage เสมอ (backup) */
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   const now=new Date();
   const ts=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
-  try{localStorage.setItem(SKM,ts);}catch(e){}
+  lsSet(SKM,ts);
   setBadge(ts,'local');
 
-  /* 2. Firebase sync (ถ้ามี config) — priority สูงกว่า GS */
-  if(fbDb&&CT!==12){
+  /* 2. Firebase sync (ถ้ามี config) — saveM() กัน CT===12 ไว้ตั้งแต่ต้นแล้ว */
+  if(fbDb){
     setSyncSt('fb_saving');
     try{
       const savedTs=await fbSaveMonth(ymk(CT));
@@ -1695,7 +1713,7 @@ async function restore(){
         const cfg={apiKey:parsed.k,projectId:parsed.p,docId:parsed.d||'default'};
         fbCfg=cfg;
         fbInit(cfg);
-        localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));
+        lsSet(FB_CFG_KEY,JSON.stringify(cfg));
         history.replaceState(null,'',location.href.split('#')[0]);
         toast('🔗 โหลด Firebase Config จาก Link สำเร็จ!','ts');
       }
@@ -1801,7 +1819,7 @@ function rA(){
       <button class="delbtn" onclick="delA('${a.id}')">✕</button>
     </div>`;
   }).join('');
-  bindDrag('aList',A,rA);
+  bindDrag('aList','a');
   updCkBars();
 }
 function rD(){
@@ -1830,7 +1848,7 @@ function rD(){
       <button class="delbtn" onclick="delD('${d.id}')">✕</button>
     </div>`;
   }).join('');
-  bindDrag('dList',D,rD);
+  bindDrag('dList','d');
   updPaySummary();
   updCkBars();
 }
@@ -1847,7 +1865,7 @@ function rO(){
       <button class="fwdbtn" onclick="openRowFwd('o','${o.id}')" title="ส่งรายการนี้ไปเดือนถัดๆ ไป">📤</button>
       <button class="delbtn" onclick="delO('${o.id}')">✕</button>
     </div>`).join('');
-  bindDrag('oList',O,rO);
+  bindDrag('oList','o');
   updOth();
   updCkBars();
 }
@@ -1873,7 +1891,7 @@ function rI(){
       <button class="delbtn" onclick="delI('${inv.id}')">✕</button>
     </div>`;
   }).join('');
-  bindDrag('iList',I,rI);
+  bindDrag('iList','i');
   updInv();
 }
 
@@ -1924,7 +1942,7 @@ function rP(){
       <div class="pl-row3">${prog}</div>
     </div>`;
   }).join('');
-  bindDrag('pList',P,rP);
+  bindDrag('pList','p');
   updPlan();updCkBars();
 }
 
@@ -1946,34 +1964,47 @@ function updPlan(){
     +(varDed>0?` &nbsp;(ยังไม่หักผันแปร 🔄 ${fmt(varDed)} ซึ่งจ่ายจากก้อนนี้)`:'')+`</span>`;
 }
 
-/* ── Drag & Drop reorder ── */
-let _dragId=null,_dragArr=null,_dragRe=null;
-function bindDrag(listId,arr,reFn){
+/* ── Drag & Drop reorder ──
+   จำแค่ "กล่องไหน" ไม่ใช่ตัว array — ห้ามจับ reference ของ array ไว้ตอน bind เด็ดขาด
+   เพราะ saveM() ทำ A=colA() (และ D/I/O/P) = แทนด้วย array ใหม่ทั้งก้อน โดยไม่วาดลิสต์ใหม่
+   ตัวฟังที่ผูกไว้จึงค้างอยู่กับก้อนเก่าที่ถูกทิ้งแล้ว พอ drop ก็ splice ลงก้อนนั้น
+   แล้ว re-render อ่านจากก้อนใหม่ = ลำดับไม่ขยับ เงียบสนิท ไม่มี error
+   เส้นทางที่ทำให้พังมีเต็มไปหมด: กด 🧮 คำนวณ · กด 💾 บันทึก · ติ๊ก ☑ (ckAutoSave)
+   · สลับแท็บเบราว์เซอร์ออกแล้วกลับมา (visibilitychange) — ทั้งหมดเรียก saveM() โดยไม่วาดใหม่ */
+let _dragId=null,_dragKind=null;
+function bindDrag(listId,kind){
+  if(!LIST_META[kind])return;
   const rows=ge(listId).querySelectorAll('[draggable]');
   rows.forEach(row=>{
     row.addEventListener('dragstart',e=>{
-      _dragId=row.dataset.id;_dragArr=arr;_dragRe=reFn;
+      _dragId=row.dataset.id;_dragKind=kind;
       row.classList.add('dragging');
       e.dataTransfer.effectAllowed='move';
     });
     row.addEventListener('dragend',()=>{
       row.classList.remove('dragging');
+      _dragId=null;_dragKind=null;
       ge(listId).querySelectorAll('.drag-over').forEach(r=>r.classList.remove('drag-over'));
     });
     row.addEventListener('dragover',e=>{
+      if(_dragKind!==kind)return;              /* ลากข้ามกล่องไม่ได้ — อย่าไฮไลต์ให้เข้าใจผิด */
       e.preventDefault();e.dataTransfer.dropEffect='move';
       if(row.dataset.id!==_dragId)row.classList.add('drag-over');
     });
     row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
     row.addEventListener('drop',e=>{
       e.preventDefault();row.classList.remove('drag-over');
-      if(!_dragId||row.dataset.id===_dragId)return;
-      const fromIdx=_dragArr.findIndex(x=>x.id===_dragId);
-      const toIdx=_dragArr.findIndex(x=>x.id===row.dataset.id);
+      if(!_dragId||_dragKind!==kind||row.dataset.id===_dragId)return;
+      const m=LIST_META[kind];
+      const arr=(m.get()||[]).slice();          /* อ่านสดตอน drop ไม่ใช่ตอน bind */
+      const fromIdx=arr.findIndex(x=>x&&x.id===_dragId);
+      const toIdx=arr.findIndex(x=>x&&x.id===row.dataset.id);
       if(fromIdx<0||toIdx<0)return;
-      const [item]=_dragArr.splice(fromIdx,1);
-      _dragArr.splice(toIdx,0,item);
-      _dragRe();updInv();
+      const [item]=arr.splice(fromIdx,1);
+      arr.splice(toIdx,0,item);
+      m.set(arr);
+      formDirty=true;ckAutoSave();              /* ลำดับเป็นข้อมูลจริง — กติกาเดียวกับปุ่มเรียง */
+      m.re();updInv();
     });
   });
 }
@@ -2493,7 +2524,7 @@ async function basePropYes(){
   if(!d)return;
   await saveM();                                   /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
   d.targets.forEach(k=>{if(DB[k])DB[k].base=String(d.newBase);});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   const fail=await syncMonths(d.targets,'propagate');
   if(CT===12)renderSum();
@@ -2547,7 +2578,10 @@ function loadMonth(mi){
         const dv=rec.days[dk];
         const ea=ge(`ota_${dk}`),e3=ge(`ot3_${dk}`);
         if(ea)ea.value=dv.ac||'';
-        if(e3)e3.value=dv.o3||'';
+        /* ช่อง ×3.0 ของวันธรรมดาถูก disable ไว้ และตัวคำนวณไม่นับให้อยู่แล้ว (ดู isN3Dow)
+           ถ้ายังเขียนค่าเก่าลงไป ผู้ใช้จะเห็นตัวเลขในกล่องเทาที่ลบเองไม่ได้ และเข้าใจว่าได้เงินเพิ่ม
+           ปล่อยว่างไว้ แล้ว saveM() รอบถัดไปจะล้างค่าค้างออกจากข้อมูลให้เอง */
+        if(e3)e3.value=e3.disabled?'':(dv.o3||'');
       });
     }
     onBaseChg();reOT();
@@ -2721,7 +2755,7 @@ async function planFwdYes(){
     const doneIds=new Set(fw.done.map(x=>x.id));
     rec.p=mergePlans((rec.p||[]).filter(x=>x&&!doneIds.has(x.id)),fw.list);
   });
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   const fail=await syncMonths(d.targets,'plan propagate');
   if(CT===12)renderSum();
@@ -2901,6 +2935,23 @@ function sortRevertClick(kind,e){
 document.addEventListener('click',()=>sortCloseAll());
 document.addEventListener('keydown',e=>{if(e.key==='Escape')sortCloseAll();});
 
+/* ── ขังโฟกัสไว้ในกล่องยืนยันที่เปิดอยู่ ──
+   overlay (z-index 10000, inset 0) บังการคลิกไว้แล้ว แต่กด Tab ยังวิ่งไปโดนปุ่มหลังฉากได้
+   เช่นแท็บเดือน — สลับเดือนทั้งที่กล่องยังค้าง แล้วกดยืนยันทีหลังจะไปลงมือกับเดือนที่ไม่ใช่
+   เดือนที่กล่องนั้นสรุปไว้ (ตัวแปร _rowDel/_rowFwd/_baseProp ถูกตั้งไว้ตั้งแต่ตอนเปิด) */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Tab')return;
+  const box=document.querySelector('.modal-overlay.open .modal-box');
+  if(!box)return;
+  const f=[...box.querySelectorAll('button,input,select,textarea,a[href]')]
+    .filter(el=>!el.disabled&&el.tabIndex!==-1&&el.offsetParent!==null);
+  if(!f.length)return;
+  const first=f[0],last=f[f.length-1];
+  if(!box.contains(document.activeElement)){e.preventDefault();first.focus();return;}
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+});
+
 const rowName=(m,x)=>String((x&&x[m.nf])||'').trim();
 function rowSame(m,x,id,name){
   if(!x)return false;
@@ -3062,7 +3113,7 @@ async function rowDelYes(){
 
   await saveM();                 /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
   others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   const fail=await syncMonths(others,'row delete');
   if(CT===12)renderSum();
   toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
@@ -3222,11 +3273,20 @@ async function rowFwdYes(){
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   ge('rowFwdModal').classList.remove('open');_rowFwd=null;
   if(!sc.hit.length)return;
+  /* แผนผ่อนที่ครบงวดก่อนถึงเดือนไหน จะไม่ถูกเขียนลงเดือนนั้น (rowPut ถอดของเก่าออกให้แทน)
+     ข้อความสรุปจึงต้องนับเฉพาะเดือนที่ได้รับจริง ไม่ใช่ทุกเดือนที่แตะ */
+  const fin=rowFwdFinished(m,d.item,d.ym,sc.hit);
+  const wrote=sc.hit.filter(t=>!fin.includes(t));
   sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   const fail=await syncMonths(sc.hit,'row propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่ง "${String(d.item[m.nf]||'')}" ไป ${sc.hit.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
+  const nm=String(d.item[m.nf]||'');
+  const skipTxt=fin.length?` · ข้าม ${fin.length} เดือนที่ผ่อนครบก่อนแล้ว`:'';
+  toast(wrote.length
+    ? `✅ ส่ง "${nm}" ไป ${wrote.length} เดือนถัดไปแล้ว${skipTxt}`+syncFailTxt(fail)
+    : `🎉 "${nm}" ผ่อนครบก่อนถึงทุกเดือนที่เลือก — ไม่ได้ส่งไป (ถอดรายการเก่าออกให้แล้ว ${fin.length} เดือน)`+syncFailTxt(fail),
+    fail?'te':'ts');
 }
 
 /* แสดงความยินดีเมื่อมีรายการผ่อนครบ — ใช้ toast ตามสำนวนเดิมของแอป ไม่บล็อกการใช้งาน */
@@ -3424,7 +3484,7 @@ async function doCopyYear(){
   if(!p.copy.length){go.disabled=false;renderCopyPreview();cpyStep(1);toast('ไม่มีเดือนที่ต้องลอก');return;}
 
   p.copy.forEach(c=>{DB[ymk(c.mi)]=buildCopyRec(c.rec,c.mi,c.srcYm,keepAmt);});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   closeCopyYear();
   if(CT===12)renderSum();else switchTab(CT,true);
@@ -3477,7 +3537,7 @@ async function doClearYear(){
   const yms=ms.map(mi=>`${yr}-${p2(mi+1)}`);
 
   yms.forEach(ym=>{delete DB[ym];});
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   updateDots();
   closeClearYear();
   /* ล้างหน้าจอให้ตรงกับข้อมูลที่เพิ่งลบ — เดือนที่เปิดอยู่จะกลับเป็นฟอร์มเปล่า */
@@ -3722,18 +3782,25 @@ function adoptWkbDef(){
   const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]&&DB[k].wkbDef).sort();
   if(keys.length){
     _wkbDef=String(DB[keys[keys.length-1]].wkbDef);
-    try{localStorage.setItem(WKBD_KEY,_wkbDef);}catch(e){}
+    lsSet(WKBD_KEY,_wkbDef);
   }
 }
 /* กรอกค่าใหม่ = ตั้งเฉพาะเดือนนี้ (ถ้าเท่ากับค่าเริ่มต้นก็ถือว่าไม่ได้ override) */
 function setWkb(v){_wkb=String(v??'').trim();setTimeout(doCalc,0);}
-/* เลื่อนขั้นค่าปัจจุบันเป็นค่าเริ่มต้นถาวร แล้วประทับลงทุกเดือนที่บันทึกไว้ ให้ทุกเครื่องเห็นตรงกัน */
-function setWkbDefault(){
+/* เลื่อนขั้นค่าปัจจุบันเป็นค่าเริ่มต้นถาวร แล้วประทับลงทุกเดือนที่บันทึกไว้ ให้ทุกเครื่องเห็นตรงกัน
+   ★ ต้องซิงค์ "ทุกเดือนที่ประทับ" ขึ้น cloud ด้วย ไม่ใช่ปล่อยให้ doCalc→saveM จัดการ
+   เพราะ persist() เรียก fbSaveMonth() ของเดือนที่เปิดอยู่เดือนเดียว อีก 11 เดือนบน cloud
+   จึงยังเป็นค่าเก่า แล้ว adoptWkbDef() ของเครื่องอื่นหยิบ "เดือนล่าสุดที่มี wkbDef"
+   ซึ่งมักเป็นเดือนท้ายปีที่ยังไม่ถูกอัปเดต = ได้ค่าเก่ากลับมา แถมเขียนทับ localStorage ด้วย */
+async function setWkbDefault(){
   _wkbDef=_wkb;
-  try{localStorage.setItem(WKBD_KEY,_wkbDef);}catch(e){}
-  Object.keys(DB).forEach(k=>{if(/^\d{4}-\d{2}$/.test(k)&&DB[k])DB[k].wkbDef=_wkbDef;});
-  toast(`⭐ จำงบวันหยุด ${_wkbDef?'฿'+_wkbDef+'/วัน':'(ว่าง)'} เป็นค่าเริ่มต้นแล้ว`);
-  setTimeout(doCalc,0);
+  lsSet(WKBD_KEY,_wkbDef);
+  const months=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]);
+  months.forEach(k=>{DB[k].wkbDef=_wkbDef;});
+  lsSet(SK,JSON.stringify(DB));
+  const fail=await syncMonths(months,'wkbDef');
+  doCalc();                       /* วาดการ์ดใหม่หลัง event ของปุ่มจบแล้ว จึงไม่ถอดปุ่มกลางคัน */
+  toast(`⭐ จำงบวันหยุด ${_wkbDef?'฿'+_wkbDef+'/วัน':'(ว่าง)'} เป็นค่าเริ่มต้นแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 function resetWkbToDefault(){_wkb=_wkbDef;setTimeout(doCalc,0);}
 
@@ -4316,7 +4383,7 @@ function doResetM(){
   _blankYm=ym;
   sortResetAll();   /* ไม่ได้ผ่าน loadM() — ต้องล้างสถานะเรียงเอง ไม่งั้น "ลำดับเดิม" ชี้ไปแถวที่ถูกล้างไปแล้ว */
   /* บันทึก localStorage */
-  try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+  lsSet(SK,JSON.stringify(DB));
   /* sync — Firebase ก่อน (priority) ไม่งั้น GS */
   if(fbDb){
     setSyncSt('fb_saving');
@@ -4494,15 +4561,16 @@ function clrTax(){
   ge('txRes').innerHTML='';lastTax=undefined;
 }
 
-/* ── Print Monthly ── */
-function printMonthly(){
-  document.body.classList.add('print-monthly');
-  window.addEventListener('afterprint',function h(){
-    document.body.classList.remove('print-monthly');
-    window.removeEventListener('afterprint',h);
-  });
-  window.print();
-}
+/* ── Print ──
+   print CSS ตั้งต้นบังคับ #mv{display:none} #sv{display:block} = พิมพ์หน้าสรุปปีเสมอ
+   แต่ renderSum() ทำงานเฉพาะตอนเข้าแท็บ 📊 ถ้าผู้ใช้ยังไม่เคยเปิด ตาราง #sv จะว่าง
+   กด Ctrl+P เองจากหน้าเดือนจึงได้กระดาษเปล่า — จัดโหมดให้ตรงกับแท็บที่เปิดอยู่เสมอ
+   ครอบคลุมทั้งปุ่มในแอปและการสั่งพิมพ์จากเบราว์เซอร์/ระบบปฏิบัติการ */
+window.addEventListener('beforeprint',()=>{
+  document.body.classList.toggle('print-monthly',CT!==12);
+});
+window.addEventListener('afterprint',()=>document.body.classList.remove('print-monthly'));
+function printMonthly(){window.print();}
 
 /* ── CSV Export ── */
 const ce=v=>{v=String(v??'');return(v.includes(',')||v.includes('"')||v.includes('\n'))?`"${v.replace(/"/g,'""')}"`:v;};
@@ -4516,7 +4584,11 @@ function doExport(){
   yrs.forEach(yr=>{
     for(let mi=0;mi<12;mi++){
       const ym=`${yr}-${p2(mi+1)}`;const rec=DB[ym];if(!rec)continue;const m=mi+1;
-      rows.push(cr('BASE',yr,m,'','',rec.base||'',rec.baseDt||'',rec.wkb||'',rec.wkbDef||''));
+      /* baseDt เป็นช่องเดียวที่ "เคารพการล้างค่า" (loadMonth เทียบ !==undefined ไม่ใช่ falsy)
+         แต่ '' ในไฟล์แยกไม่ออกระหว่าง "ล้างทิ้ง" กับ "ไฟล์เก่าไม่มีคอลัมน์นี้"
+         จึงเขียน '-' แทนค่าที่ถูกล้างทิ้ง (ไฟล์เก่าไม่เคยมี '-' จึง import ได้เหมือนเดิม) */
+      const baseDtCsv=rec.baseDt===undefined?'':(rec.baseDt||'-');
+      rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',rec.wkbDef||''));
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
@@ -4562,7 +4634,7 @@ function doImport(input){
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],p:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
-        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=extra;if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
+        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
@@ -4581,7 +4653,7 @@ function doImport(input){
       Object.assign(DB,tmp);
       adoptWkbDef();
       /* บันทึก localStorage */
-      try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+      lsSet(SK,JSON.stringify(DB));
       const first=Object.keys(tmp).sort()[0];
       if(first){CY=parseInt(first.split('-')[0]);ge('ySel').value=CY;buildTabs();}
       updateDots();switchTab(CT,true);
@@ -5784,7 +5856,7 @@ init();
       if(!apiKey){st.className='gs-status-bar show err';st.textContent='กรุณากรอก API Key';return;}
       aiCfg={mode:'key',apiKey,model,proxyUrl:'',accessCode:''};
     }
-    try{localStorage.setItem(AI_CFG_KEY,JSON.stringify(aiCfg));}catch(e){}
+    lsSet(AI_CFG_KEY,JSON.stringify(aiCfg));
     updFab();
     st.className='gs-status-bar show ok';st.textContent='บันทึกแล้ว! เปิดผู้ช่วย AI ได้เลย';
     setTimeout(()=>{aiCloseCfg();if(!ge('ai-panel').classList.contains('open'))aiToggle();},900);
@@ -5817,7 +5889,7 @@ init();
     if(!aiChats.list.find(x=>x.id===aiChats.cur))aiChats.cur=aiChats.list[0].id;
     aiHistory=(curChat().msgs||[]).slice();
   }
-  function saveChats(){try{localStorage.setItem(AI_CHATS_KEY,JSON.stringify(aiChats));}catch(e){}}
+  function saveChats(){lsSet(AI_CHATS_KEY,JSON.stringify(aiChats));}
   function curChat(){return aiChats.list.find(x=>x.id===aiChats.cur)||aiChats.list[0];}
   function persistCurrentChat(){
     if(!aiChats)loadChats();
@@ -6490,6 +6562,13 @@ init();
     names.forEach(nm=>{const it=arr.find(x=>x.n===nm&&!used.has(x));if(it){head.push(it);used.add(it);}});
     return head.concat(arr.filter(x=>!used.has(x)));
   }
+  /* ปลดธง "เดือนนี้เพิ่งถูกล้างและยังไม่มีใครแตะ" ก่อนลงมือเขียนค่า
+     ตัวฟัง input/change ที่ #mv ปลดให้เฉพาะตอนผู้ใช้พิมพ์เอง แต่เราเขียนด้วยโค้ด (el.value=...)
+     ซึ่งไม่ยิง event และช่องแชทก็อยู่นอก #mv — ถ้าไม่ปลดเอง ด่านกัน autosave ใน saveM()
+     (_blankYm===ymCur && !formDirty && !DB[ymCur]) จะข้ามการบันทึกทั้งหมด
+     แล้วของที่เพิ่งกรอกให้หายเกลี้ยงตอนสลับเดือน — รวมถึง saveM() ที่เราเรียกเองข้างล่างด้วย */
+  function markFormTouched(){_blankYm=null;formDirty=true;}
+
   /* แก้ "ฟอร์มเดือนที่เปิดอยู่" (เห็นผลสด) — sync DOM→array ก่อน แล้ว render ใหม่จาก array */
   function applyToForm(f){
     if(f.base!=null){sv('fBase',String(r(f.base)));}
@@ -6610,9 +6689,10 @@ init();
         if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
         if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
         const curYm=(CT>=0&&CT<12)?ymk(CT):null;
+        if(curYm&&months.includes(curYm))markFormTouched();
         months.forEach(ym=>{ const fm=fFor(ym); if(ym===curYm)applyToForm(fm); else applyToRecord(ym,fm); });
         if(curYm&&months.includes(curYm))saveM();          /* บันทึกเดือนปัจจุบันที่แก้ผ่านฟอร์ม */
-        try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}
+        lsSet(SK,JSON.stringify(DB));
         updateDots();if(CT===12)renderSum();
         /* ใช้ syncMonths() เหมือนปุ่มอื่น — เดิม fire-and-forget แล้ว console.warn เฉยๆ
            ซิงค์ล้มเหลวกี่เดือนก็ไม่มีใครรู้ ทั้งที่ toast บอกว่าแก้เรียบร้อยแล้ว */
@@ -6622,6 +6702,7 @@ init();
         where=months.map(monthLabelFull).join(', ');
       }else{
         if(CT<0||CT>=12){toast('เปิดหน้าเดือนก่อนนะครับ (ตอนนี้อยู่หน้าสรุปปี)','te');return;}
+        markFormTouched();
         applyToForm(f);
         where=MF[CT]+' '+CY+' (ตรวจแล้วกด “คำนวณ/บันทึก”)';
         toast('✅ แก้ไขเรียบร้อย — ตรวจแล้วกด “คำนวณ”');
