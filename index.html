@@ -611,7 +611,10 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
     <div class="ch cbl">⚙️ ข้อมูลพื้นฐาน</div>
     <div class="cb">
       <div class="g3">
-        <div><label>เดือน / ปี</label><input id="fPrd" type="month" class="input-ro"></div>
+        <!-- readonly + tabindex=-1 ไม่ใช่แค่ pointer-events:none ใน CSS ซึ่งกันได้แค่เมาส์
+             กด Tab เข้าไปแล้วใช้ลูกศรเปลี่ยนเดือนได้ → ตาราง OT/วันเงินเดือนออกคิดจากเดือนหนึ่ง
+             แต่ saveM() บันทึกด้วย ymk(CT) อีกเดือนหนึ่ง (ช่องนี้สะท้อนแท็บที่เลือก ไม่ใช่ช่องกรอก) -->
+        <div><label>เดือน / ปี</label><input id="fPrd" type="month" class="input-ro" readonly tabindex="-1" aria-readonly="true"></div>
         <div><label>เงินเดือนฐาน (บาท)</label><input id="fBase" type="number" placeholder="0.00" min="0" oninput="onBaseChg()" onchange="onBaseCommit()"></div>
         <div><label>วันเงินเดือนออก</label><input id="fBaseDt" type="date" title="วันที่เงินเดือนเข้าบัญชี — ค่าเริ่มต้นคือวันที่ 5 ของเดือนถัดไป"></div>
       </div>
@@ -1182,7 +1185,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
       <div id="xdPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
 
       <div style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
-        • ลบหลายเดือนจะ<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — ลบเฉพาะเดือนนี้จะรอคุณกดบันทึกเหมือนเดิม<br>
+        • ทุกตัวเลือก<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — รวมถึง "เฉพาะเดือนนี้"<br>
         • เดือนอื่นที่มีชื่อรายการตรงกันเป๊ะ ถือเป็นรายการเดียวกัน
       </div>
     </div>
@@ -1353,6 +1356,11 @@ let fbOwnTs=null,fbOwnAt=0;
 const fbMarkOwn=ts=>{if(ts){fbOwnTs=ts;fbOwnAt=Date.now();}return ts;};
 const FB_ECHO_MS=60000;   /* พ้นช่วงนี้ถือว่าไม่มี echo ค้างแล้ว กลับไปเทียบ ts ตรงๆ แบบเดิม */
 let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
+/* true เมื่อ "อ่าน" Firebase สำเร็จอย่างน้อยหนึ่งครั้งในรอบนี้ — ต่างจาก fbReady ซึ่งเป็นจริง
+   แม้การโหลดจะล้มเหลว (init() ตั้งใน finally เพื่อไม่ให้แอปค้างจนบันทึกอะไรไม่ได้เลย)
+   ทางที่เขียนทับ "ทั้ง document" (fbSave ใช้ .set() ไม่ใช่ merge) ต้องเช็คตัวนี้ ไม่ใช่ fbReady
+   ไม่งั้นโหลด cloud ไม่สำเร็จ → DB มีแค่ของ localStorage → Import แล้วเดือนที่อยู่บน cloud หายถาวร */
+let fbLoaded=false;
 let fbKnownMonths=new Set();  /* เดือนที่เห็นใน Firebase แล้ว — ใช้ตัดสินใจว่าควรลบ local หรือไม่ */
 let formDirty=false;  /* true เมื่อมีการแก้ใน form แต่ยังไม่ save */
 /* เดือนที่เพิ่งถูก "ล้างข้อมูล" ไป และผู้ใช้ยังไม่ได้แตะอะไรต่อ
@@ -1576,11 +1584,12 @@ async function saveFbCfg(){
     return;
   }
   fbCfg=cfg;
-  fbReady=false;  /* บล็อก save ระหว่างโหลด */
+  fbReady=false;fbLoaded=false;  /* บล็อก save ระหว่างโหลด */
   try{localStorage.setItem(FB_CFG_KEY,JSON.stringify(cfg));}catch(e){}
   showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
   try{
     const result=await fbLoad();
+    fbLoaded=true;           /* fbLoad() ผ่าน = อ่าน cloud สำเร็จ (ไม่มีข้อมูลก็ถือว่าอ่านได้) */
     if(result&&result.data){
       showFbStatus('เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล...','ok');
       loadAllFromFB(result.data,result.lastSaved);
@@ -1598,7 +1607,7 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
-  fbDb=null;updCloudBtns();fbCfg=null;fbDocId='default';fbLastKnownTs=null;
+  fbDb=null;updCloudBtns();fbCfg=null;fbDocId='default';fbLastKnownTs=null;fbLoaded=false;
   fbKnownMonths=new Set();pendingRemote=null;
   const cb=ge('conflictBanner');if(cb)cb.style.display='none';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
@@ -1854,6 +1863,7 @@ async function restore(){
     try{
       const fbTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
       const result=await Promise.race([fbLoad(),fbTimeout]);
+      fbLoaded=true;           /* อ่าน cloud สำเร็จแล้ว — DB ในเครื่องถือว่าครบพอจะเขียนทับได้ */
       if(result&&result.data){
         loadAllFromFB(result.data,result.lastSaved);
         fbStartListener();
@@ -2190,10 +2200,15 @@ function ckStat(k){
   const arr=_CKL[k]()||[],base=k==='I'?calcBase():0;
   const rows=[];let done=0,tot=0,dtot=0;
   arr.forEach(x=>{
-    const raw=nf(gv(_CKV[k]+x.id)||x[_CKF[k]]);
+    /* มี element ต้องเชื่อ element เสมอ แม้ค่าจะว่าง — กติกาเดียวกับ gvf()
+       เดิมใช้ gv()||x.v ซึ่ง '' เป็น falsy ผู้ใช้ล้างช่องยอดทิ้งแล้วแถบ ✅ ยังนับยอดเดิม
+       (ค่าใน array อัปเดตตอน re-render เท่านั้น ไม่ใช่ทุกตัวอักษรที่พิมพ์) */
+    const vEl=ge(_CKV[k]+x.id);
+    const raw=nf(vEl?vEl.value:x[_CKF[k]]);
     const amt=(k==='I'&&x.t==='%')?base*raw/100:raw;
     if(!(amt>0))return;
-    const nm=(gv(_CKN[k]+x.id)||x.n||x.name||'').trim();
+    const nEl=ge(_CKN[k]+x.id);
+    const nm=String(nEl?nEl.value:(x.n||x.name||'')).trim();
     rows.push({n:nm||'(ไม่มีชื่อ)',amt,dn:!!x.dn});
     tot+=amt;if(x.dn){done++;dtot+=amt;}
   });
@@ -2345,13 +2360,19 @@ function dedSplit(arr){
   });
   return{fix,vari,other:fix+vari};
 }
+/* ช่อง ×3.0 เปิดให้กรอกเฉพาะเสาร์/อาทิตย์ — buildOT() ใส่ disabled ให้วันธรรมดาไว้แล้ว
+   แต่ข้อมูลที่ไม่ได้มาจากการพิมพ์ (ไฟล์ CSV · ผู้ช่วย AI) เขียนลงวันธรรมดาได้
+   แล้วเคยถูกนับเป็น OT ×3.0 เงียบๆ ทั้งที่ผู้ใช้มองเห็นแต่ลบเองไม่ได้ (ช่องถูกปิด)
+   ตัวอ่านทุกตัวจึงต้องยึดกติกาเดียวกับฟอร์ม = นอกเสาร์/อาทิตย์ไม่มี ×3.0 */
+const isN3Dow=dow=>dow===0||dow===6;
 function getOTs(){
   const pv=gv('fPrd');if(!pv)return{h15:0,h20:0,h30:0};
   const[y,m]=pv.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
   let m15=0,m20=0,m30=0;
   for(let d=1;d<=cnt;d++){
-    const ac=Math.max(0,nf(ge(`ota_${d}`)?.value)),o3=Math.max(0,nf(ge(`ot3_${d}`)?.value));   /* ค่าติดลบต้องไม่หักยอด OT */
     const dow=new Date(y,m-1,d).getDay();
+    /* ค่าติดลบต้องไม่หักยอด OT */
+    const ac=Math.max(0,nf(ge(`ota_${d}`)?.value)),o3=isN3Dow(dow)?Math.max(0,nf(ge(`ot3_${d}`)?.value)):0;
     if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
   }
   return{h15:m15/60,h20:m20/60,h30:m30/60};
@@ -2364,7 +2385,10 @@ function liveTakeHome(){
   const base=num('fBase');if(!base)return 0;
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const ot=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
-  const ta=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value),0);
+  /* ?? a.v — ถ้าแถวยังไม่ถูก render (ระหว่างล้าง/วาดลิสต์ใหม่) ต้องใช้ค่าใน array ไม่ใช่ปัดเป็น 0
+     กติกาเดียวกับ getOth() · getPaySummary() · liveInvRow() · liveDedSplit() ที่มี fallback ครบ
+     (?? จับเฉพาะ null/undefined ช่องที่ผู้ใช้ล้างค่าจริงยังเป็น '' → 0 ตามเดิม) */
+  const ta=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const to=getOth();
   const sso=getSso(),pvd=getPvd();
   const taxD=getTaxFromD(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),ct:gv(`dc_${d.id}`)||d.ct})));
@@ -2496,7 +2520,10 @@ function buildTabs(){
 function updateDots(){
   for(let i=0;i<12;i++){
     const t=ge(`tb_${i}`);if(!t)continue;
-    const r=DB[ymk(i)];t.classList.toggle('dot',!!(r&&nf(r.base)>0));
+    /* ใช้ recHasData() ตัวเดียวกับที่ทั้งแอปใช้แปลว่า "เดือนนี้มีข้อมูล"
+       (getPrev · copyYearPlan · openClearYear · resetM) — เดิมดูแค่เงินเดือนฐาน
+       เดือนที่มีแต่แผนผ่อน/ประกันหรือรายการอื่นจึงไม่ขึ้นจุด ทั้งที่กล่องล้างข้อมูลบอกว่ามีของให้ลบ */
+    t.classList.toggle('dot',recHasData(DB[ymk(i)]));
   }
 }
 function switchTab(idx,skipSave=false){
@@ -2540,7 +2567,13 @@ function saveM(fb=false){
   }
   DB[ym]={base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
     ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
-    wkb:(_wkb===_wkbDef?'':_wkb),wkbDef:_wkbDef,
+    /* '' ในฟิลด์ wkb แปลว่า "ใช้ค่าเริ่มต้น" (ตัวอ่านทุกตัวใช้ rec.wkb||_wkbDef)
+       เดือนที่ผู้ใช้ตั้งใจ "ไม่มีงบวันหยุด" จึงเก็บเป็น '' ไม่ได้ — มันไปชนกับความหมายแรก
+       แล้วตารางสรุปรายเดือน/สรุปรายปี/ไทม์ไลน์หน้าสรุป จะหักงบค่าเริ่มต้นให้ทั้งที่หน้าเดือนบอกว่าไม่หัก
+       และพอเปิดเดือนนั้นใหม่ค่าก็เด้งกลับเป็นค่าเริ่มต้น = override หายเงียบๆ
+       เก็บเป็น '0' แทน: ค่าเท่ากันทุกการคำนวณ (nf('0')===nf('')===0) แต่เป็นสตริง truthy
+       จึงรอดด่าน ||_wkbDef ของตัวอ่านทุกตัวโดยไม่ต้องแก้ที่อื่นและไม่ต้อง migrate ข้อมูลเก่า */
+    wkb:(_wkb===_wkbDef?'':(_wkb===''?'0':_wkb)),wkbDef:_wkbDef,
     a:JSON.parse(JSON.stringify(A)),
     d:JSON.parse(JSON.stringify(D)),
     i:JSON.parse(JSON.stringify(I)),
@@ -2637,6 +2670,11 @@ function loadM(mi){
   try{loadMonth(mi);}finally{_loadingM=false;}
 }
 function loadMonth(mi){
+  /* ยกเลิก autosave ที่ตั้งค้างไว้จากเดือนก่อน (ckAutoSave หน่วง 800 ms)
+     ถ้าปล่อยไว้ มันจะยิง saveM() หลัง CT เปลี่ยนแล้ว = บันทึก "เดือนใหม่" แทนเดือนที่แก้
+     ซึ่งเขียน record ให้เดือนเปล่าที่ผู้ใช้แค่คลิกผ่าน (จุดบนแท็บติด + ถูก sync ขึ้น cloud)
+     ส่วนเดือนที่แก้จริงไม่ต้องห่วง — switchTab() เรียก saveM() ให้ก่อนหน้านี้แล้ว */
+  clearTimeout(_ckSt);
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
   if(_blankYm&&_blankYm!==ym)_blankYm=null;   /* ย้ายเดือนแล้ว — สถานะ "เพิ่งล้าง" หมดอายุ */
   sortResetAll();                            /* ลำดับเดิมของเดือนก่อนใช้กับเดือนนี้ไม่ได้ */
@@ -3636,8 +3674,9 @@ function reOT(){
   const[y,m]=pv.split('-').map(Number);const cnt=new Date(y,m,0).getDate();
   let m15=0,m20=0,m30=0;
   for(let d=1;d<=cnt;d++){
-    const ac=Math.max(0,nf(ge(`ota_${d}`)?.value)),o3=Math.max(0,nf(ge(`ot3_${d}`)?.value));   /* ค่าติดลบต้องไม่หักยอด OT */
     const dow=new Date(y,m-1,d).getDay();
+    /* ค่าติดลบต้องไม่หักยอด OT · ×3.0 นับเฉพาะเสาร์/อาทิตย์ (ดู isN3Dow) */
+    const ac=Math.max(0,nf(ge(`ota_${d}`)?.value)),o3=isN3Dow(dow)?Math.max(0,nf(ge(`ot3_${d}`)?.value)):0;
     const tp=ge(`otp_${d}`);
     if(tp){let b='';if(ac>0)b+=dow===0?`<span class="rb rb20">×2.0</span> `:`<span class="rb rb15">×1.5</span> `;if(o3>0)b+=`<span class="rb rb30">×3.0</span>`;tp.innerHTML=b||'<span class="rbn">—</span>';}
     if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
@@ -3744,7 +3783,9 @@ function doCalc(){
   ge('rIncNote').innerHTML='* ไล่จากบนลงล่างได้เลย — ยอดล่างสุดตรงกับเลขใหญ่ด้านบนของหน้านี้เสมอ'
     +'<br>* สามรายการที่หัก “ก่อนเงินถึงมือ” ยังถูกนับใน “รวมหักทั้งหมด” ของกล่องรายการหักด้วย (คนละมุมของเงินก้อนเดียวกัน ไม่ได้หักซ้ำ)'
     +'<br>* รายการหักที่เหลือ (คงที่/ผันแปร) · ผ่อน & ประกัน · แบ่งลงทุน จ่ายออกจากยอดรายได้รับจริงนี้';
-  const invD=iArr.map(x=>{const v=nf(x.v);const a=x.t==='%'?(invBase*v/100):v;return x.n?[`${x.n}${x.t==='%'?` (${v}%)`:''}`,a]:null;}).filter(Boolean);
+  /* esc() ที่ชื่อ — ป้ายนี้ถูกยัดเข้า innerHTML ด้านล่าง และชื่อรายการมาจากผู้ใช้ได้หลายทาง
+     (พิมพ์เอง · ไฟล์ CSV ที่ import · เอกสาร Firebase ที่แชร์กันหลายเครื่อง · ชื่อที่ AI สร้าง) */
+  const invD=iArr.map(x=>{const v=nf(x.v);const a=x.t==='%'?(invBase*v/100):v;return x.n?[`${esc(x.n)}${x.t==='%'?` (${v}%)`:''}`,a]:null;}).filter(Boolean);
   ge('rInvL').innerHTML=invD.length
     ?invD.map(([l,a])=>`<div class="li"><span>${l}</span><span class="vat">${fmt(a)}</span></div>`).join('')
     :'<div class="li" style="color:#a0aec0;font-style:italic">— ไม่มีแผนลงทุน —</div>';
@@ -3775,9 +3816,11 @@ function doCalc(){
   const rps={bank:rBank,cash:rCash,credit:rCredit,sso,pvd};
   const rpsEl=ge('rPaySum');if(rpsEl)rpsEl.innerHTML=renderPmSum(rps);
   renderCkSum();
+  /* ส่ง wkb เข้าไปตรงๆ (เดิมเว้นไว้ให้ไปอ่าน _wkb เอง) — หน้าสรุปรายปีส่งมาผ่าน flowCtxFromRec()
+     อยู่แล้ว ทั้งสองทางจึงอ่านจากฟิลด์เดียวกัน ไม่มีทางแยกกันเงียบๆ อีก */
   renderFlowTimeline({ym:pv,baseDt:gv('fBaseDt'),ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
                       base,aArr,oArr,dArr,iArr,pArr,invBase,totOT,h15,h20,h30,sso,pvd,
-                      totInc,finalCash});
+                      totInc,finalCash,wkb:_wkb});
   ge('res').style.display='block';
   ge('res').scrollIntoView({behavior:'smooth'});
   saveM();
@@ -4410,6 +4453,13 @@ function doResetM(){
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   delete DB[ym];
   A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,true);I=defI();O=defO();P=defP();
+  /* แถวโบนัส/ภาษีโบนัสผูกกับเดือน ไม่ใช่กับข้อมูล — ยึดกติกาเดียวกับ loadMonth()
+     ไม่ได้ผ่าน loadM() จึงต้องเติมเอง ไม่งั้นล้างเดือน พ.ค./พ.ย. แล้วแถวโบนัสหายไปเฉยๆ
+     จนกว่าจะสลับแท็บออกแล้วกลับเข้ามาใหม่ */
+  if(BONUS_MONTHS.includes(CT)){
+    A.unshift({id:BONUS_ID,n:'โบนัส',v:'',ok:false,dn:false,dt:payDate(ym)});
+    D.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:'',pm:'bank',ct:'tax',ok:false,dn:false,dt:payDate(ym)});
+  }
   /* ล้าง DOM ของรายการเก่าก่อน render — กัน rA/rD pre-sync ดึงค่าเก่ามาทับ defaults */
   ['aList','dList','iList','oList','pList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();rP();buildOT();reOT();updateDots();
@@ -4441,7 +4491,7 @@ function calcBonusTax(){
   const base=num('fBase');if(!base)return 0;
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const totOT=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
-  const regularA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value),0);
+  const regularA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const ssoA=getSso()*12,pvdA=getPvd()*12;
   const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
   const p3=(parseInt(gv('tx3'))||0)*30000,p4=(parseInt(gv('tx4'))||0)*30000;
@@ -4468,7 +4518,7 @@ function calcTax(){
   if(!base){res.innerHTML='<div style="color:#a0aec0;font-size:.78rem;text-align:center;padding:8px">กรุณากรอกเงินเดือนฐานก่อนครับ</div>';return;}
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const totOT=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
-  const totA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value),0);
+  const totA=A.reduce((s,a)=>a.id===BONUS_ID?s:s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const totInc=base+totA+totOT;
   const mode=gv('txMode');
   const p1=ge('tx1')?.checked?60000:0,p2v=ge('tx2')?.checked?60000:0;
@@ -4651,6 +4701,11 @@ function doImport(input){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
+      /* Import \u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07 DB (\u0E41\u0E25\u0E30\u0E17\u0E31\u0E49\u0E07 document \u0E1A\u0E19 cloud) \u2014 \u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E17\u0E33\u0E25\u0E32\u0E22\u0E21\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2A\u0E38\u0E14\u0E43\u0E19\u0E41\u0E2D\u0E1B
+         \u0E08\u0E36\u0E07\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35 guard \u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E37\u0E48\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E40\u0E14\u0E37\u0E2D\u0E19 (rowDelYes / doCopyYear / doClearYear)
+         \u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E22: cloud \u0E22\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E21\u0E48\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2B\u0E23\u0E37\u0E2D\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E47 import \u0E17\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35 */
+      if(fbDb&&!fbReady)throw new Error('\u0E01\u0E33\u0E25\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E08\u0E32\u0E01 cloud \u2014 \u0E23\u0E2D\u0E2A\u0E31\u0E01\u0E04\u0E23\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48');
+      if(pendingRemote)throw new Error('\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E17\u0E35\u0E48\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E37\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E01\u0E48\u0E2D\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E2D\u0E22 Import');
       const text=e.target.result.replace(/^\uFEFF/,'');
       const lines=text.split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
       if(!lines.length)throw new Error('ไฟล์ว่างเปล่า');
@@ -4689,10 +4744,18 @@ function doImport(input){
       toast(`✅ Import สำเร็จ! ${cnt} เดือน`);
       /* sync ทั้งหมด — Firebase ก่อน (priority) ไม่งั้น GS */
       if(fbDb){
-        setSyncSt('fb_saving');
-        fbSave()
-          .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
-          .catch(e=>setSyncSt('fb_error',e.message));
+        /* fbSave() ใช้ .set() = แทนที่ทั้ง document ไม่ใช่ merge
+           ถ้ายังไม่เคยอ่าน cloud สำเร็จในรอบนี้ DB ในมือคือของ localStorage ล้วน
+           เขียนขึ้นไปเมื่อไหร่ เดือนที่มีอยู่แต่บน cloud หายถาวรทันที — ยอมไม่ซิงค์ดีกว่า */
+        if(!fbLoaded){
+          setSyncSt('fb_error','ยังอ่าน cloud ไม่สำเร็จ — งดเขียนทับ');
+          toast('⚠️ Import ลงเครื่องเรียบร้อย แต่ยังอ่าน Firebase ไม่สำเร็จ จึงยังไม่เขียนขึ้น cloud (กันข้อมูลบนคลาวด์หาย) — รีเฟรชหน้าให้โหลด cloud ผ่านก่อน แล้ว Import ซ้ำอีกครั้ง','te');
+        }else{
+          setSyncSt('fb_saving');
+          fbSave()
+            .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
+            .catch(e=>setSyncSt('fb_error',e.message));
+        }
       }else if(gsUrl){
         setSyncSt('saving');
         gsPost({action:'saveAll',db:DB})
@@ -4724,8 +4787,9 @@ function otMinutes(rec,ym){
   const byDow=[0,1,2,3,4,5,6].map(()=>({ac:0,o3:0,days:0}));
   for(let d=1;d<=cnt;d++){
     const dv=rec.days?.[String(d)];if(!dv)continue;
-    const ac=Math.max(0,nf(dv.ac)),o3=Math.max(0,nf(dv.o3));   /* กติกาเดียวกับ getOTs()/reOT() */
     const dow=new Date(y,m-1,d).getDay();
+    /* กติกาเดียวกับ getOTs()/reOT() — ค่าติดลบไม่หักยอด · ×3.0 เฉพาะเสาร์/อาทิตย์ */
+    const ac=Math.max(0,nf(dv.ac)),o3=isN3Dow(dow)?Math.max(0,nf(dv.o3)):0;
     if(dow===0)m20+=ac;else m15+=ac;m30+=o3;
     if(ac||o3){const g=byDow[dow];g.ac+=ac;g.o3+=o3;g.days++;}
   }
@@ -4871,7 +4935,8 @@ function renderDedSum(){
   ge('dedCatStat').innerHTML=[...cats].sort((a,b)=>b.total-a.total).map(c=>{
     const pct=grandTotal?((c.total/grandTotal)*100).toFixed(1):0;
     const dimmed=!dedActive[c.key]?' dimmed':'';
-    return`<div class="ded-stat-item${dimmed}" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${c.label}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
+    /* c.label ของหมวด d_/p_ คือชื่อรายการที่ผู้ใช้ตั้ง — ต้อง esc() เหมือนปุ่มกรองด้านบน */
+    return`<div class="ded-stat-item${dimmed}" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${esc(c.label)}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
   }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมหัก + ลงทุนทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`
     +(Math.abs(dedDiff)>=0.005?`<div class="ded-stat-item" style="border-left-color:#c53030;background:#fff5f5"><div class="ded-stat-lbl" style="color:#c53030;font-weight:700">⚠️ ไม่ตรงกับตารางสรุป</div><div class="ded-stat-val" style="color:#c53030">${dedDiff<0?'−':'+'}฿${fN(Math.abs(dedDiff))}</div><div class="ded-stat-sub">ควรเป็น ฿${fN(expTot)}</div></div>`:'');
 
@@ -5106,7 +5171,9 @@ function renderSum(){
   const proj=lastAcc+avg*(12-(last?last.mi+1:0));const rem=12-(last?last.mi+1:0);
   ge('fcNote').innerHTML=!last?'<strong>ยังไม่มีข้อมูล</strong>':last.mi===11?`<strong>📊 ปิดปีครบ!</strong> สะสมรวม <strong>${fmt(lastAcc)}</strong>`
     :`<strong>📐 Forecast:</strong> เฉลี่ย ${filled.length} เดือน = <strong>${fmt(avg)}/เดือน</strong><br>🔵 สะสมจริง <strong>${fmt(lastAcc)}</strong> ถึง ${MF[last.mi]}<br>⚪ คาดการณ์ ${rem} เดือนที่เหลือ<br>🎯 สิ้นปี: <strong style="color:#276749">${fmt(proj)}</strong>`;
-  Object.values(CH).forEach(c=>{if(c)c.destroy();});
+  /* ต้องล้าง reference ทิ้งด้วย ไม่ใช่ destroy() เฉยๆ — ไม่งั้น rebuildIncChart()/renderDedSum()/
+     renderPmYear() ที่เรียกต่อจากนี้จะไป destroy() ซ้ำบน instance ที่ตายไปแล้ว และ CH ค้าง object เก่าไว้ */
+  Object.keys(CH).forEach(k=>{if(CH[k]){CH[k].destroy();CH[k]=null;}});
   const co={responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': ฿'+c.parsed.y.toLocaleString()}}}};
   const ch={responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+' ชม.'}}}};
   _incLbs=lbs;_dInc=dInc;_dTH=dTH;_dFin=dFin;_dDed=dDed;
@@ -5456,12 +5523,20 @@ init();
     if(e.altKey&&e.code==='KeyC'){e.preventDefault();toggleCalc();return;}
   });
 
+  /* ช่องกรอกของหน้าเว็บต้องพิมพ์ได้ตามปกติเสมอ
+     ตัวฟังข้างล่างอยู่ที่ document จึงรับคีย์ของ "ทั้งหน้า" ไม่ใช่เฉพาะตอนโฟกัสอยู่ที่เครื่องคิดเลข
+     ถ้าไม่กันไว้ แค่เปิดแผงค้างไว้ ตัวเลข 0-9 · จุด · + − × ÷ · Enter · Backspace · Delete · c
+     จะโดน preventDefault() ทิ้งทุกช่อง (เงินเดือนฐาน · OT รายวัน · ยอดทุกกล่อง · ช่องแชท AI)
+     = พิมพ์ไม่เข้าและลบไม่ได้ทั้งหน้า ปล่อยผ่านเฉพาะ Escape ซึ่งไม่กินตัวอักษร */
+  const isTypingTarget=t=>!!t&&(t.isContentEditable===true||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName||''));
+
   // keyboard support when panel open
   document.addEventListener('keydown',function(e){
     const p=document.getElementById('calc-panel');
     if(!p.classList.contains('open'))return;
     // ไม่ขัดแทรก shortcut ของ browser (Ctrl/Cmd+...)
     if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(isTypingTarget(e.target)&&e.key!=='Escape')return;
     const key=e.key;
     if(key>='0'&&key<='9'){e.preventDefault();calcNum(key);}
     else if(key==='.'){e.preventDefault();calcDot();}
@@ -5751,7 +5826,8 @@ init();
   ★ "รายได้อื่นๆ (ไม่คิดภาษี)" = รายได้ที่นับเป็นเงินเข้าจริง (อยู่ในรายได้รวม/รับจริง/ฐานคิดลงทุน) แต่ "ไม่" ถูกนำไปคำนวณภาษีเลย เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ รายได้เสริม — ต่างจาก "ค่าเพิ่มเติม/เบี้ย" ที่ถูกคิดภาษี
   รายได้จากการทำงาน (กลุ่มที่คิดภาษี) = ฐาน + ค่าเพิ่มเติม/เบี้ย + ค่า OT   →  หลังหักภาษี = กลุ่มนี้ − ภาษี (ยังไม่หักประกันสังคม/กองทุนฯ)
   ประกันสังคม(ถ้าไม่กรอกเอง) = min(ฐาน×5%, 875)   กองทุนฯ(ถ้าไม่กรอกเอง) = ฐาน×7%
-  ภาษี = ผลรวมรายการหักที่ "ชื่อมีคำว่า ภาษี" · อื่นๆ = รายการหักที่เหลือ
+  ภาษี = ผลรวมรายการหักที่ "ประเภทต้นทุน = ภาษี" (ฟิลด์ ct="tax" ซึ่งติดมากับแต่ละแถวใน context; แถวเก่าที่ยังไม่มีธงจะเดาจากชื่อที่มีคำว่า ภาษี ให้ครั้งเดียว) · อื่นๆ = รายการหักที่เหลือ แยกเป็น คงที่ (fix) กับ ผันแปร (var)
+  ★ การเปลี่ยน "ชื่อ" แถวไม่เปลี่ยนการคำนวณ — ตัวตัดสินคือธงประเภทต้นทุน ไม่ใช่ชื่อ
   รับจริง (takeHome) = รายได้รวม − ประกันสังคม − กองทุนฯ − ภาษี
   ฐานคิดลงทุน  invBase = max(0, รับจริง)
   ยอดลงทุน     = Σ(รายการ % → invBase×%/100) + Σ(รายการ ฿ → ค่านั้นตรงๆ)
@@ -6610,7 +6686,9 @@ init();
     /* re-render จาก array ล้วน (เคลียร์ DOM กัน sync ทับ) */
     ['aList','dList','iList','oList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
     rA();rD();rO();rI();
-    (f.otDays||[]).forEach(o=>{if(!o||!o.d)return;const ea=ge('ota_'+o.d),e3=ge('ot3_'+o.d);if(ea&&o.minutes!=null)ea.value=String(r(o.minutes));if(e3&&o.night3!=null)e3.value=String(r(o.night3));});
+    /* ช่อง ×3.0 ของวันธรรมดาถูก disable ไว้ — ห้ามเขียนลงไป ไม่งั้นผู้ใช้เห็นตัวเลขที่ลบเองไม่ได้
+       (ตัวคำนวณไม่นับให้อยู่แล้วตาม isN3Dow แต่ปล่อยให้โชว์ค้างก็ทำให้เข้าใจผิดว่าได้เงินเพิ่ม) */
+    (f.otDays||[]).forEach(o=>{if(!o||!o.d)return;const ea=ge('ota_'+o.d),e3=ge('ot3_'+o.d);if(ea&&o.minutes!=null)ea.value=String(r(o.minutes));if(e3&&!e3.disabled&&o.night3!=null)e3.value=String(r(o.night3));});
     reOT();updInv();
   }
   /* แก้ "เดือนอื่น" โดยตรงใน DB record (สร้างใหม่ถ้ายังไม่มี) */
