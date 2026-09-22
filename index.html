@@ -1630,6 +1630,7 @@ function loadAllFromFB(data,lastSaved){
   fbLastKnownTs=lastSaved||null;
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
+  buildYearSel();                 /* cloud อาจมีปีที่ dropdown ยังไม่มีตัวเลือกให้ */
   buildTabs();updateDots();switchTab(CT,true);
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
 }
@@ -1657,6 +1658,7 @@ function fbSyncFromRemote(data,lastSaved,remoteMonths){
   lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
+  buildYearSel();                 /* เครื่องอื่นอาจเพิ่มปีใหม่เข้ามา (วาดใหม่เฉพาะตอนช่วงปีเปลี่ยน) */
   updateDots();
 
   if(curChanged){
@@ -1814,7 +1816,10 @@ function rA(){
       const bm=a.bm||'';
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
-      const amtDisp=computedAmt?`= ${fmt(parseFloat(computedAmt))}`:'';   /* fmt() ใส่ ฿ ให้แล้ว */
+      /* ไม่มี bm แต่มียอดติดมา (Import CSV / ลอกทั้งปี) → โชว์ยอดที่เก็บไว้ ไม่ใช่ช่องว่าง
+         กติกาเดียวกับ onBonusMthChg() ที่คงยอดเดิมไว้เมื่อช่องจำนวนเดือนยังว่าง */
+      const shownAmt=computedAmt||(nf(a.v)>0?a.v:'');
+      const amtDisp=shownAmt?`= ${fmt(nf(shownAmt))}`:'';   /* fmt() ใส่ ฿ ให้แล้ว */
       return`<div class="dr drb${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         ${ckBox('A',a)}
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
@@ -1825,7 +1830,7 @@ function rA(){
         <button class="fwdbtn" disabled title="โบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
         <span class="bm-disp" id="abm_disp_${a.id}">${amtDisp}</span>
-        <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
+        <input type="hidden" id="av_${a.id}" value="${esc(shownAmt)}" style="display:none">
       </div>`;
     }
     return`<div class="dr${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
@@ -2359,10 +2364,16 @@ function onBonusMthChg(){
   const dispEl=ge(`abm_disp_${BONUS_ID}`);
   const hidEl=ge(`av_${BONUS_ID}`);
   if(!mthEl)return;
-  const mth=parseFloat(mthEl.value)||0;
-  const amt=base*mth;
-  if(dispEl)dispEl.textContent=mth&&base?`= ${fmt(amt)}`:'';   /* fmt() ใส่ ฿ ให้แล้ว เดิมขึ้น "฿฿" */
-  if(hidEl)hidEl.value=amt?amt.toFixed(2):'';
+  const raw=String(mthEl.value??'').trim();
+  const mth=parseFloat(raw)||0;
+  /* ช่อง "จำนวนเดือน" ว่าง = ยังไม่เคยกรอก ≠ "ไม่มีโบนัส"
+     ข้อมูลที่มาจาก Import CSV / ลอกทั้งปี เก็บมาแต่ยอด (v) ไม่มี bm ถ้าล้างช่องซ่อนตรงนี้
+     ยอดโบนัส + ภาษีโบนัสจะหายพร้อมกันทันทีที่ผู้ใช้แตะช่องเงินเดือนฐาน (onBaseChg → ตัวนี้)
+     โดยไม่มีอะไรเตือน — คงยอดเดิมไว้ แล้วล้างเฉพาะตอนผู้ใช้พิมพ์ 0 เอง ซึ่งแปลว่าไม่มีโบนัสจริงๆ */
+  const keep=raw===''&&hidEl&&nf(hidEl.value)>0;
+  const amt=keep?nf(hidEl.value):base*mth;
+  if(dispEl)dispEl.textContent=amt?`= ${fmt(amt)}`:'';   /* fmt() ใส่ ฿ ให้แล้ว เดิมขึ้น "฿฿" */
+  if(hidEl&&!keep)hidEl.value=amt?amt.toFixed(2):'';
   /* ยอดโบนัสเปลี่ยน = ภาษีหัก ณ ที่จ่ายของโบนัสต้องเปลี่ยนตามทันที
      เดิมคำนวณให้เฉพาะตอนกดปุ่ม ✓ ที่แถวโบนัสเท่านั้น ใครกรอกจำนวนเดือนแล้วกด "คำนวณเงินเดือน" เลย
      จะได้ยอดรับจริงสูงเกินจริงทั้งเดือน เพราะภาษีโบนัสยังเป็น 0 อยู่
@@ -2378,14 +2389,36 @@ function onBaseChg(){
   updInv();
 }
 
+/* ── ช่วงปีของ dropdown ──
+   เดิม hardcode 2026–2051 ซึ่งพังสองทาง:
+   (1) Import ไฟล์ backup ที่มีปีก่อน 2026 → ge('ySel').value=CY ไม่ตรงกับ option ไหนเลย
+       ช่องปีโชว์เปล่า (selectedIndex=-1) แล้วผู้ใช้กลับไปปีนั้นไม่ได้อีก ทั้งที่ข้อมูลยังอยู่ครบใน DB
+   (2) เครื่องที่นาฬิกาเลยปี 2051 ไปแล้ว — ปีปัจจุบันไม่มีในลิสต์ตั้งแต่แรก
+   จึงสร้างช่วงจาก "ปีที่มีข้อมูลจริง + ปีปัจจุบัน" เสมอ แล้วเผื่อไปข้างหน้า 25 ปีเหมือนเดิม
+   (ติดตั้งใหม่ที่ยังไม่มีข้อมูลจะได้ 2026–2051 เท่าของเดิมเป๊ะ) */
+function yearRange(){
+  const ys=Object.keys(DB).map(k=>parseInt(String(k).slice(0,4),10)).filter(y=>y>=1970&&y<=9999);
+  ys.push(new Date().getFullYear(),CY,2026);
+  return{lo:Math.min(...ys),hi:Math.max(...ys)+25};
+}
+/* วาด dropdown ปีใหม่จากข้อมูลที่มีอยู่ตอนนี้ — ต้องเรียกซ้ำทุกครั้งที่ DB ได้ปีใหม่เข้ามา
+   (Import · โหลดจาก Firebase) ไม่งั้นปีนั้นจะไม่มีตัวเลือกให้กลับไปดู */
+let _ySelRange='';
+function buildYearSel(){
+  const sel=ge('ySel');if(!sel)return;
+  const{lo,hi}=yearRange();
+  /* วาดใหม่เฉพาะตอนช่วงปีเปลี่ยนจริง — ตัวนี้ถูกเรียกได้ทุกครั้งที่ข้อมูลจากคลาวด์เข้ามา
+     ถ้าวาด <option> ใหม่ทุกรอบ dropdown ที่ผู้ใช้กำลังเปิดค้างอยู่จะถูกกระชากปิด */
+  if(_ySelRange===`${lo}-${hi}`&&sel.value===String(CY))return;
+  _ySelRange=`${lo}-${hi}`;
+  let html='';
+  for(let y=lo;y<=hi;y++)html+=`<option value="${y}"${y===CY?' selected':''}>${y} (พ.ศ. ${y+543})</option>`;
+  sel.innerHTML=html;
+  sel.value=String(CY);
+}
+
 /* ── INIT ── */
 async function init(){
-  const sel=ge('ySel');
-  for(let y=2026;y<=2051;y++){
-    const o=document.createElement('option');o.value=y;
-    o.textContent=`${y} (พ.ศ. ${y+543})`;
-    if(y===CY)o.selected=true;sel.appendChild(o);
-  }
   /* แสดงข้อมูล localStorage ก่อนเสมอ เพื่อไม่ให้หน้าจอว่าง */
   try{
     const raw=localStorage.getItem(SK);
@@ -2399,6 +2432,7 @@ async function init(){
     }
   }catch(e){}
   adoptWkbDef();
+  buildYearSel();                 /* หลังโหลด DB แล้ว — ช่วงปีต้องครอบคลุมปีที่มีข้อมูลจริง */
   buildTabs();updateDots();switchTab(CT,true);
   /* จากนั้น sync กับ cloud ใน background — ถ้ามีข้อมูลใหม่จะ re-render อัตโนมัติ */
   try{await restore();adoptWkbDef();}finally{fbReady=true;}
@@ -2647,19 +2681,19 @@ function loadMonth(mi){
   /* แจ้งหลัง render เสร็จ เพื่อให้ผู้ใช้เห็นรายการที่เหลือพร้อมกับข้อความ */
   if(_planDone.length){announcePlansDone(_planDone);_planDone=[];}
 }
-/* หาเดือนก่อนหน้าเพื่อใช้เป็นต้นแบบ — ในปีเดียวกันก่อน ถ้าไม่เจอค่อยถอยข้ามปี */
-function getPrev(mi){
-  /* ต้องกรอง recHasData เหมือน fallback ข้ามปีข้างล่าง ไม่ใช่ "เจอ record อะไรก็เอา"
-     เพราะแอปบันทึกเดือนที่เปิดค้างไว้ให้อัตโนมัติตอนสลับแท็บ (switchTab→saveM)
-     เดือนเปล่านั้นเคยมาตัดสายส่งต่อ: เงินเดือนฐาน/โครงรายการ/แผนผ่อน ของเดือนถัดไป
-     กลายเป็นว่าง ทั้งที่เดือนก่อนหน้ามีข้อมูลครบ — แผนผ่อนที่ยังผ่อนอยู่หายเงียบๆ */
-  for(let i=mi-1;i>=0;i--){const ym=ymk(i),r=DB[ym];if(recHasData(r))return{ym,rec:r};}
-  const cur=ymk(mi);
-  const keys=Object.keys(DB).filter(k=>k<cur&&recHasData(DB[k])).sort();
+/* หาเดือนก่อนหน้าเพื่อใช้เป็นต้นแบบ — เดือนที่ใกล้ที่สุดที่มีข้อมูล ถอยข้ามปีได้ */
+/* เดือนก่อนหน้าที่ "มีข้อมูล" ของงวด ym ใดก็ได้ (ข้ามปีได้) — แกนกลางของ getPrev()
+   แยกออกมาเพราะผู้ช่วย AI ต้องใช้กับเดือนที่ไม่ได้เปิดอยู่ด้วย (ดู applyToRecord)
+   ต้องกรอง recHasData ไม่ใช่ "เจอ record อะไรก็เอา" เพราะแอปบันทึกเดือนที่เปิดค้างไว้ให้
+   อัตโนมัติตอนสลับแท็บ (switchTab→saveM) เดือนเปล่านั้นเคยมาตัดสายส่งต่อ:
+   เงินเดือนฐาน/โครงรายการ/แผนผ่อน ของเดือนถัดไปกลายเป็นว่าง ทั้งที่เดือนก่อนหน้ามีข้อมูลครบ */
+function prevRecFor(ym){
+  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k<ym&&recHasData(DB[k])).sort();
   if(!keys.length)return null;
-  const ym=keys[keys.length-1];
-  return{ym,rec:DB[ym]};
+  const k=keys[keys.length-1];
+  return{ym:k,rec:DB[k]};
 }
+function getPrev(mi){return prevRecFor(ymk(mi));}
 
 /* ════════════════════════════════════════════════════
    ลอกรายการทั้งปีจากปีก่อน
@@ -3395,6 +3429,9 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
   const anc=(arr,payday)=>anchorDates(blankItems(arr,keepAmt),srcYm||dstYm,dstYm,payday);
   /* ค่าโบนัส/ภาษีโบนัสของต้นแบบ — ใช้ต่อเมื่อลอกจำนวนเงินและเดือนปลายทางเป็นเดือนโบนัส */
   const srcV=(arr,id)=>keepAmt?(((arr||[]).find(x=>x.id===id)||{}).v||''):'';
+  /* จำนวนเดือนของโบนัส — ต้องลอกไปคู่กับยอดเสมอ ไม่งั้นเดือนปลายทางมีแต่ v ที่ไม่มี bm กำกับ
+     แล้วยอดจะถูกล้างทิ้งตอนแตะเงินเดือนฐาน (ดูหมายเหตุใน onBonusMthChg) */
+  const srcBm=arr=>keepAmt?(((arr||[]).find(x=>x.id===BONUS_ID)||{}).bm||''):'';
   const rec={
     /* เดือนปลายทางเคยตั้งเงินเดือนฐานไว้แล้ว — เก็บของเดิม อย่าทับด้วยของปีก่อน */
     base:(dst&&nf(dst.base)>0)?dst.base:(src.base||''),
@@ -3414,7 +3451,7 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
   };
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
   if(BONUS_MONTHS.includes(mi)){
-    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),ok:false,dn:false,dt:payDate(dstYm)});
+    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),bm:srcBm(src.a),ok:false,dn:false,dt:payDate(dstYm)});
     rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ct:'tax',ok:false,dn:false,dt:payDate(dstYm)});
   }
   return rec;
@@ -4639,7 +4676,10 @@ function doExport(){
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
-      (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
+      /* EXTRA4 = bm (จำนวนเดือนของแถวโบนัส) — แหล่งความจริงของยอดโบนัสอยู่ที่ฟิลด์นี้ ไม่ใช่ v
+         เดิมไม่ถูก export เลย backup/restore แล้วยอดโบนัสหายทั้งก้อนตอนแตะเงินเดือนฐานครั้งแรก
+         (ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ) */
+      (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',x.bm||'')));
       /* EXTRA5 = วิธีจ่าย — เดิมไม่ถูก export เลย backup/restore แล้ววิธีจ่ายหายกลับเป็น 'บัญชี' ทั้งหมด */
       (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',dedCt(x),x.pm||'bank')));
       (rec.i||[]).forEach(x=>rows.push(cr('I',yr,m,x.id,x.n,x.v,x.t,x.dn?'1':'',x.dt||'')));
@@ -4684,7 +4724,7 @@ function doImport(input){
         if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
-        else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
+        else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{}),...(extra4?{bm:extra4}:{})});
         /* ct: ไฟล์เก่าไม่มีคอลัมน์นี้ → ห้ามยัด 'fix' ให้ ไม่งั้นแถวภาษีจะเลิกเป็นภาษี
            ปล่อยว่างไว้ให้ dedCt() เดาจากชื่อเอง (ผลลัพธ์เท่ากับก่อนมีฟีเจอร์นี้เป๊ะ) */
         else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,pm:extra5||'bank',ok:extra==='1',dn:extra2==='1',...(extra4?{ct:costTy(extra4)}:{}),...(extra3!==undefined?{dt:extra3}:{})});
@@ -4702,7 +4742,9 @@ function doImport(input){
       /* บันทึก localStorage */
       lsSet(SK,JSON.stringify(DB));
       const first=Object.keys(tmp).sort()[0];
-      if(first){CY=parseInt(first.split('-')[0]);ge('ySel').value=CY;buildTabs();}
+      /* buildYearSel() ไม่ใช่ ySel.value=CY เฉยๆ — ไฟล์ที่ import อาจมีปีนอกช่วงที่ dropdown มีอยู่
+         ตั้ง value ตรงๆ จะได้ selectedIndex=-1 (ช่องปีว่าง) แล้วกลับไปปีนั้นไม่ได้อีกเลย */
+      if(first){CY=parseInt(first.split('-')[0]);buildYearSel();buildTabs();}
       updateDots();switchTab(CT,true);
       toast(`✅ Import สำเร็จ! ${cnt} เดือน`);
       /* sync ทั้งหมด — Firebase ก่อน (priority) ไม่งั้น GS */
@@ -4886,15 +4928,21 @@ function renderDedSum(){
   }).join('');
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
-  /* ตาข่ายนิรภัย — ยอดกล่องนี้ต้องเท่ากับ Σ หักรวม + Σ แบ่งลงทุน ของตารางสรุปเสมอ */
-  let expTot=0;for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)expTot+=t.totDed+t.totInv;}
+  /* ป้ายยอดรวมต้องบอกให้ครบว่ารวมอะไรไว้บ้าง — มีผ่อน/ประกันอยู่ในนั้นด้วย (คีย์ 'p_') */
+  const grandLbl='รวมหัก'+(cats.some(c=>c.key.startsWith('p_'))?' + ผ่อน/ประกัน':'')+' + ลงทุนทั้งปี';
+  /* ตาข่ายนิรภัย — ยอดกล่องนี้ต้องเท่ากับ Σ หักรวม + Σ ผ่อน/ประกัน + Σ แบ่งลงทุน ของตารางสรุปเสมอ
+     ★ ต้องบวก totPlan ด้วย เพราะ buildDedCats() นับ rec.p เป็นหมวดหนึ่งไปแล้ว (คีย์ 'p_')
+       เดิมเทียบกับ totDed+totInv เฉยๆ ซึ่งไม่มีผ่อน/ประกันอยู่เลย ส่วนต่างจึงเท่ากับ
+       "ยอดผ่อน/ประกันทั้งปี" เป๊ะๆ ทุกครั้ง = กล่องเตือนสีแดงโผล่ทุกปีที่มีแผนผ่อนสักรายการ
+       ทั้งที่ตัวเลขทุกตัวถูกต้อง */
+  let expTot=0;for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)expTot+=t.totDed+t.totPlan+t.totInv;}
   const dedDiff=expTot-grandTotal;
   ge('dedCatStat').innerHTML=[...cats].sort((a,b)=>b.total-a.total).map(c=>{
     const pct=grandTotal?((c.total/grandTotal)*100).toFixed(1):0;
     const dimmed=!dedActive[c.key]?' dimmed':'';
     /* c.label ของหมวด d_/p_ คือชื่อรายการที่ผู้ใช้ตั้ง — ต้อง esc() เหมือนปุ่มกรองด้านบน */
     return`<div class="ded-stat-item${dimmed}" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${esc(c.label)}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
-  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมหัก + ลงทุนทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`
+  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">${grandLbl}</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`
     +(Math.abs(dedDiff)>=0.005?`<div class="ded-stat-item" style="border-left-color:#c53030;background:#fff5f5"><div class="ded-stat-lbl" style="color:#c53030;font-weight:700">⚠️ ไม่ตรงกับตารางสรุป</div><div class="ded-stat-val" style="color:#c53030">${dedDiff<0?'−':'+'}฿${fN(Math.abs(dedDiff))}</div><div class="ded-stat-sub">ควรเป็น ฿${fN(expTot)}</div></div>`:'');
 
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
@@ -6697,7 +6745,17 @@ init();
   /* แก้ "เดือนอื่น" โดยตรงใน DB record (สร้างใหม่ถ้ายังไม่มี) */
   function applyToRecord(ym,f){
     let rec=DB[ym];
-    if(!rec){rec={base:'',baseDt:payDate(ym),sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};DB[ym]=rec;}
+    /* เดือนที่ยังไม่เคยเปิด — ต้องดึงเงินเดือนฐานจากเดือนก่อนหน้ามาให้ เหมือนที่ loadM() ทำ
+       ถ้าปล่อย base:'' ไว้ record เปล่านี้จะไปตัดสายไหลของเงินเดือนฐานสองชั้น:
+       (1) เปิดเดือนนั้นแล้วช่องฐานว่าง ทั้งที่เดือนก่อนมีข้อมูลครบ
+       (2) ถ้า AI กรอก OT ลงไปด้วย recHasData() จะเป็นจริง เดือนถัดๆ ไปจึงหยิบเดือนนี้
+           เป็นต้นแบบแล้วได้ฐานว่างต่อกันเป็นทอดๆ
+       (f.base ที่ AI สั่งมาจะถูกเขียนทับข้างล่างอยู่แล้ว) */
+    if(!rec){
+      const pv=prevRecFor(ym);
+      rec={base:(pv&&pv.rec.base)||'',baseDt:payDate(ym),sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};
+      DB[ym]=rec;
+    }
     rec.a=rec.a||[];rec.d=rec.d||[];rec.i=rec.i||[];rec.o=rec.o||[];rec.days=rec.days||{};
     if(f.base!=null)rec.base=String(r(f.base));
     if(f.sso!=null)rec.sso=String(r(f.sso));
