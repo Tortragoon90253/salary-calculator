@@ -4941,13 +4941,23 @@ function renderDedSum(){
   const isSolo=activeCats.length===1;
   const soloKey=isSolo?activeCats[0].key:null;
 
-  ge('dedFlt').innerHTML=cats.map(c=>{
+  /* ไม่มีปุ่ม "✕ แสดงทั้งหมด" แยกแล้ว — คลิกปุ่มหมวดที่ solo อยู่ซ้ำก็กลับมาแสดงทั้งหมดเหมือนกัน
+     (toggleDed() เช็ค isSolo ให้ และ title ของปุ่มก็บอกไว้ตรงๆ) ปุ่มเดิมเป็นทางที่สองไปที่เดิม
+     ── คีย์หมวดส่งผ่าน data-i (ดัชนีล้วน) แล้วผูก listener ทีหลัง ไม่ยัดลง onclick="" ──
+     คีย์ของหมวด d_/p_ คือชื่อรายการที่ผู้ใช้ตั้ง ซึ่งมาได้หลายทาง (พิมพ์เอง · CSV · Firebase ·
+     ชื่อที่ AI สร้าง) เดิมยัดเป็นสตริง JS ในแอตทริบิวต์ HTML = ต้องหนีสองชั้นพร้อมกัน
+     (JSON.stringify แล้วแปลง " เป็น &quot;) ชื่อที่มีคำว่า &quot; อยู่จริงจึงทำให้โค้ดใน onclick
+     พังทั้งก้อน กดปุ่มแล้วไม่เกิดอะไร — ดัชนีเป็นตัวเลขล้วน ไม่มีอะไรให้หนีอีก */
+  const fltBox=ge('dedFlt');
+  fltBox.innerHTML=cats.map((c,i)=>{
     const active=dedActive[c.key];
     const solo=isSolo&&c.key===soloKey;
-    return`<button class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" onclick="toggleDed(${JSON.stringify(c.key).replace(/"/g,'&quot;')})" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'&#10003; ':''}${esc(c.label)}</button>`;
-  /* ไม่มีปุ่ม "✕ แสดงทั้งหมด" แยกแล้ว — คลิกปุ่มหมวดที่ solo อยู่ซ้ำก็กลับมาแสดงทั้งหมดเหมือนกัน
-     (toggleDed() เช็ค isSolo ให้ และ title ของปุ่มก็บอกไว้ตรงๆ) ปุ่มเดิมเป็นทางที่สองไปที่เดิม */
+    return`<button type="button" class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" data-i="${i}" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'&#10003; ':''}${esc(c.label)}</button>`;
   }).join('');
+  fltBox.querySelectorAll('.ded-flt-btn').forEach(b=>{
+    const c=cats[+b.dataset.i];
+    if(c)b.addEventListener('click',()=>toggleDed(c.key));
+  });
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
   /* ป้ายยอดรวมต้องบอกให้ครบว่ารวมอะไรไว้บ้าง — มีผ่อน/ประกันอยู่ในนั้นด้วย (คีย์ 'p_') */
