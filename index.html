@@ -1630,6 +1630,7 @@ function loadAllFromFB(data,lastSaved){
   fbLastKnownTs=lastSaved||null;
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
+  buildYearSel();                 /* cloud อาจมีปีที่ dropdown ยังไม่มีตัวเลือกให้ */
   buildTabs();updateDots();switchTab(CT,true);
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
 }
@@ -1657,6 +1658,7 @@ function fbSyncFromRemote(data,lastSaved,remoteMonths){
   lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
+  buildYearSel();                 /* เครื่องอื่นอาจเพิ่มปีใหม่เข้ามา (วาดใหม่เฉพาะตอนช่วงปีเปลี่ยน) */
   updateDots();
 
   if(curChanged){
@@ -1814,7 +1816,10 @@ function rA(){
       const bm=a.bm||'';
       const base=num('fBase');
       const computedAmt=bm&&base?(base*parseFloat(bm)).toFixed(2):'';
-      const amtDisp=computedAmt?`= ${fmt(parseFloat(computedAmt))}`:'';   /* fmt() ใส่ ฿ ให้แล้ว */
+      /* ไม่มี bm แต่มียอดติดมา (Import CSV / ลอกทั้งปี) → โชว์ยอดที่เก็บไว้ ไม่ใช่ช่องว่าง
+         กติกาเดียวกับ onBonusMthChg() ที่คงยอดเดิมไว้เมื่อช่องจำนวนเดือนยังว่าง */
+      const shownAmt=computedAmt||(nf(a.v)>0?a.v:'');
+      const amtDisp=shownAmt?`= ${fmt(nf(shownAmt))}`:'';   /* fmt() ใส่ ฿ ให้แล้ว */
       return`<div class="dr drb${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
         ${ckBox('A',a)}
         <span class="drag-handle" title="โบนัส — ปรากฏเฉพาะ พ.ค. และ พ.ย.">⠿</span>
@@ -1825,7 +1830,7 @@ function rA(){
         <button class="fwdbtn" disabled title="โบนัส — มีเฉพาะเดือนโบนัส ส่งต่อไม่ได้">📤</button>
         <button class="delbtn" onclick="delA('${a.id}')">✕</button>
         <span class="bm-disp" id="abm_disp_${a.id}">${amtDisp}</span>
-        <input type="hidden" id="av_${a.id}" value="${esc(computedAmt||a.v)}" style="display:none">
+        <input type="hidden" id="av_${a.id}" value="${esc(shownAmt)}" style="display:none">
       </div>`;
     }
     return`<div class="dr${a.dn?' done':''}" id="ra_${a.id}" draggable="true" data-id="${a.id}" data-list="A">
@@ -2277,6 +2282,20 @@ function getOTs(){
 }
 /* ยอดรวมรายได้อื่นๆ (ไม่คิดภาษี) จากฟอร์มสด */
 function getOth(){return O.reduce((s,o)=>s+nf(ge(`ov_${o.id}`)?.value??o.v),0);}
+/* ── แถวรายการหักจากฟอร์มสด — ตัวกลางตัวเดียวของ liveTakeHome() และ liveDedSplit() ──
+   ยอด (v): มี element ต้องเชื่อ element เสมอแม้ค่าจะว่าง · ไม่มี element ค่อยใช้ค่าใน array
+   เดิม liveTakeHome() อ่านยอดด้วย gv() เปล่าๆ เป็นจุดเดียวในกลุ่ม live* ที่ไม่มี fallback
+   ช่วงที่ DOM ถูกล้างก่อนวาดใหม่ (loadMonth · applyToForm · fillBlankDates ล้าง dList
+   แล้ว rA() ทำงานก่อน rD()) ภาษีจึงถูกอ่านเป็น 0 → ฐานคิดลงทุน/FCF สูงเกินจริงชั่วขณะ
+   และจะกลายเป็นตัวเลขผิดค้างทันทีที่มีใครสลับลำดับการ render ใหม่
+   ชื่อ (n) / ประเภท (ct) คงกติกา ||ค่าเดิม ไว้ตามของเดิมทั้งสองตัว — ใช้เป็น fallback
+   ของ dedCt() เท่านั้น ไม่ใช่ยอดเงิน */
+const liveDRows=()=>D.map(d=>({
+  id:d.id,
+  n:gv(`dn_${d.id}`)||d.n,
+  v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,
+  ct:gv(`dc_${d.id}`)||d.ct
+}));
 /* ยอดรายได้รับจริงจากฟอร์มสด — สูตรเดียวกับ takeHome ใน doCalc() และ "ไม่ตัดที่ 0"
    เดือนที่หัก/ภาษีมากกว่ารายได้ต้องติดลบได้ ไม่งั้นการ์ดกับหน้าผลคำนวณจะโชว์ไม่ตรงกัน */
 function liveTakeHome(){
@@ -2284,12 +2303,12 @@ function liveTakeHome(){
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const ot=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
   /* ?? a.v — ถ้าแถวยังไม่ถูก render (ระหว่างล้าง/วาดลิสต์ใหม่) ต้องใช้ค่าใน array ไม่ใช่ปัดเป็น 0
-     กติกาเดียวกับ getOth() · getPaySummary() · liveInvRow() · liveDedSplit() ที่มี fallback ครบ
+     กติกาเดียวกับ getOth() · getPaySummary() · liveInvRow() · liveDRows() ที่มี fallback ครบ
      (?? จับเฉพาะ null/undefined ช่องที่ผู้ใช้ล้างค่าจริงยังเป็น '' → 0 ตามเดิม) */
   const ta=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const to=getOth();
   const sso=getSso(),pvd=getPvd();
-  const taxD=getTaxFromD(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),ct:gv(`dc_${d.id}`)||d.ct})));
+  const taxD=getTaxFromD(liveDRows());
   return base+ta+ot+to-sso-pvd-taxD;
 }
 /* ฐานคิดลงทุน — ตัวเดียวกันแต่ตัดที่ 0 เพราะแบ่งลงทุนแบบ % จากยอดติดลบไม่มีความหมาย
@@ -2302,8 +2321,8 @@ function updOth(){
    จึงต้องอ่านได้จากการ์ดผ่อน/ประกันโดยไม่ต้องรอกดคำนวณ */
 const liveInvRow=(inv,base)=>{const v=nf(ge(`iv_${inv.id}`)?.value??inv.v);return inv.t==='%'?(base*v/100):v;};
 const liveInvTot=()=>{const b=calcBase();return I.reduce((s,inv)=>s+liveInvRow(inv,b),0);};
-/* รายการหักจากฟอร์มสด แยกคงที่/ผันแปร */
-const liveDedSplit=()=>dedSplit(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,ct:gv(`dc_${d.id}`)||d.ct})));
+/* รายการหักจากฟอร์มสด แยกคงที่/ผันแปร — อ่านจากแหล่งเดียวกับ liveTakeHome() */
+const liveDedSplit=()=>dedSplit(liveDRows());
 function updInv(){
   updOth();
   const base=calcBase();let tot=0;
@@ -2359,10 +2378,16 @@ function onBonusMthChg(){
   const dispEl=ge(`abm_disp_${BONUS_ID}`);
   const hidEl=ge(`av_${BONUS_ID}`);
   if(!mthEl)return;
-  const mth=parseFloat(mthEl.value)||0;
-  const amt=base*mth;
-  if(dispEl)dispEl.textContent=mth&&base?`= ${fmt(amt)}`:'';   /* fmt() ใส่ ฿ ให้แล้ว เดิมขึ้น "฿฿" */
-  if(hidEl)hidEl.value=amt?amt.toFixed(2):'';
+  const raw=String(mthEl.value??'').trim();
+  const mth=parseFloat(raw)||0;
+  /* ช่อง "จำนวนเดือน" ว่าง = ยังไม่เคยกรอก ≠ "ไม่มีโบนัส"
+     ข้อมูลที่มาจาก Import CSV / ลอกทั้งปี เก็บมาแต่ยอด (v) ไม่มี bm ถ้าล้างช่องซ่อนตรงนี้
+     ยอดโบนัส + ภาษีโบนัสจะหายพร้อมกันทันทีที่ผู้ใช้แตะช่องเงินเดือนฐาน (onBaseChg → ตัวนี้)
+     โดยไม่มีอะไรเตือน — คงยอดเดิมไว้ แล้วล้างเฉพาะตอนผู้ใช้พิมพ์ 0 เอง ซึ่งแปลว่าไม่มีโบนัสจริงๆ */
+  const keep=raw===''&&hidEl&&nf(hidEl.value)>0;
+  const amt=keep?nf(hidEl.value):base*mth;
+  if(dispEl)dispEl.textContent=amt?`= ${fmt(amt)}`:'';   /* fmt() ใส่ ฿ ให้แล้ว เดิมขึ้น "฿฿" */
+  if(hidEl&&!keep)hidEl.value=amt?amt.toFixed(2):'';
   /* ยอดโบนัสเปลี่ยน = ภาษีหัก ณ ที่จ่ายของโบนัสต้องเปลี่ยนตามทันที
      เดิมคำนวณให้เฉพาะตอนกดปุ่ม ✓ ที่แถวโบนัสเท่านั้น ใครกรอกจำนวนเดือนแล้วกด "คำนวณเงินเดือน" เลย
      จะได้ยอดรับจริงสูงเกินจริงทั้งเดือน เพราะภาษีโบนัสยังเป็น 0 อยู่
@@ -2378,14 +2403,36 @@ function onBaseChg(){
   updInv();
 }
 
+/* ── ช่วงปีของ dropdown ──
+   เดิม hardcode 2026–2051 ซึ่งพังสองทาง:
+   (1) Import ไฟล์ backup ที่มีปีก่อน 2026 → ge('ySel').value=CY ไม่ตรงกับ option ไหนเลย
+       ช่องปีโชว์เปล่า (selectedIndex=-1) แล้วผู้ใช้กลับไปปีนั้นไม่ได้อีก ทั้งที่ข้อมูลยังอยู่ครบใน DB
+   (2) เครื่องที่นาฬิกาเลยปี 2051 ไปแล้ว — ปีปัจจุบันไม่มีในลิสต์ตั้งแต่แรก
+   จึงสร้างช่วงจาก "ปีที่มีข้อมูลจริง + ปีปัจจุบัน" เสมอ แล้วเผื่อไปข้างหน้า 25 ปีเหมือนเดิม
+   (ติดตั้งใหม่ที่ยังไม่มีข้อมูลจะได้ 2026–2051 เท่าของเดิมเป๊ะ) */
+function yearRange(){
+  const ys=Object.keys(DB).map(k=>parseInt(String(k).slice(0,4),10)).filter(y=>y>=1970&&y<=9999);
+  ys.push(new Date().getFullYear(),CY,2026);
+  return{lo:Math.min(...ys),hi:Math.max(...ys)+25};
+}
+/* วาด dropdown ปีใหม่จากข้อมูลที่มีอยู่ตอนนี้ — ต้องเรียกซ้ำทุกครั้งที่ DB ได้ปีใหม่เข้ามา
+   (Import · โหลดจาก Firebase) ไม่งั้นปีนั้นจะไม่มีตัวเลือกให้กลับไปดู */
+let _ySelRange='';
+function buildYearSel(){
+  const sel=ge('ySel');if(!sel)return;
+  const{lo,hi}=yearRange();
+  /* วาดใหม่เฉพาะตอนช่วงปีเปลี่ยนจริง — ตัวนี้ถูกเรียกได้ทุกครั้งที่ข้อมูลจากคลาวด์เข้ามา
+     ถ้าวาด <option> ใหม่ทุกรอบ dropdown ที่ผู้ใช้กำลังเปิดค้างอยู่จะถูกกระชากปิด */
+  if(_ySelRange===`${lo}-${hi}`&&sel.value===String(CY))return;
+  _ySelRange=`${lo}-${hi}`;
+  let html='';
+  for(let y=lo;y<=hi;y++)html+=`<option value="${y}"${y===CY?' selected':''}>${y} (พ.ศ. ${y+543})</option>`;
+  sel.innerHTML=html;
+  sel.value=String(CY);
+}
+
 /* ── INIT ── */
 async function init(){
-  const sel=ge('ySel');
-  for(let y=2026;y<=2051;y++){
-    const o=document.createElement('option');o.value=y;
-    o.textContent=`${y} (พ.ศ. ${y+543})`;
-    if(y===CY)o.selected=true;sel.appendChild(o);
-  }
   /* แสดงข้อมูล localStorage ก่อนเสมอ เพื่อไม่ให้หน้าจอว่าง */
   try{
     const raw=localStorage.getItem(SK);
@@ -2399,6 +2446,7 @@ async function init(){
     }
   }catch(e){}
   adoptWkbDef();
+  buildYearSel();                 /* หลังโหลด DB แล้ว — ช่วงปีต้องครอบคลุมปีที่มีข้อมูลจริง */
   buildTabs();updateDots();switchTab(CT,true);
   /* จากนั้น sync กับ cloud ใน background — ถ้ามีข้อมูลใหม่จะ re-render อัตโนมัติ */
   try{await restore();adoptWkbDef();}finally{fbReady=true;}
@@ -2647,19 +2695,19 @@ function loadMonth(mi){
   /* แจ้งหลัง render เสร็จ เพื่อให้ผู้ใช้เห็นรายการที่เหลือพร้อมกับข้อความ */
   if(_planDone.length){announcePlansDone(_planDone);_planDone=[];}
 }
-/* หาเดือนก่อนหน้าเพื่อใช้เป็นต้นแบบ — ในปีเดียวกันก่อน ถ้าไม่เจอค่อยถอยข้ามปี */
-function getPrev(mi){
-  /* ต้องกรอง recHasData เหมือน fallback ข้ามปีข้างล่าง ไม่ใช่ "เจอ record อะไรก็เอา"
-     เพราะแอปบันทึกเดือนที่เปิดค้างไว้ให้อัตโนมัติตอนสลับแท็บ (switchTab→saveM)
-     เดือนเปล่านั้นเคยมาตัดสายส่งต่อ: เงินเดือนฐาน/โครงรายการ/แผนผ่อน ของเดือนถัดไป
-     กลายเป็นว่าง ทั้งที่เดือนก่อนหน้ามีข้อมูลครบ — แผนผ่อนที่ยังผ่อนอยู่หายเงียบๆ */
-  for(let i=mi-1;i>=0;i--){const ym=ymk(i),r=DB[ym];if(recHasData(r))return{ym,rec:r};}
-  const cur=ymk(mi);
-  const keys=Object.keys(DB).filter(k=>k<cur&&recHasData(DB[k])).sort();
+/* หาเดือนก่อนหน้าเพื่อใช้เป็นต้นแบบ — เดือนที่ใกล้ที่สุดที่มีข้อมูล ถอยข้ามปีได้ */
+/* เดือนก่อนหน้าที่ "มีข้อมูล" ของงวด ym ใดก็ได้ (ข้ามปีได้) — แกนกลางของ getPrev()
+   แยกออกมาเพราะผู้ช่วย AI ต้องใช้กับเดือนที่ไม่ได้เปิดอยู่ด้วย (ดู applyToRecord)
+   ต้องกรอง recHasData ไม่ใช่ "เจอ record อะไรก็เอา" เพราะแอปบันทึกเดือนที่เปิดค้างไว้ให้
+   อัตโนมัติตอนสลับแท็บ (switchTab→saveM) เดือนเปล่านั้นเคยมาตัดสายส่งต่อ:
+   เงินเดือนฐาน/โครงรายการ/แผนผ่อน ของเดือนถัดไปกลายเป็นว่าง ทั้งที่เดือนก่อนหน้ามีข้อมูลครบ */
+function prevRecFor(ym){
+  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k<ym&&recHasData(DB[k])).sort();
   if(!keys.length)return null;
-  const ym=keys[keys.length-1];
-  return{ym,rec:DB[ym]};
+  const k=keys[keys.length-1];
+  return{ym:k,rec:DB[k]};
 }
+function getPrev(mi){return prevRecFor(ymk(mi));}
 
 /* ════════════════════════════════════════════════════
    ลอกรายการทั้งปีจากปีก่อน
@@ -3395,6 +3443,9 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
   const anc=(arr,payday)=>anchorDates(blankItems(arr,keepAmt),srcYm||dstYm,dstYm,payday);
   /* ค่าโบนัส/ภาษีโบนัสของต้นแบบ — ใช้ต่อเมื่อลอกจำนวนเงินและเดือนปลายทางเป็นเดือนโบนัส */
   const srcV=(arr,id)=>keepAmt?(((arr||[]).find(x=>x.id===id)||{}).v||''):'';
+  /* จำนวนเดือนของโบนัส — ต้องลอกไปคู่กับยอดเสมอ ไม่งั้นเดือนปลายทางมีแต่ v ที่ไม่มี bm กำกับ
+     แล้วยอดจะถูกล้างทิ้งตอนแตะเงินเดือนฐาน (ดูหมายเหตุใน onBonusMthChg) */
+  const srcBm=arr=>keepAmt?(((arr||[]).find(x=>x.id===BONUS_ID)||{}).bm||''):'';
   const rec={
     /* เดือนปลายทางเคยตั้งเงินเดือนฐานไว้แล้ว — เก็บของเดิม อย่าทับด้วยของปีก่อน */
     base:(dst&&nf(dst.base)>0)?dst.base:(src.base||''),
@@ -3414,7 +3465,7 @@ function buildCopyRec(src,mi,srcYm,keepAmt){
   };
   /* รายการโบนัสผูกกับเดือน ไม่ใช่กับต้นแบบ — ยึดกติกาเดียวกับ loadM() */
   if(BONUS_MONTHS.includes(mi)){
-    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),ok:false,dn:false,dt:payDate(dstYm)});
+    rec.a.unshift({id:BONUS_ID,n:'โบนัส',v:srcV(src.a,BONUS_ID),bm:srcBm(src.a),ok:false,dn:false,dt:payDate(dstYm)});
     rec.d.push({id:BONUS_TAX_ID,n:'ภาษีหัก ณ ที่จ่าย (โบนัส)',v:srcV(src.d,BONUS_TAX_ID),pm:'bank',ct:'tax',ok:false,dn:false,dt:payDate(dstYm)});
   }
   return rec;
@@ -3805,7 +3856,12 @@ try{_wkbDef=localStorage.getItem(WKBD_KEY)||'';}catch(e){}
 /* ค่าเริ่มต้นถูกฝังไว้ในข้อมูลรายเดือนด้วย เพราะการซิงค์ปกติส่งขึ้นคลาวด์ทีละเดือน
    (fbSaveMonth เขียนเฉพาะ field ของเดือนนั้น) ค่าที่เก็บนอกข้อมูลรายเดือนจะไม่ตามไปเครื่องอื่น */
 function adoptWkbDef(){
-  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]&&DB[k].wkbDef).sort();
+  /* เกณฑ์คือ "มีฟิลด์นี้ไหม" ไม่ใช่ "ค่า truthy ไหม"
+     เดิมกรองด้วย DB[k].wkbDef เฉยๆ ค่า '' จึงถูกมองว่า "ไม่เคยตั้ง" ปนกับเรคคอร์ดเก่าที่ไม่มีฟิลด์
+     ผลคือ setWkbDefault() ที่ตั้งค่าเริ่มต้นเป็น "ว่าง" (= ไม่มีงบวันหยุด) ประทับลงทุกเดือนแล้ว
+     แต่เครื่องอื่นหยิบไปใช้ไม่ได้เลย ยังคงใช้ค่าเก่าต่อไปทั้งที่ toast บอกว่าจำแล้ว */
+  const has=k=>DB[k]&&DB[k].wkbDef!==undefined&&DB[k].wkbDef!==null;
+  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&has(k)).sort();
   if(keys.length){
     _wkbDef=String(DB[keys[keys.length-1]].wkbDef);
     lsSet(WKBD_KEY,_wkbDef);
@@ -4635,11 +4691,17 @@ function doExport(){
          แต่ '' ในไฟล์แยกไม่ออกระหว่าง "ล้างทิ้ง" กับ "ไฟล์เก่าไม่มีคอลัมน์นี้"
          จึงเขียน '-' แทนค่าที่ถูกล้างทิ้ง (ไฟล์เก่าไม่เคยมี '-' จึง import ได้เหมือนเดิม) */
       const baseDtCsv=rec.baseDt===undefined?'':(rec.baseDt||'-');
-      rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',rec.wkbDef||''));
+      /* wkbDef ใช้กติกา '-' เดียวกัน — '' คือ "ตั้งใจไม่มีงบวันหยุด" ซึ่งเป็นค่าที่ต้องเก็บไว้จริง
+         ต่างจากเรคคอร์ดเก่าที่ไม่มีฟิลด์นี้เลย (ดูหมายเหตุใน adoptWkbDef) */
+      const wkbDefCsv=rec.wkbDef===undefined?'':(rec.wkbDef||'-');
+      rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',wkbDefCsv));
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
-      (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'')));
+      /* EXTRA4 = bm (จำนวนเดือนของแถวโบนัส) — แหล่งความจริงของยอดโบนัสอยู่ที่ฟิลด์นี้ ไม่ใช่ v
+         เดิมไม่ถูก export เลย backup/restore แล้วยอดโบนัสหายทั้งก้อนตอนแตะเงินเดือนฐานครั้งแรก
+         (ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ) */
+      (rec.a||[]).forEach(x=>rows.push(cr('A',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',x.bm||'')));
       /* EXTRA5 = วิธีจ่าย — เดิมไม่ถูก export เลย backup/restore แล้ววิธีจ่ายหายกลับเป็น 'บัญชี' ทั้งหมด */
       (rec.d||[]).forEach(x=>rows.push(cr('D',yr,m,x.id,x.n,x.v,x.ok?'1':'',x.dn?'1':'',x.dt||'',dedCt(x),x.pm||'bank')));
       (rec.i||[]).forEach(x=>rows.push(cr('I',yr,m,x.id,x.n,x.v,x.t,x.dn?'1':'',x.dt||'')));
@@ -4681,10 +4743,10 @@ function doImport(input){
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],p:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
-        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
+        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=(extra3==='-'?'':extra3);}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
-        else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{})});
+        else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{}),...(extra4?{bm:extra4}:{})});
         /* ct: ไฟล์เก่าไม่มีคอลัมน์นี้ → ห้ามยัด 'fix' ให้ ไม่งั้นแถวภาษีจะเลิกเป็นภาษี
            ปล่อยว่างไว้ให้ dedCt() เดาจากชื่อเอง (ผลลัพธ์เท่ากับก่อนมีฟีเจอร์นี้เป๊ะ) */
         else if(T==='D'||T==='DED')r.d.push({id:key||uid(),n:name,v:val,pm:extra5||'bank',ok:extra==='1',dn:extra2==='1',...(extra4?{ct:costTy(extra4)}:{}),...(extra3!==undefined?{dt:extra3}:{})});
@@ -4702,7 +4764,9 @@ function doImport(input){
       /* บันทึก localStorage */
       lsSet(SK,JSON.stringify(DB));
       const first=Object.keys(tmp).sort()[0];
-      if(first){CY=parseInt(first.split('-')[0]);ge('ySel').value=CY;buildTabs();}
+      /* buildYearSel() ไม่ใช่ ySel.value=CY เฉยๆ — ไฟล์ที่ import อาจมีปีนอกช่วงที่ dropdown มีอยู่
+         ตั้ง value ตรงๆ จะได้ selectedIndex=-1 (ช่องปีว่าง) แล้วกลับไปปีนั้นไม่ได้อีกเลย */
+      if(first){CY=parseInt(first.split('-')[0]);buildYearSel();buildTabs();}
       updateDots();switchTab(CT,true);
       toast(`✅ Import สำเร็จ! ${cnt} เดือน`);
       /* sync ทั้งหมด — Firebase ก่อน (priority) ไม่งั้น GS */
@@ -4877,24 +4941,40 @@ function renderDedSum(){
   const isSolo=activeCats.length===1;
   const soloKey=isSolo?activeCats[0].key:null;
 
-  ge('dedFlt').innerHTML=cats.map(c=>{
+  /* ไม่มีปุ่ม "✕ แสดงทั้งหมด" แยกแล้ว — คลิกปุ่มหมวดที่ solo อยู่ซ้ำก็กลับมาแสดงทั้งหมดเหมือนกัน
+     (toggleDed() เช็ค isSolo ให้ และ title ของปุ่มก็บอกไว้ตรงๆ) ปุ่มเดิมเป็นทางที่สองไปที่เดิม
+     ── คีย์หมวดส่งผ่าน data-i (ดัชนีล้วน) แล้วผูก listener ทีหลัง ไม่ยัดลง onclick="" ──
+     คีย์ของหมวด d_/p_ คือชื่อรายการที่ผู้ใช้ตั้ง ซึ่งมาได้หลายทาง (พิมพ์เอง · CSV · Firebase ·
+     ชื่อที่ AI สร้าง) เดิมยัดเป็นสตริง JS ในแอตทริบิวต์ HTML = ต้องหนีสองชั้นพร้อมกัน
+     (JSON.stringify แล้วแปลง " เป็น &quot;) ชื่อที่มีคำว่า &quot; อยู่จริงจึงทำให้โค้ดใน onclick
+     พังทั้งก้อน กดปุ่มแล้วไม่เกิดอะไร — ดัชนีเป็นตัวเลขล้วน ไม่มีอะไรให้หนีอีก */
+  const fltBox=ge('dedFlt');
+  fltBox.innerHTML=cats.map((c,i)=>{
     const active=dedActive[c.key];
     const solo=isSolo&&c.key===soloKey;
-    return`<button class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" onclick="toggleDed(${JSON.stringify(c.key).replace(/"/g,'&quot;')})" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'&#10003; ':''}${esc(c.label)}</button>`;
-  /* ไม่มีปุ่ม "✕ แสดงทั้งหมด" แยกแล้ว — คลิกปุ่มหมวดที่ solo อยู่ซ้ำก็กลับมาแสดงทั้งหมดเหมือนกัน
-     (toggleDed() เช็ค isSolo ให้ และ title ของปุ่มก็บอกไว้ตรงๆ) ปุ่มเดิมเป็นทางที่สองไปที่เดิม */
+    return`<button type="button" class="ded-flt-btn ${active?'on':'off'}${solo?' solo':''}" style="background:${c.color};color:white;border-color:${c.border}" data-i="${i}" title="${solo?'คลิกเพื่อแสดงทั้งหมด':'คลิกเพื่อดูเฉพาะหมวดนี้'}">${solo?'&#10003; ':''}${esc(c.label)}</button>`;
   }).join('');
+  fltBox.querySelectorAll('.ded-flt-btn').forEach(b=>{
+    const c=cats[+b.dataset.i];
+    if(c)b.addEventListener('click',()=>toggleDed(c.key));
+  });
 
   const grandTotal=cats.reduce((s,c)=>s+c.total,0);
-  /* ตาข่ายนิรภัย — ยอดกล่องนี้ต้องเท่ากับ Σ หักรวม + Σ แบ่งลงทุน ของตารางสรุปเสมอ */
-  let expTot=0;for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)expTot+=t.totDed+t.totInv;}
+  /* ป้ายยอดรวมต้องบอกให้ครบว่ารวมอะไรไว้บ้าง — มีผ่อน/ประกันอยู่ในนั้นด้วย (คีย์ 'p_') */
+  const grandLbl='รวมหัก'+(cats.some(c=>c.key.startsWith('p_'))?' + ผ่อน/ประกัน':'')+' + ลงทุนทั้งปี';
+  /* ตาข่ายนิรภัย — ยอดกล่องนี้ต้องเท่ากับ Σ หักรวม + Σ ผ่อน/ประกัน + Σ แบ่งลงทุน ของตารางสรุปเสมอ
+     ★ ต้องบวก totPlan ด้วย เพราะ buildDedCats() นับ rec.p เป็นหมวดหนึ่งไปแล้ว (คีย์ 'p_')
+       เดิมเทียบกับ totDed+totInv เฉยๆ ซึ่งไม่มีผ่อน/ประกันอยู่เลย ส่วนต่างจึงเท่ากับ
+       "ยอดผ่อน/ประกันทั้งปี" เป๊ะๆ ทุกครั้ง = กล่องเตือนสีแดงโผล่ทุกปีที่มีแผนผ่อนสักรายการ
+       ทั้งที่ตัวเลขทุกตัวถูกต้อง */
+  let expTot=0;for(let i=0;i<12;i++){const t=compM(ymk(i));if(t)expTot+=t.totDed+t.totPlan+t.totInv;}
   const dedDiff=expTot-grandTotal;
   ge('dedCatStat').innerHTML=[...cats].sort((a,b)=>b.total-a.total).map(c=>{
     const pct=grandTotal?((c.total/grandTotal)*100).toFixed(1):0;
     const dimmed=!dedActive[c.key]?' dimmed':'';
     /* c.label ของหมวด d_/p_ คือชื่อรายการที่ผู้ใช้ตั้ง — ต้อง esc() เหมือนปุ่มกรองด้านบน */
     return`<div class="ded-stat-item${dimmed}" style="border-left-color:${c.border}"><div class="ded-stat-lbl">${esc(c.label)}</div><div class="ded-stat-val">฿${fN(c.total)}</div><div class="ded-stat-sub">สัดส่วน ${pct}%</div></div>`;
-  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">รวมหัก + ลงทุนทั้งปี</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`
+  }).join('')+`<div class="ded-stat-item" style="border-left-color:#2d3748;background:#edf2f7"><div class="ded-stat-lbl" style="color:#4a5568;font-weight:700">${grandLbl}</div><div class="ded-stat-val" style="color:#c53030">฿${fN(grandTotal)}</div><div class="ded-stat-sub">100%</div></div>`
     +(Math.abs(dedDiff)>=0.005?`<div class="ded-stat-item" style="border-left-color:#c53030;background:#fff5f5"><div class="ded-stat-lbl" style="color:#c53030;font-weight:700">⚠️ ไม่ตรงกับตารางสรุป</div><div class="ded-stat-val" style="color:#c53030">${dedDiff<0?'−':'+'}฿${fN(Math.abs(dedDiff))}</div><div class="ded-stat-sub">ควรเป็น ฿${fN(expTot)}</div></div>`:'');
 
   if(CH.c4){CH.c4.destroy();CH.c4=null;}
@@ -5445,6 +5525,10 @@ init();
   };
   window.calcOp=function(op,e){
     addRipple(e);
+    /* หารด้วยศูนย์ทำให้ _cur เป็น 'Error' — ถ้ากดโอเปอเรเตอร์ต่อ parseFloat('Error') = NaN
+       จะติดค้างไปทุกผลลัพธ์หลังจากนั้น (ทุกอย่างกลายเป็น Error) จนกว่าจะกด AC เอง
+       ซึ่งไม่มีอะไรบอกผู้ใช้เลย — ล้างสถานะให้เริ่มจาก 0 ใหม่ตรงนี้แทน */
+    if(_cur==='Error')clearAll();
     if(_op&&!_justEq&&!_newNum){
       const r=compute(_prev,parseFloat(_cur),_op);
       _prev=r;_cur=fmt(r);
@@ -5469,10 +5553,14 @@ init();
     document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
     upd();
   };
+  /* ล้างทุกอย่างกลับสถานะเริ่มต้น — ใช้ร่วมกันระหว่างปุ่ม AC กับการกู้สถานะ 'Error' ใน calcOp() */
+  function clearAll(){
+    _cur='0';_prev=null;_op=null;_justEq=false;_newNum=false;_expr='';
+    document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
+  }
   window.calcFn=function(fn,e){
     addRipple(e);
-    if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_newNum=false;_expr='';
-      document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');}
+    if(fn==='ac')clearAll();
     else if(fn==='bs'){
       if(_justEq||_newNum){return;}
       _cur=_cur.length>1?_cur.slice(0,-1):'0';
@@ -5542,11 +5630,10 @@ init();
       calcOp(map[key]);
     }
     else if(key==='Enter'||key==='='){e.preventDefault();calcEq();}
-    else if(key==='Backspace'){
-      e.preventDefault();
-      if(_cur.length>1)_cur=_cur.slice(0,-1); else _cur='0';
-      upd();
-    }
+    /* ต้องเรียก calcFn('bs') ไม่ใช่แก้ _cur เอง — ของเดิมข้าม guard `if(_justEq||_newNum)return`
+       ที่ปุ่ม ⌫ บนจอมี ผลคือกดจากคีย์บอร์ดหลังกด = หรือหลังกดโอเปอเรเตอร์ ได้ผลไม่เหมือนกดปุ่ม
+       (ไปแทะผลลัพธ์/ตัวตั้งที่ยังไม่ได้เริ่มพิมพ์ตัวใหม่) */
+    else if(key==='Backspace'){e.preventDefault();calcFn('bs');}
     else if(key==='Delete'||key==='c'||key==='C'){e.preventDefault();calcFn('ac');}
     else if(key==='Escape'){e.preventDefault();toggleCalc();}
   });
@@ -6505,12 +6592,21 @@ init();
   /* แปลง markdown แบบย่อ — คืน '' ถ้าไม่เหลือเนื้อความเลย (ให้ addAssistant ตัดสินใจต่อ)
      สำคัญ: ตัดออกเฉพาะบล็อค json ที่เป็น "คำสั่ง" ของระบบเท่านั้น
      บล็อคโค้ดอื่น (เช่น ตารางเทียบตัวเลขที่ AI จัดให้) ต้องแสดง ไม่ใช่หายไปเงียบๆ */
+  /* fence ของบล็อคโค้ด — คืน regex ใหม่ทุกครั้ง เพราะ /g เก็บ lastIndex ไว้ในตัวมันเอง
+     ใช้ตัวเดียวกันทั้ง mdLite() (ซ่อนบล็อคคำสั่ง) และ extractAction() (หยิบบล็อคคำสั่งไปใช้)
+     ถ้าสองที่ใช้คนละเกณฑ์ จะมีบล็อคที่ "ถูกซ่อนแต่ไม่ถูกหยิบ" = การ์ดยืนยันไม่ขึ้นเฉยๆ */
+  const fenceRe=()=>/```[a-zA-Z]*\r?\n?([\s\S]*?)```/g;
+  /* บล็อคนี้เป็น "คำสั่ง" ของระบบไหม — คืน object ถ้าใช่ ไม่ใช่คืน null */
+  const parseActionJson=t=>{
+    try{const o=JSON.parse(String(t||'').trim());return (o&&typeof o==='object'&&o.action)?o:null;}
+    catch(e){return null;}
+  };
   function mdLite(raw){
     const blocks=[];
-    let s=raw.replace(/```[a-zA-Z]*\r?\n?([\s\S]*?)```/g,(m,code)=>{
+    let s=raw.replace(fenceRe(),(m,code)=>{
       const t=code.trim();
       if(!t)return '';
-      try{const o=JSON.parse(t);if(o&&typeof o==='object'&&o.action)return '';}catch(e){}
+      if(parseActionJson(t))return '';
       blocks.push(t);
       return '\n\uE000B'+(blocks.length-1)+'\uE000\n';
     });
@@ -6529,10 +6625,17 @@ init();
     return html;
   }
 
-  /* ── action parser (คืน object ของ action ที่พบ: fill / ask) ── */
+  /* ── action parser (คืน object ของ action ที่พบ: fill / ask / simulate) ──
+     สแกน "ทุกบล็อค" ไม่ใช่แค่บล็อคแรก และไม่จำกัดเฉพาะที่ติดป้าย json
+     เดิมจับ ```json ตัวแรกที่เจอ ถ้า AI วางตารางเทียบตัวเลขเป็น JSON ไว้ก่อนแล้วค่อยวางคำสั่ง
+     หรือติดป้ายบล็อคคำสั่งเป็นอย่างอื่น คำสั่งจะถูก mdLite() ซ่อนออกจากข้อความ
+     แต่ไม่มีใครหยิบไปใช้ = ผู้ใช้เห็น AI ตอบว่าแก้ให้แล้ว แต่การ์ดยืนยันไม่เคยขึ้น */
   function extractAction(raw){
-    const m=raw.match(/```json\s*([\s\S]*?)```/);if(!m)return null;
-    try{const o=JSON.parse(m[1].trim());if(o&&typeof o==='object'&&o.action)return o;}catch(e){}
+    const re=fenceRe();let m;
+    while((m=re.exec(String(raw||'')))!==null){
+      const o=parseActionJson(m[1]);
+      if(o)return o;
+    }
     return null;
   }
   function actMonths(act){return (Array.isArray(act.months)?act.months:[]).map(x=>String(x||'').trim()).filter(x=>/^\d{4}-\d{2}$/.test(x));}
@@ -6697,7 +6800,17 @@ init();
   /* แก้ "เดือนอื่น" โดยตรงใน DB record (สร้างใหม่ถ้ายังไม่มี) */
   function applyToRecord(ym,f){
     let rec=DB[ym];
-    if(!rec){rec={base:'',baseDt:payDate(ym),sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};DB[ym]=rec;}
+    /* เดือนที่ยังไม่เคยเปิด — ต้องดึงเงินเดือนฐานจากเดือนก่อนหน้ามาให้ เหมือนที่ loadM() ทำ
+       ถ้าปล่อย base:'' ไว้ record เปล่านี้จะไปตัดสายไหลของเงินเดือนฐานสองชั้น:
+       (1) เปิดเดือนนั้นแล้วช่องฐานว่าง ทั้งที่เดือนก่อนมีข้อมูลครบ
+       (2) ถ้า AI กรอก OT ลงไปด้วย recHasData() จะเป็นจริง เดือนถัดๆ ไปจึงหยิบเดือนนี้
+           เป็นต้นแบบแล้วได้ฐานว่างต่อกันเป็นทอดๆ
+       (f.base ที่ AI สั่งมาจะถูกเขียนทับข้างล่างอยู่แล้ว) */
+    if(!rec){
+      const pv=prevRecFor(ym);
+      rec={base:(pv&&pv.rec.base)||'',baseDt:payDate(ym),sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};
+      DB[ym]=rec;
+    }
     rec.a=rec.a||[];rec.d=rec.d||[];rec.i=rec.i||[];rec.o=rec.o||[];rec.days=rec.days||{};
     if(f.base!=null)rec.base=String(r(f.base));
     if(f.sso!=null)rec.sso=String(r(f.sso));
