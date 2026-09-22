@@ -2282,6 +2282,20 @@ function getOTs(){
 }
 /* ยอดรวมรายได้อื่นๆ (ไม่คิดภาษี) จากฟอร์มสด */
 function getOth(){return O.reduce((s,o)=>s+nf(ge(`ov_${o.id}`)?.value??o.v),0);}
+/* ── แถวรายการหักจากฟอร์มสด — ตัวกลางตัวเดียวของ liveTakeHome() และ liveDedSplit() ──
+   ยอด (v): มี element ต้องเชื่อ element เสมอแม้ค่าจะว่าง · ไม่มี element ค่อยใช้ค่าใน array
+   เดิม liveTakeHome() อ่านยอดด้วย gv() เปล่าๆ เป็นจุดเดียวในกลุ่ม live* ที่ไม่มี fallback
+   ช่วงที่ DOM ถูกล้างก่อนวาดใหม่ (loadMonth · applyToForm · fillBlankDates ล้าง dList
+   แล้ว rA() ทำงานก่อน rD()) ภาษีจึงถูกอ่านเป็น 0 → ฐานคิดลงทุน/FCF สูงเกินจริงชั่วขณะ
+   และจะกลายเป็นตัวเลขผิดค้างทันทีที่มีใครสลับลำดับการ render ใหม่
+   ชื่อ (n) / ประเภท (ct) คงกติกา ||ค่าเดิม ไว้ตามของเดิมทั้งสองตัว — ใช้เป็น fallback
+   ของ dedCt() เท่านั้น ไม่ใช่ยอดเงิน */
+const liveDRows=()=>D.map(d=>({
+  id:d.id,
+  n:gv(`dn_${d.id}`)||d.n,
+  v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,
+  ct:gv(`dc_${d.id}`)||d.ct
+}));
 /* ยอดรายได้รับจริงจากฟอร์มสด — สูตรเดียวกับ takeHome ใน doCalc() และ "ไม่ตัดที่ 0"
    เดือนที่หัก/ภาษีมากกว่ารายได้ต้องติดลบได้ ไม่งั้นการ์ดกับหน้าผลคำนวณจะโชว์ไม่ตรงกัน */
 function liveTakeHome(){
@@ -2289,12 +2303,12 @@ function liveTakeHome(){
   const hr=base/23/8;const{h15,h20,h30}=getOTs();
   const ot=hr*1.5*h15+hr*2.0*h20+hr*3.0*h30;
   /* ?? a.v — ถ้าแถวยังไม่ถูก render (ระหว่างล้าง/วาดลิสต์ใหม่) ต้องใช้ค่าใน array ไม่ใช่ปัดเป็น 0
-     กติกาเดียวกับ getOth() · getPaySummary() · liveInvRow() · liveDedSplit() ที่มี fallback ครบ
+     กติกาเดียวกับ getOth() · getPaySummary() · liveInvRow() · liveDRows() ที่มี fallback ครบ
      (?? จับเฉพาะ null/undefined ช่องที่ผู้ใช้ล้างค่าจริงยังเป็น '' → 0 ตามเดิม) */
   const ta=A.reduce((s,a)=>s+nf(ge(`av_${a.id}`)?.value??a.v),0);
   const to=getOth();
   const sso=getSso(),pvd=getPvd();
-  const taxD=getTaxFromD(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:gv(`dv_${d.id}`),ct:gv(`dc_${d.id}`)||d.ct})));
+  const taxD=getTaxFromD(liveDRows());
   return base+ta+ot+to-sso-pvd-taxD;
 }
 /* ฐานคิดลงทุน — ตัวเดียวกันแต่ตัดที่ 0 เพราะแบ่งลงทุนแบบ % จากยอดติดลบไม่มีความหมาย
@@ -2307,8 +2321,8 @@ function updOth(){
    จึงต้องอ่านได้จากการ์ดผ่อน/ประกันโดยไม่ต้องรอกดคำนวณ */
 const liveInvRow=(inv,base)=>{const v=nf(ge(`iv_${inv.id}`)?.value??inv.v);return inv.t==='%'?(base*v/100):v;};
 const liveInvTot=()=>{const b=calcBase();return I.reduce((s,inv)=>s+liveInvRow(inv,b),0);};
-/* รายการหักจากฟอร์มสด แยกคงที่/ผันแปร */
-const liveDedSplit=()=>dedSplit(D.map(d=>({id:d.id,n:gv(`dn_${d.id}`)||d.n,v:ge(`dv_${d.id}`)?gv(`dv_${d.id}`):d.v,ct:gv(`dc_${d.id}`)||d.ct})));
+/* รายการหักจากฟอร์มสด แยกคงที่/ผันแปร — อ่านจากแหล่งเดียวกับ liveTakeHome() */
+const liveDedSplit=()=>dedSplit(liveDRows());
 function updInv(){
   updOth();
   const base=calcBase();let tot=0;
@@ -3842,7 +3856,12 @@ try{_wkbDef=localStorage.getItem(WKBD_KEY)||'';}catch(e){}
 /* ค่าเริ่มต้นถูกฝังไว้ในข้อมูลรายเดือนด้วย เพราะการซิงค์ปกติส่งขึ้นคลาวด์ทีละเดือน
    (fbSaveMonth เขียนเฉพาะ field ของเดือนนั้น) ค่าที่เก็บนอกข้อมูลรายเดือนจะไม่ตามไปเครื่องอื่น */
 function adoptWkbDef(){
-  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&DB[k]&&DB[k].wkbDef).sort();
+  /* เกณฑ์คือ "มีฟิลด์นี้ไหม" ไม่ใช่ "ค่า truthy ไหม"
+     เดิมกรองด้วย DB[k].wkbDef เฉยๆ ค่า '' จึงถูกมองว่า "ไม่เคยตั้ง" ปนกับเรคคอร์ดเก่าที่ไม่มีฟิลด์
+     ผลคือ setWkbDefault() ที่ตั้งค่าเริ่มต้นเป็น "ว่าง" (= ไม่มีงบวันหยุด) ประทับลงทุกเดือนแล้ว
+     แต่เครื่องอื่นหยิบไปใช้ไม่ได้เลย ยังคงใช้ค่าเก่าต่อไปทั้งที่ toast บอกว่าจำแล้ว */
+  const has=k=>DB[k]&&DB[k].wkbDef!==undefined&&DB[k].wkbDef!==null;
+  const keys=Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&has(k)).sort();
   if(keys.length){
     _wkbDef=String(DB[keys[keys.length-1]].wkbDef);
     lsSet(WKBD_KEY,_wkbDef);
@@ -4672,7 +4691,10 @@ function doExport(){
          แต่ '' ในไฟล์แยกไม่ออกระหว่าง "ล้างทิ้ง" กับ "ไฟล์เก่าไม่มีคอลัมน์นี้"
          จึงเขียน '-' แทนค่าที่ถูกล้างทิ้ง (ไฟล์เก่าไม่เคยมี '-' จึง import ได้เหมือนเดิม) */
       const baseDtCsv=rec.baseDt===undefined?'':(rec.baseDt||'-');
-      rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',rec.wkbDef||''));
+      /* wkbDef ใช้กติกา '-' เดียวกัน — '' คือ "ตั้งใจไม่มีงบวันหยุด" ซึ่งเป็นค่าที่ต้องเก็บไว้จริง
+         ต่างจากเรคคอร์ดเก่าที่ไม่มีฟิลด์นี้เลย (ดูหมายเหตุใน adoptWkbDef) */
+      const wkbDefCsv=rec.wkbDef===undefined?'':(rec.wkbDef||'-');
+      rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',wkbDefCsv));
       rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
       rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
@@ -4721,7 +4743,7 @@ function doImport(input){
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],p:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
-        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=extra3;}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
+        if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=(extra3==='-'?'':extra3);}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
         else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
         else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{}),...(extra4?{bm:extra4}:{})});
@@ -5493,6 +5515,10 @@ init();
   };
   window.calcOp=function(op,e){
     addRipple(e);
+    /* หารด้วยศูนย์ทำให้ _cur เป็น 'Error' — ถ้ากดโอเปอเรเตอร์ต่อ parseFloat('Error') = NaN
+       จะติดค้างไปทุกผลลัพธ์หลังจากนั้น (ทุกอย่างกลายเป็น Error) จนกว่าจะกด AC เอง
+       ซึ่งไม่มีอะไรบอกผู้ใช้เลย — ล้างสถานะให้เริ่มจาก 0 ใหม่ตรงนี้แทน */
+    if(_cur==='Error')clearAll();
     if(_op&&!_justEq&&!_newNum){
       const r=compute(_prev,parseFloat(_cur),_op);
       _prev=r;_cur=fmt(r);
@@ -5517,10 +5543,14 @@ init();
     document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
     upd();
   };
+  /* ล้างทุกอย่างกลับสถานะเริ่มต้น — ใช้ร่วมกันระหว่างปุ่ม AC กับการกู้สถานะ 'Error' ใน calcOp() */
+  function clearAll(){
+    _cur='0';_prev=null;_op=null;_justEq=false;_newNum=false;_expr='';
+    document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');
+  }
   window.calcFn=function(fn,e){
     addRipple(e);
-    if(fn==='ac'){_cur='0';_prev=null;_op=null;_justEq=false;_newNum=false;_expr='';
-      document.querySelectorAll('.ck-op').forEach(b=>b.style.background='');}
+    if(fn==='ac')clearAll();
     else if(fn==='bs'){
       if(_justEq||_newNum){return;}
       _cur=_cur.length>1?_cur.slice(0,-1):'0';
@@ -5590,11 +5620,10 @@ init();
       calcOp(map[key]);
     }
     else if(key==='Enter'||key==='='){e.preventDefault();calcEq();}
-    else if(key==='Backspace'){
-      e.preventDefault();
-      if(_cur.length>1)_cur=_cur.slice(0,-1); else _cur='0';
-      upd();
-    }
+    /* ต้องเรียก calcFn('bs') ไม่ใช่แก้ _cur เอง — ของเดิมข้าม guard `if(_justEq||_newNum)return`
+       ที่ปุ่ม ⌫ บนจอมี ผลคือกดจากคีย์บอร์ดหลังกด = หรือหลังกดโอเปอเรเตอร์ ได้ผลไม่เหมือนกดปุ่ม
+       (ไปแทะผลลัพธ์/ตัวตั้งที่ยังไม่ได้เริ่มพิมพ์ตัวใหม่) */
+    else if(key==='Backspace'){e.preventDefault();calcFn('bs');}
     else if(key==='Delete'||key==='c'||key==='C'){e.preventDefault();calcFn('ac');}
     else if(key==='Escape'){e.preventDefault();toggleCalc();}
   });
@@ -6553,12 +6582,21 @@ init();
   /* แปลง markdown แบบย่อ — คืน '' ถ้าไม่เหลือเนื้อความเลย (ให้ addAssistant ตัดสินใจต่อ)
      สำคัญ: ตัดออกเฉพาะบล็อค json ที่เป็น "คำสั่ง" ของระบบเท่านั้น
      บล็อคโค้ดอื่น (เช่น ตารางเทียบตัวเลขที่ AI จัดให้) ต้องแสดง ไม่ใช่หายไปเงียบๆ */
+  /* fence ของบล็อคโค้ด — คืน regex ใหม่ทุกครั้ง เพราะ /g เก็บ lastIndex ไว้ในตัวมันเอง
+     ใช้ตัวเดียวกันทั้ง mdLite() (ซ่อนบล็อคคำสั่ง) และ extractAction() (หยิบบล็อคคำสั่งไปใช้)
+     ถ้าสองที่ใช้คนละเกณฑ์ จะมีบล็อคที่ "ถูกซ่อนแต่ไม่ถูกหยิบ" = การ์ดยืนยันไม่ขึ้นเฉยๆ */
+  const fenceRe=()=>/```[a-zA-Z]*\r?\n?([\s\S]*?)```/g;
+  /* บล็อคนี้เป็น "คำสั่ง" ของระบบไหม — คืน object ถ้าใช่ ไม่ใช่คืน null */
+  const parseActionJson=t=>{
+    try{const o=JSON.parse(String(t||'').trim());return (o&&typeof o==='object'&&o.action)?o:null;}
+    catch(e){return null;}
+  };
   function mdLite(raw){
     const blocks=[];
-    let s=raw.replace(/```[a-zA-Z]*\r?\n?([\s\S]*?)```/g,(m,code)=>{
+    let s=raw.replace(fenceRe(),(m,code)=>{
       const t=code.trim();
       if(!t)return '';
-      try{const o=JSON.parse(t);if(o&&typeof o==='object'&&o.action)return '';}catch(e){}
+      if(parseActionJson(t))return '';
       blocks.push(t);
       return '\n\uE000B'+(blocks.length-1)+'\uE000\n';
     });
@@ -6577,10 +6615,17 @@ init();
     return html;
   }
 
-  /* ── action parser (คืน object ของ action ที่พบ: fill / ask) ── */
+  /* ── action parser (คืน object ของ action ที่พบ: fill / ask / simulate) ──
+     สแกน "ทุกบล็อค" ไม่ใช่แค่บล็อคแรก และไม่จำกัดเฉพาะที่ติดป้าย json
+     เดิมจับ ```json ตัวแรกที่เจอ ถ้า AI วางตารางเทียบตัวเลขเป็น JSON ไว้ก่อนแล้วค่อยวางคำสั่ง
+     หรือติดป้ายบล็อคคำสั่งเป็นอย่างอื่น คำสั่งจะถูก mdLite() ซ่อนออกจากข้อความ
+     แต่ไม่มีใครหยิบไปใช้ = ผู้ใช้เห็น AI ตอบว่าแก้ให้แล้ว แต่การ์ดยืนยันไม่เคยขึ้น */
   function extractAction(raw){
-    const m=raw.match(/```json\s*([\s\S]*?)```/);if(!m)return null;
-    try{const o=JSON.parse(m[1].trim());if(o&&typeof o==='object'&&o.action)return o;}catch(e){}
+    const re=fenceRe();let m;
+    while((m=re.exec(String(raw||'')))!==null){
+      const o=parseActionJson(m[1]);
+      if(o)return o;
+    }
     return null;
   }
   function actMonths(act){return (Array.isArray(act.months)?act.months:[]).map(x=>String(x||'').trim()).filter(x=>/^\d{4}-\d{2}$/.test(x));}
