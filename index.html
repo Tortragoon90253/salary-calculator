@@ -1337,6 +1337,34 @@ let fbLastKnownTs=null;
 let fbOwnTs=null,fbOwnAt=0;
 const fbMarkOwn=ts=>{if(ts){fbOwnTs=ts;fbOwnAt=Date.now();}return ts;};
 const FB_ECHO_MS=60000;   /* พ้นช่วงนี้ถือว่าไม่มี echo ค้างแล้ว กลับไปเทียบ ts ตรงๆ แบบเดิม */
+/* ── เดือนที่ "ยังเขียนขึ้น cloud ไม่เสร็จ" ──
+   Firestore เปิดแบบไม่มี offline persistence คิวเขียนที่รอส่งอยู่แค่ในหน่วยความจำ
+   ปิดแท็บ/รีเฟรช/แท็บถูกเบราว์เซอร์ฆ่า ก่อน server ตอบ = คิวหาย ขณะที่ localStorage มีค่าใหม่แล้ว
+   แล้วตอนเปิดใหม่ restore() เอา cloud (ของเก่า) มาทับ localStorage = สิ่งที่เพิ่งแก้หายเงียบๆ
+   จึงจดเดือนที่กำลังเขียนไว้ใน localStorage ก่อนส่ง ลบออกเมื่อ server ยืนยัน
+   เปิดใหม่แล้วเจอค้าง → ใช้ค่าในเครื่องแทนของ cloud แล้วส่งขึ้นไปใหม่ (fbApplyPending / fbFlushPending)
+   เก็บแยกตาม docId — เปลี่ยน doc แล้วของค้างของ doc เดิมต้องไม่ไปทับ doc ใหม่ */
+const SKP='sol_v5_fbpend';
+let fbPendSeq={},_fbSeqN=0;   /* ลำดับการเขียนล่าสุดของแต่ละเดือน — เขียนเก่าเสร็จทีหลังต้องไม่ลบสถานะค้างของเขียนใหม่ */
+function fbPendAll(){try{return JSON.parse(localStorage.getItem(SKP)||'{}')||{};}catch(e){return {};}}
+function fbPendGet(){return Object.assign({},fbPendAll()[fbDocId]);}
+function fbPendPut(p){
+  const all=fbPendAll();
+  if(Object.keys(p).length)all[fbDocId]=p;else delete all[fbDocId];
+  lsSet(SKP,JSON.stringify(all));
+}
+function fbPendMark(yms){
+  const p=fbPendGet();const seq={};
+  yms.forEach(ym=>{p[ym]=1;seq[ym]=fbPendSeq[ym]=++_fbSeqN;});
+  fbPendPut(p);
+  return seq;
+}
+function fbPendDone(seq){
+  const p=fbPendGet();let ch=false;
+  Object.keys(seq).forEach(ym=>{if(fbPendSeq[ym]===seq[ym]){delete fbPendSeq[ym];delete p[ym];ch=true;}});
+  if(ch)fbPendPut(p);
+}
+const fbHasPending=()=>!!fbDb&&Object.keys(fbPendGet()).length>0;
 let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
 /* true เมื่อ "อ่าน" Firebase สำเร็จอย่างน้อยหนึ่งครั้งในรอบนี้ — ต่างจาก fbReady ซึ่งเป็นจริง
    แม้การโหลดจะล้มเหลว (init() ตั้งใน finally เพื่อไม่ให้แอปค้างจนบันทึกอะไรไม่ได้เลย)
@@ -1493,6 +1521,7 @@ async function saveFbCfg(){
   try{
     const result=await fbLoad();
     fbLoaded=true;           /* fbLoad() ผ่าน = อ่าน cloud สำเร็จ (ไม่มีข้อมูลก็ถือว่าอ่านได้) */
+    const pend=fbApplyPending(result&&result.data);
     if(result&&result.data){
       showFbStatus('เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล...','ok');
       loadAllFromFB(result.data,result.lastSaved);
@@ -1502,6 +1531,7 @@ async function saveFbCfg(){
       setSyncSt('fb_ok');
     }
     fbStartListener();
+    fbFlushPending(pend);
     setTimeout(closeFbCfg,1200);
   }catch(e){
     showFbStatus('เชื่อมต่อไม่ได้: '+e.message+' — ตรวจสอบ Config และ Firestore Rules','err');
@@ -1510,6 +1540,8 @@ async function saveFbCfg(){
 
 function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
+  /* เลิกใช้ doc นี้แล้ว — ของค้างไม่ควรไปทับ cloud ถ้ากลับมาเชื่อมใหม่อีกนานหลังจากนี้ (ต้องทำก่อนรีเซ็ต fbDocId) */
+  fbPendPut({});fbPendSeq={};
   fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;fbLoaded=false;
   fbKnownMonths=new Set();pendingRemote=null;
   const cb=ge('conflictBanner');if(cb)cb.style.display='none';
@@ -1543,7 +1575,9 @@ async function fbSave(){
   if(!fbDb)return;
   const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
+  const seq=fbPendMark(Object.keys(DB));
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
+  fbPendDone(seq);
   return ts;
 }
 
@@ -1552,12 +1586,14 @@ async function fbSaveMonth(ym){
   const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.add(ym);
+  const seq=fbPendMark([ym]);
   const ref=fbDb.collection('salary_data').doc(fbDocId);
   try{
     await ref.update({[`data.${ym}`]:DB[ym],lastSaved:ts});
   }catch(e){
     await ref.set({data:{[ym]:DB[ym]},lastSaved:ts},{merge:true});
   }
+  fbPendDone(seq);
   return ts;
 }
 
@@ -1572,13 +1608,45 @@ async function fbDeleteMonth(ym){
   const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.delete(ym);
+  const seq=fbPendMark([ym]);
   try{
     await fbDb.collection('salary_data').doc(fbDocId).update({
       [`data.${ym}`]:firebase.firestore.FieldValue.delete(),
       lastSaved:ts
     });
   }catch(e){if(!fbErrNotFound(e))throw e;}   /* doc ไม่มีอยู่ — ถือว่าเสร็จ */
+  fbPendDone(seq);
   return ts;
+}
+
+/* ก่อนเอาข้อมูล cloud ไปใส่ DB — เดือนที่ค้างจากรอบก่อนให้ใช้ค่าในเครื่อง (localStorage) แทน
+   เดือนค้างที่ในเครื่องไม่มีแล้ว = รอบก่อนสั่งลบแต่ยังลบบน cloud ไม่ทัน → ตัดออกจากชุด cloud ด้วย
+   ต้องเรียกตอน DB ยังเป็นของ localStorage อยู่ (ก่อน loadAllFromFB) · คืนรายชื่อเดือนที่ต้องส่งซ้ำ */
+function fbApplyPending(data){
+  const yms=Object.keys(fbPendGet());
+  if(!yms.length||!data)return yms;
+  yms.forEach(ym=>{
+    if(DB[ym])data[ym]=JSON.parse(JSON.stringify(DB[ym]));
+    else delete data[ym];
+  });
+  return yms;
+}
+/* ส่งเดือนที่ค้างขึ้น cloud ซ้ำ — มีในเครื่อง = เขียน · ไม่มี = ลบ */
+async function fbFlushPending(yms){
+  if(!fbDb||!yms||!yms.length)return;
+  setSyncSt('fb_saving');
+  let fail=0,lastTs=null;
+  for(const ym of yms){
+    try{lastTs=(await (DB[ym]?fbSaveMonth(ym):fbDeleteMonth(ym)))||lastTs;}
+    catch(e){fail++;console.warn('pending sync failed',ym,e);}
+  }
+  if(fail){
+    setSyncSt('fb_error',`ซิงค์ค้าง ${fail} เดือน`);
+    toast(`⚠️ มีข้อมูลที่แก้ไว้รอบก่อนแต่ยังขึ้น cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลยังอยู่ในเครื่อง จะลองส่งใหม่เมื่อเปิดหน้าครั้งถัดไป`,'te');
+  }else{
+    setSyncSt('fb_ok');if(lastTs)setBadge(lastTs,'fb');
+    toast(`🔥 ส่งข้อมูลที่ค้างจากรอบก่อนขึ้น cloud แล้ว ${yms.length} เดือน`);
+  }
 }
 
 async function fbLoad(){
@@ -1754,14 +1822,17 @@ async function restore(){
       const fbTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
       const result=await Promise.race([fbLoad(),fbTimeout]);
       fbLoaded=true;           /* อ่าน cloud สำเร็จแล้ว — DB ในเครื่องถือว่าครบพอจะเขียนทับได้ */
+      const pend=fbApplyPending(result&&result.data);   /* ของค้างจากรอบก่อนชนะของ cloud */
       if(result&&result.data){
         loadAllFromFB(result.data,result.lastSaved);
         fbStartListener();
+        fbFlushPending(pend);
         return true;
       }
       fbLastKnownTs=null;
       setSyncSt('fb_ok');
       fbStartListener();
+      fbFlushPending(pend);
     }catch(e){
       const msg=e.message==='timeout'?'Firebase หมดเวลาเชื่อมต่อ — ใช้ข้อมูล local แทน':'โหลดไม่ได้ — ใช้ข้อมูล local แทน';
       setSyncSt('fb_error',msg);
@@ -5289,6 +5360,16 @@ syncTopbar();
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'&&CT!==12)saveM();
+});
+/* ปิดแท็บ/รีเฟรช ตอนที่ยังเขียนขึ้น cloud ไม่เสร็จ — ให้เบราว์เซอร์ถามยืนยันก่อน
+   beforeunload มาก่อน visibilitychange จึงสั่ง saveM() ที่นี่เองถ้าฟอร์มยังไม่ได้บันทึก
+   ไม่งั้นการเขียนรอบสุดท้ายจะเริ่มหลังด่านนี้ไปแล้ว ไม่มีใครเตือน
+   ออกไปทั้งที่ยังค้างก็ไม่หาย — เดือนที่ค้างถูกจดไว้ เปิดครั้งหน้าจะส่งค่าในเครื่องขึ้นไปใหม่ */
+window.addEventListener('beforeunload',e=>{
+  if(formDirty&&CT!==12)saveM();
+  if(!fbHasPending())return;
+  e.preventDefault();
+  e.returnValue='';
 });
 
 /* mark dirty เมื่อมีการแก้ใน form (event delegation) */
