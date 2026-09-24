@@ -2618,6 +2618,10 @@ function saveM(fb=false){
 async function syncMonths(yms,label){
   if(!yms||!yms.length||!fbDb)return 0;
   setSyncSt('fb_saving');
+  /* จดทุกเดือนในชุดว่าค้าง "ก่อน" เริ่มวน — DB/localStorage ได้ค่าใหม่ครบทุกเดือนไปแล้ว
+     แต่ cloud เขียนทีละเดือน ถ้าจดตอน fbSaveMonth() เริ่มแต่ละเดือน เดือนท้ายๆ ที่ยังไม่ถึงคิว
+     จะไม่ถูกจด ปิดแท็บ/รีเฟรชกลางทาง → เปิดใหม่ cloud ของเก่าทับ = ส่งไปได้แค่ครึ่งเดียว */
+  fbPendMark(yms);
   let fail=0;
   for(const ym of yms){
     try{await fbSaveMonth(ym);}
@@ -3697,6 +3701,7 @@ async function doClearYear(){
   if(fbDb){
     setSyncSt('fb_saving');
     let fail=0,lastTs=null;
+    fbPendMark(yms);   /* เหตุผลเดียวกับ syncMonths() — เดือนที่ยังไม่ถึงคิวลบต้องถูกจดว่าค้างด้วย */
     for(const ym of yms){
       try{lastTs=(await fbDeleteMonth(ym))||lastTs;}
       catch(e){fail++;console.warn('clearYear sync failed',ym,e);}
