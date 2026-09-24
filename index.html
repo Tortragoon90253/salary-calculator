@@ -1362,7 +1362,7 @@ function fbPendMark(yms){
 function fbPendDone(seq){
   const p=fbPendGet();let ch=false;
   Object.keys(seq).forEach(ym=>{if(fbPendSeq[ym]===seq[ym]){delete fbPendSeq[ym];delete p[ym];ch=true;}});
-  if(ch)fbPendPut(p);
+  if(ch){fbPendPut(p);if(_syncSt==='fb_saving')setSyncSt('fb_saving');}   /* อัปเดตจำนวนที่เหลือ */
 }
 const fbHasPending=()=>!!fbDb&&Object.keys(fbPendGet()).length>0;
 let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
@@ -1433,12 +1433,30 @@ function toast(msg,type='ts'){
 }
 
 /* ── Sync Status UI ── */
+/* แถบสถานะต้องบอกความจริง — "ซิงค์แล้ว" ได้ก็ต่อเมื่อไม่มีอะไรค้างจริงๆ
+   เดิมทุกจุดสั่ง fb_ok เองเมื่อ "งานของตัวเอง" เสร็จ ถ้ามีชุดหลายเดือนวนอยู่ (📤 ส่งรายการ ฯลฯ)
+   แล้วมีการบันทึกเดือนเดียวเสร็จแทรกขึ้นมา แถบจะขึ้นซิงค์แล้วทั้งที่อีกหลายเดือนยังไม่ขึ้น cloud
+   · ยังมีงานเขียนวิ่งอยู่ (_fbBusy) → ยังเป็น "กำลังบันทึก" พร้อมจำนวนเดือนที่เหลือ
+   · ไม่มีงานวิ่งแล้วแต่ยังมีเดือนค้าง (= เขียนล้มเหลว) → เตือนว่าค้างกี่เดือน */
+let _fbBusy=0,_syncSt=null;
+async function fbBusyRun(fn){_fbBusy++;try{return await fn();}finally{_fbBusy--;}}
 function setSyncSt(state,msg){
   const el=ge('syncSt');if(!el)return;
+  if(fbDb&&(state==='fb_ok'||state==='fb_saving')){
+    const n=Object.keys(fbPendGet()).length;
+    /* ขอ "กำลังบันทึก" = เชื่อได้เสมอ (ผู้เรียกกำลังจะเริ่มเขียน) · ขอ "ซิงค์แล้ว" ต้องผ่านการเช็คก่อน */
+    if(state==='fb_ok'){
+      if(_fbBusy>0)state='fb_saving';
+      else if(n>0){state='fb_pend';msg=n;}
+    }
+    if(state==='fb_saving')msg=n>1?n:'';
+  }
+  _syncSt=state;
   const map={
     local:     {txt:'💾 Local เท่านั้น',             color:'#f6ad55'},
     fb_loading:{txt:'🔄 กำลังโหลด Firebase...',     color:'#90cdf4'},
-    fb_saving: {txt:'🔄 กำลังบันทึก Firebase...',   color:'#fbd38d'},
+    fb_saving: {txt:'🔄 กำลังบันทึก Firebase...'+(msg?` (เหลือ ${msg} เดือน)`:''),color:'#fbd38d'},
+    fb_pend:   {txt:`⚠️ ยังไม่ขึ้น cloud ${msg} เดือน`,color:'#fbd38d'},
     fb_ok:     {txt:'🔥 Firebase ซิงค์แล้ว',        color:'#ed8936'},
     fb_error:  {txt:'❌ Firebase: '+(msg||'error'),  color:'#fc8181'},
     none:      {txt:'',                              color:'transparent'},
@@ -1573,16 +1591,19 @@ function copyFbShareLink(){
 
 async function fbSave(){
   if(!fbDb)return;
+  return fbBusyRun(async()=>{
   const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   const seq=fbPendMark(Object.keys(DB));
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   fbPendDone(seq);
   return ts;
+  });
 }
 
 async function fbSaveMonth(ym){
   if(!fbDb||!ym)return;
+  return fbBusyRun(async()=>{
   const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.add(ym);
@@ -1595,6 +1616,7 @@ async function fbSaveMonth(ym){
   }
   fbPendDone(seq);
   return ts;
+  });
 }
 
 /* "ไม่มี document ให้ลบ" = งานเสร็จอยู่แล้ว · error อื่น (สิทธิ์ / เน็ต / โควตา) คือความล้มเหลวจริง
@@ -1605,6 +1627,7 @@ const fbErrNotFound=e=>{
 };
 async function fbDeleteMonth(ym){
   if(!fbDb||!ym)return;
+  return fbBusyRun(async()=>{
   const ts=fbMarkOwn(fbTs());
   fbLastKnownTs=ts;
   fbKnownMonths.delete(ym);
@@ -1617,6 +1640,7 @@ async function fbDeleteMonth(ym){
   }catch(e){if(!fbErrNotFound(e))throw e;}   /* doc ไม่มีอยู่ — ถือว่าเสร็จ */
   fbPendDone(seq);
   return ts;
+  });
 }
 
 /* ก่อนเอาข้อมูล cloud ไปใส่ DB — เดือนที่ค้างจากรอบก่อนให้ใช้ค่าในเครื่อง (localStorage) แทน
@@ -1636,10 +1660,12 @@ async function fbFlushPending(yms){
   if(!fbDb||!yms||!yms.length)return;
   setSyncSt('fb_saving');
   let fail=0,lastTs=null;
-  for(const ym of yms){
-    try{lastTs=(await (DB[ym]?fbSaveMonth(ym):fbDeleteMonth(ym)))||lastTs;}
-    catch(e){fail++;console.warn('pending sync failed',ym,e);}
-  }
+  await fbBusyRun(async()=>{
+    for(const ym of yms){
+      try{lastTs=(await (DB[ym]?fbSaveMonth(ym):fbDeleteMonth(ym)))||lastTs;}
+      catch(e){fail++;console.warn('pending sync failed',ym,e);}
+    }
+  });
   if(fail){
     setSyncSt('fb_error',`ซิงค์ค้าง ${fail} เดือน`);
     toast(`⚠️ มีข้อมูลที่แก้ไว้รอบก่อนแต่ยังขึ้น cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลยังอยู่ในเครื่อง จะลองส่งใหม่เมื่อเปิดหน้าครั้งถัดไป`,'te');
@@ -2623,10 +2649,12 @@ async function syncMonths(yms,label){
      จะไม่ถูกจด ปิดแท็บ/รีเฟรชกลางทาง → เปิดใหม่ cloud ของเก่าทับ = ส่งไปได้แค่ครึ่งเดียว */
   fbPendMark(yms);
   let fail=0;
-  for(const ym of yms){
-    try{await fbSaveMonth(ym);}
-    catch(e){fail++;console.warn(label+' sync failed',ym,e);}
-  }
+  await fbBusyRun(async()=>{       /* นับทั้งชุดเป็นงานเดียว — ระหว่างเดือนแถบต้องไม่หลุดเป็น "ซิงค์แล้ว" */
+    for(const ym of yms){
+      try{await fbSaveMonth(ym);}
+      catch(e){fail++;console.warn(label+' sync failed',ym,e);}
+    }
+  });
   if(fail)setSyncSt('fb_error',`ซิงค์ไม่สำเร็จ ${fail} เดือน`);
   else setSyncSt('fb_ok');
   return fail;
@@ -3709,10 +3737,12 @@ async function doClearYear(){
     setSyncSt('fb_saving');
     let fail=0,lastTs=null;
     fbPendMark(yms);   /* เหตุผลเดียวกับ syncMonths() — เดือนที่ยังไม่ถึงคิวลบต้องถูกจดว่าค้างด้วย */
-    for(const ym of yms){
-      try{lastTs=(await fbDeleteMonth(ym))||lastTs;}
-      catch(e){fail++;console.warn('clearYear sync failed',ym,e);}
-    }
+    await fbBusyRun(async()=>{
+      for(const ym of yms){
+        try{lastTs=(await fbDeleteMonth(ym))||lastTs;}
+        catch(e){fail++;console.warn('clearYear sync failed',ym,e);}
+      }
+    });
     if(fail)setSyncSt('fb_error',`ลบไม่สำเร็จ ${fail} เดือน`);
     else{setSyncSt('fb_ok');if(lastTs)setBadge(lastTs,'fb');}
     toast(`🗑️ ล้างข้อมูลปี ${yr} แล้ว ${ms.length} เดือน`
