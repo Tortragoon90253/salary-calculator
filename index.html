@@ -2671,10 +2671,13 @@ function basePropCancel(){
 async function basePropYes(){
   const d=_baseProp;ge('basePropModal').classList.remove('open');_baseProp=null;
   if(!d)return;
-  await saveM();                                   /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
+  /* แก้เดือนถัดไปในเครื่อง + จดค้าง "ก่อน" รอ cloud ของเดือนนี้ — เหตุผลเดียวกับ rowDelYes() */
   d.targets.forEach(k=>{if(DB[k])DB[k].base=String(d.newBase);});
+  const pr=saveM();                                /* บันทึกเดือนปัจจุบัน (ฐานใหม่) + sync */
   lsSet(SK,JSON.stringify(DB));
+  if(fbDb)fbPendMark(d.targets);
   updateDots();
+  await pr;
   const fail=await syncMonths(d.targets,'propagate');
   if(CT===12)renderSum();
   toast(`✅ อัปเดตเงินเดือนฐาน ${d.targets.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
@@ -3259,10 +3262,14 @@ async function rowDelYes(){
     return;
   }
   rowDelNowAll(m,d.id,d.name);   /* เกณฑ์เดียวกับเดือนอื่น ไม่งั้นเดือนนี้เหลือแถวซ้ำชื่อค้าง */
-
-  await saveM();                 /* commit เดือนนี้ก่อน ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
+  /* ลบในเครื่องให้ครบทุกเดือน + จดค้างทั้งชุด "ก่อน" รอ cloud ของเดือนนี้
+     เดิม await saveM() ก่อนแล้วค่อยแตะเดือนอื่น — saveM() รอ server ตอบ ถ้าเน็ตช้า/หลุด
+     เดือนอื่นยังไม่ถูกลบแม้แต่ในเครื่อง ปิดแท็บตอนนั้น = รายการยังอยู่ครบทุกเดือนที่เหลือ */
   others.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=(rec[m.key]||[]).filter(x=>!rowSame(m,x,d.id,d.name));});
+  const pr=saveM();              /* commit เดือนนี้ด้วย ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
   lsSet(SK,JSON.stringify(DB));
+  if(fbDb)fbPendMark(others);
+  await pr;                      /* รอเดือนนี้เสร็จก่อน ไม่งั้นสถานะ sync ของเดือนนี้มาทับผลของทั้งชุด */
   const fail=await syncMonths(others,'row delete');
   if(CT===12)renderSum();
   toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
