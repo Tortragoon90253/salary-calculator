@@ -112,6 +112,10 @@ input:focus,select:focus{outline:none;border-color:#4299e1;background:white}
 .pl input,.pl select{font-size:.8rem;background:white}
 .pl input[type=number]{text-align:right}
 .pl.done{opacity:.72}
+/* ประกันสังคม/กองทุนฯ ในกล่องรายการหัก — ติ๊กแล้วขีดฆ่าชื่อแบบเดียวกับแถวอื่น */
+.fr .fl .ckpt{display:inline-block;vertical-align:-3px;margin-right:6px}
+.fr.done{opacity:.72}
+.fr.done .fl-n{text-decoration:line-through;color:#718096}
 .pl.done input[type=text]{text-decoration:line-through;color:#718096}
 .pl-row2,.pl-row3{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px}
 .pl .dtin{flex:0 0 130px;border:1px solid #cbd5e0;border-radius:4px;background:white}
@@ -709,14 +713,14 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
   <div class="card">
     <div class="ch cre">➖ รายการหัก <span class="ch-sub">☑ จัดการแล้ว | 📤 ส่งต่อ | ✕ ลบ</span><button class="sortbtn" id="sb_d" onclick="sortToggle('d',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_d"></span></button><div class="sortmenu" id="sm_d" role="menu"></div></div>
     <div class="cb">
-      <div class="fr">
-        <span class="fl">ประกันสังคม (5%, สูงสุด 875 บาท) <span class="pm-bank">บัญชี</span></span>
+      <div class="fr" id="fr_sso">
+        <span class="fl"><input type="checkbox" class="ckpt" id="fSsoDn" onchange="tgStatDn('sso',this.checked)" title="ติ๊กเมื่อจัดการรายการนี้แล้ว"><span class="fl-n">ประกันสังคม (5%, สูงสุด 875 บาท)</span> <span class="pm-bank">บัญชี</span></span>
         <input type="date" class="dtin" id="fSsoDt" title="วันที่ตัดเงิน — ค่าเริ่มต้นคือวันเงินเดือนออก">
         <input id="fSso" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
       </div>
-      <div class="fr">
-        <span class="fl">กองทุนสำรองเลี้ยงชีพ (7%) <span class="pm-bank">บัญชี</span></span>
+      <div class="fr" id="fr_pvd">
+        <span class="fl"><input type="checkbox" class="ckpt" id="fPvdDn" onchange="tgStatDn('pvd',this.checked)" title="ติ๊กเมื่อจัดการรายการนี้แล้ว"><span class="fl-n">กองทุนสำรองเลี้ยงชีพ (7%)</span> <span class="pm-bank">บัญชี</span></span>
         <input type="date" class="dtin" id="fPvdDt" title="วันที่ตัดเงิน — ค่าเริ่มต้นคือวันเงินเดือนออก">
         <input id="fPvd" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
@@ -2163,7 +2167,21 @@ function tgCk(k,id,on){
   const row=ge(_CKROW[k]+id);if(row)row.classList.toggle('done',it.dn);
   updCkBars();refreshFlowTL();ckAutoSave();
 }
-function ckAll(k,on){_CKL[k]().forEach(x=>x.dn=!!on);_CKR[k]();refreshFlowTL();ckAutoSave();}
+function ckAll(k,on){_CKL[k]().forEach(x=>x.dn=!!on);if(k==='D')setStatDn(!!on,!!on);_CKR[k]();refreshFlowTL();ckAutoSave();}
+
+/* ประกันสังคม/กองทุนฯ ไม่ได้อยู่ใน array D (เป็นช่องกรอกตายตัว) — สถานะติ๊กจึงอยู่ที่ checkbox ใน DOM
+   แล้ว saveM() เก็บลงฟิลด์ ssoDn/pvdDn ของเดือน · นับรวมในแถบ ✅ ของกล่องรายการหัก */
+const statDn=k=>!!ge(k==='sso'?'fSsoDn':'fPvdDn')?.checked;
+function setStatDn(sso,pvd){
+  [['sso','fSsoDn',sso],['pvd','fPvdDn',pvd]].forEach(([k,id,on])=>{
+    const el=ge(id);if(el)el.checked=!!on;
+    ge('fr_'+k)?.classList.toggle('done',!!on);
+  });
+}
+function tgStatDn(k,on){
+  ge('fr_'+k)?.classList.toggle('done',!!on);
+  updCkBars();refreshFlowTL();ckAutoSave();
+}
 
 /* ขีดฆ่าบนไทม์ไลน์ต้องขยับทันทีที่ติ๊ก — วาดซ้ำจาก context เดิม อัปเดตเฉพาะสถานะ dn
    ยอดเงินทั้งหมดยังเป็นชุดเดิมที่ doCalc คำนวณไว้ ตัวเลขบนกราฟจึงไม่ขยับตาม */
@@ -2176,6 +2194,7 @@ function refreshFlowTL(){
     const m=dnMap(src);
     (tgt||[]).forEach(x=>{if(x.id in m)x.dn=m[x.id];});
   });
+  c.ssoDn=statDn('sso');c.pvdDn=statDn('pvd');
   /* วาดใหม่ทั้งการ์ด = แถบเลื่อนเด้งกลับไปซ้ายสุด ถ้าไม่จำตำแหน่งไว้ก่อน */
   const sc=box.querySelector('.flow-scroll'),sx=sc?sc.scrollLeft:0;
   renderFlowTimeline(c);
@@ -2201,6 +2220,12 @@ function ckStat(k){
     const nm=String(nEl?nEl.value:(x.n||x.name||'')).trim();
     rows.push({n:nm||'(ไม่มีชื่อ)',amt,dn:!!x.dn});
     tot+=amt;if(x.dn){done++;dtot+=amt;}
+  });
+  if(k==='D')[['sso','ประกันสังคม',getSso()],['pvd','กองทุนสำรองเลี้ยงชีพ',getPvd()]].forEach(([sk,nm,amt])=>{
+    if(!(amt>0))return;
+    const dn=statDn(sk);
+    rows.unshift({n:nm,amt,dn});
+    tot+=amt;if(dn){done++;dtot+=amt;}
   });
   return{n:rows.length,done,tot,dtot,rows};
 }
@@ -2610,7 +2635,7 @@ function saveM(fb=false){
     };
   }
   DB[ym]={base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
-    ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
+    ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),ssoDn:statDn('sso'),pvdDn:statDn('pvd'),
     /* '' ในฟิลด์ wkb แปลว่า "ใช้ค่าเริ่มต้น" (ตัวอ่านทุกตัวใช้ rec.wkb||_wkbDef)
        เดือนที่ผู้ใช้ตั้งใจ "ไม่มีงบวันหยุด" จึงเก็บเป็น '' ไม่ได้ — มันไปชนกับความหมายแรก
        แล้วตารางสรุปรายเดือน/สรุปรายปี/ไทม์ไลน์หน้าสรุป จะหักงบค่าเริ่มต้นให้ทั้งที่หน้าเดือนบอกว่าไม่หัก
@@ -2740,6 +2765,7 @@ function loadMonth(mi){
     sv('fBaseDt',rec.baseDt!==undefined?rec.baseDt:payDate(ym));
     /* SSO/PVD ผูกกับวันเงินเดือนออก — ว่างเมื่อไหร่ก็เติมกลับ (ต่างจาก baseDt ที่เคารพการล้างค่า) */
     sv('fSsoDt',rec.ssoDt||payDate(ym));sv('fPvdDt',rec.pvdDt||payDate(ym));
+    setStatDn(rec.ssoDn,rec.pvdDn);
     _wkb=rec.wkb||_wkbDef;
     A=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.a||defA()))),ym,ym,true);
     D=anchorDates(dedupeIds(JSON.parse(JSON.stringify(rec.d||defD()))),ym,ym,true);
@@ -2772,6 +2798,7 @@ function loadMonth(mi){
       const s=pv.ym,prev=pv.rec;
       sv('fBase',prev.base);sv('fSso','');sv('fPvd','');
       sv('fBaseDt',payDate(ym));sv('fSsoDt',payDate(ym));sv('fPvdDt',payDate(ym));
+      setStatDn(false,false);
       _wkb=_wkbDef;
       A=anchorDates(blankItems((prev.a||defA()).filter(x=>x.id!==BONUS_ID)),s,ym,true);
       D=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,true);
@@ -2784,6 +2811,7 @@ function loadMonth(mi){
     }else{
       ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
       ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
+      setStatDn(false,false);
       _wkb=_wkbDef;
       A=anchorDates(defA(),ym,ym,true);D=anchorDates(defD(),ym,ym,true);I=defI();O=defO();P=defP();
     }
@@ -3919,6 +3947,7 @@ function doCalc(){
   /* ส่ง wkb เข้าไปตรงๆ (เดิมเว้นไว้ให้ไปอ่าน _wkb เอง) — หน้าสรุปรายปีส่งมาผ่าน flowCtxFromRec()
      อยู่แล้ว ทั้งสองทางจึงอ่านจากฟิลด์เดียวกัน ไม่มีทางแยกกันเงียบๆ อีก */
   renderFlowTimeline({ym:pv,baseDt:gv('fBaseDt'),ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),
+                      ssoDn:statDn('sso'),pvdDn:statDn('pvd'),
                       base,aArr,oArr,dArr,iArr,pArr,invBase,totOT,h15,h20,h30,sso,pvd,
                       totInc,finalCash,wkb:_wkb});
   ge('res').style.display='block';
@@ -3958,9 +3987,9 @@ const PM_META={
 const PM_ORDER=['bank','cash','credit','inv'];
 /* รายการหักตามกฎหมายที่ถูกหักจากเงินได้ก่อนถึงมือ — ชุดเดียวกับสูตร takeHome ในหน้าผลคำนวณ */
 const STAT_KIND={sso:1,pvd:1,tax:1};
-/* kind ที่มาจากตารางซึ่งมีช่องติ๊ก "จัดการแล้ว" (A/O/D/I) — ใช้นับตัวเลขบนหัวการ์ดไทม์ไลน์
-   เงินเดือนฐาน/OT/ประกันสังคม/กองทุนฯ ไม่มีช่องติ๊ก จึงไม่ถูกนับเป็นตัวหาร */
-const CK_KIND={a:1,o:1,d:1,tax:1,inv:1,plan:1};
+/* kind ที่มีช่องติ๊ก "จัดการแล้ว" (A/O/D/I/P + ประกันสังคม/กองทุนฯ) — ใช้นับตัวเลขบนหัวการ์ดไทม์ไลน์
+   เงินเดือนฐาน/OT ไม่มีช่องติ๊ก จึงไม่ถูกนับเป็นตัวหาร */
+const CK_KIND={a:1,o:1,d:1,tax:1,inv:1,plan:1,sso:1,pvd:1};
 
 /* งบใช้จ่ายวันหยุด — แหล่งความจริงอยู่ที่ตัวแปร ไม่ใช่ DOM (ช่องกรอกถูก re-render ทิ้งทุกครั้ง)
    _wkbDef = ค่าเริ่มต้นที่จำไว้ตลอด · _wkb = ค่าที่ใช้จริงของเดือนที่เปิดอยู่ (อาจถูก override) */
@@ -4006,7 +4035,7 @@ function buildFlowEvents(c){
   const pay=isDt(c.baseDt)?c.baseDt:payDate(c.ym);
   const dated=[],undated=[];
   /* dn = ติ๊ก "จัดการแล้ว" ของรายการนั้น — ใช้ขีดฆ่าบนไทม์ไลน์เท่านั้น ไม่แตะยอดใดๆ
-     เงินเดือน/OT/ประกันสังคม/กองทุนฯ ไม่มีช่องติ๊ก จึงเป็น false เสมอ */
+     เงินเดือน/OT ไม่มีช่องติ๊ก จึงเป็น false เสมอ */
   const push=(dt,dir,kind,n,v,pm,dn)=>{v=+v||0;if(v<=0)return;
     (isDt(dt)?dated:undated).push({dt:isDt(dt)?dt:'',dir,kind,n,v,pm,dn:!!dn});};
 
@@ -4023,8 +4052,8 @@ function buildFlowEvents(c){
 
   /* ── เงินออก ── */
   /* SSO/PVD ไม่มีฟิลด์วิธีจ่าย แต่ getPaySummary() นับเป็น "บัญชี" มาตลอด — ยึดตามนั้น */
-  push(isDt(c.ssoDt)?c.ssoDt:pay,'out','sso','ประกันสังคม',c.sso,'bank');
-  push(isDt(c.pvdDt)?c.pvdDt:pay,'out','pvd','กองทุนสำรองเลี้ยงชีพ',c.pvd,'bank');
+  push(isDt(c.ssoDt)?c.ssoDt:pay,'out','sso','ประกันสังคม',c.sso,'bank',c.ssoDn);
+  push(isDt(c.pvdDt)?c.pvdDt:pay,'out','pvd','กองทุนสำรองเลี้ยงชีพ',c.pvd,'bank',c.pvdDn);
   c.dArr.forEach(x=>{
     /* ภาษีหัก ณ ที่จ่ายถูกหักตอนเงินเดือนออก — ตาข่ายรองรับกรณีวันที่ยังว่าง */
     const at=isDt(x.dt)?x.dt:(isTaxRow(x)?pay:'');
@@ -4560,6 +4589,7 @@ function doResetM(){
   const ym=ymk(CT);
   ['fBase','fSso','fPvd'].forEach(id=>sv(id,''));
   ['fBaseDt','fSsoDt','fPvdDt'].forEach(id=>sv(id,payDate(ym)));
+  setStatDn(false,false);
   _wkb=_wkbDef;
   ge('otBody').innerHTML='';ge('res').style.display='none';
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
@@ -4809,8 +4839,8 @@ function doExport(){
          ต่างจากเรคคอร์ดเก่าที่ไม่มีฟิลด์นี้เลย (ดูหมายเหตุใน adoptWkbDef) */
       const wkbDefCsv=rec.wkbDef===undefined?'':(rec.wkbDef||'-');
       rows.push(cr('BASE',yr,m,'','',rec.base||'',baseDtCsv,rec.wkb||'',wkbDefCsv));
-      rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||''));
-      rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||''));
+      rows.push(cr('SSO',yr,m,'','',rec.sso||'',rec.ssoDt||'',rec.ssoDn?'1':''));
+      rows.push(cr('PVD',yr,m,'','',rec.pvd||'',rec.pvdDt||'',rec.pvdDn?'1':''));
       /* EXTRA2 = checkpoint "จัดการแล้ว" (dn) — ไฟล์เก่าที่ไม่มีคอลัมน์นี้ import ได้ตามปกติ */
       /* EXTRA4 = bm (จำนวนเดือนของแถวโบนัส) — แหล่งความจริงของยอดโบนัสอยู่ที่ฟิลด์นี้ ไม่ใช่ v
          เดิมไม่ถูก export เลย backup/restore แล้วยอดโบนัสหายทั้งก้อนตอนแตะเงินเดือนฐานครั้งแรก
@@ -4858,8 +4888,8 @@ function doImport(input){
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],p:[],days:{}};
         const r=tmp[ym];const T=type.toUpperCase();
         if(T==='BASE'||T==='SALARY'){r.base=val;if(extra)r.baseDt=(extra==='-'?'':extra);if(extra2)r.wkb=extra2;if(extra3)r.wkbDef=(extra3==='-'?'':extra3);}   /* ไฟล์เก่าไม่มีคอลัมน์นี้ → ปล่อยให้ loadM เติม default */
-        else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;}
-        else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;}
+        else if(T==='SSO'){r.sso=val;if(extra)r.ssoDt=extra;if(extra2==='1')r.ssoDn=true;}
+        else if(T==='PVD'){r.pvd=val;if(extra)r.pvdDt=extra;if(extra2==='1')r.pvdDn=true;}
         else if(T==='A'||T==='ALLOW')r.a.push({id:key||uid(),n:name,v:val,ok:extra==='1',dn:extra2==='1',...(extra3!==undefined?{dt:extra3}:{}),...(extra4?{bm:extra4}:{})});
         /* ct: ไฟล์เก่าไม่มีคอลัมน์นี้ → ห้ามยัด 'fix' ให้ ไม่งั้นแถวภาษีจะเลิกเป็นภาษี
            ปล่อยว่างไว้ให้ dedCt() เดาจากชื่อเอง (ผลลัพธ์เท่ากับก่อนมีฟีเจอร์นี้เป๊ะ) */
@@ -5298,7 +5328,7 @@ function renderTaxYear(){
 function flowCtxFromRec(ym){
   const rec=DB[ym],t=compM(ym);
   if(!rec||!t)return null;
-  return{ym,baseDt:rec.baseDt,ssoDt:rec.ssoDt,pvdDt:rec.pvdDt,
+  return{ym,baseDt:rec.baseDt,ssoDt:rec.ssoDt,pvdDt:rec.pvdDt,ssoDn:!!rec.ssoDn,pvdDn:!!rec.pvdDn,
     base:t.base,aArr:rec.a||[],oArr:rec.o||[],dArr:rec.d||[],iArr:rec.i||[],pArr:rec.p||[],
     invBase:t.invBase,totOT:t.totOT,h15:t.h15,h20:t.h20,h30:t.h30,
     sso:t.sso,pvd:t.pvd,totInc:t.totInc,finalCash:t.final,
