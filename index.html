@@ -2170,8 +2170,9 @@ function ckAll(k,on){_CKL[k]().forEach(x=>x.dn=!!on);_CKR[k]();refreshFlowTL();c
 function refreshFlowTL(){
   const c=_flowCtx,box=ge('flowTL');
   if(!c||!box||!box.innerHTML)return;
+  /* ต้องครบทุกกล่องที่มีช่องติ๊ก (_CKL) — เดิมขาด P ติ๊กผ่อน/ประกันแล้วไทม์ไลน์ไม่ขีดฆ่าจนกว่าจะคำนวณใหม่ */
   const dnMap=arr=>{const m={};(arr||[]).forEach(x=>{m[x.id]=!!x.dn;});return m;};
-  [[c.aArr,A],[c.oArr,O],[c.dArr,D],[c.iArr,I]].forEach(([tgt,src])=>{
+  [[c.aArr,A],[c.oArr,O],[c.dArr,D],[c.iArr,I],[c.pArr,P]].forEach(([tgt,src])=>{
     const m=dnMap(src);
     (tgt||[]).forEach(x=>{if(x.id in m)x.dn=m[x.id];});
   });
