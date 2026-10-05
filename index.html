@@ -1172,7 +1172,7 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
 
       <div id="xdPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
 
-      <div style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
+      <div id="xdNote" style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7">
         • ทุกตัวเลือก<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — รวมถึง "เฉพาะเดือนนี้"<br>
         • เดือนอื่นที่มีชื่อรายการตรงกันเป๊ะ ถือเป็นรายการเดียวกัน
       </div>
@@ -1180,7 +1180,7 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
 
     <div class="modal-btns">
       <button id="xdGo" class="mbtn-save" style="background:linear-gradient(135deg,#9b2c2c,#e53e3e)" onclick="rowDelYes()">🗑️ ลบ</button>
-      <button class="mbtn-cancel" onclick="rowDelNo()">ยกเลิก</button>
+      <button id="xdNo" class="mbtn-cancel" onclick="rowDelNo()">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -2319,7 +2319,8 @@ function onPTerm(id){
   }
   formDirty=true;updPlan();updCkBars();
 }
-function setIT(id,t){const it=I.find(x=>x.id===id);if(!it)return;it.t=t==='%'?'%':'฿';it.v='';rI();setTimeout(()=>ge(`iv_${id}`)?.focus(),40);}
+/* ล้างช่องบนจอด้วย — rI() ดึงค่าจาก DOM กลับเข้า array ก่อนวาด ไม่งั้น it.v='' ถูกยอดเก่าทับคืน */
+function setIT(id,t){const it=I.find(x=>x.id===id);if(!it)return;it.t=t==='%'?'%':'฿';it.v='';sv(`iv_${id}`,'');rI();setTimeout(()=>ge(`iv_${id}`)?.focus(),40);}
 function onII(id){const it=I.find(x=>x.id===id);if(it)it.v=gv(`iv_${id}`);updInv();}
 
 /* ── Collect DOM ── */
@@ -3219,7 +3220,8 @@ function openRowDel(kind,id){
   /* แถวเปล่าที่เพิ่งกด ＋ มาแล้วยังไม่ได้กรอกอะไร — ไม่มีอะไรให้เสีย ถามไปก็รำคาญเปล่าๆ */
   if(!others.length&&!name&&nf(it[m.vf])<=0){rowDelNow(m,id);return;}
 
-  _rowDel={m,id,name,ym,others,label:name||'(ไม่ระบุชื่อ)'};
+  _rowDel={op:'del',m,id,name,ym,others,label:name||'(ไม่ระบุชื่อ)'};
+  rowDlgLook('del');
   ge('xdTitle').textContent=`🗑️ ลบ${m.label}`;
   ge('xdHead').innerHTML=`${m.icon} <b>${esc(_rowDel.label)}</b>`
     +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${rowDelInfo(m,it)}</div>`
@@ -3290,7 +3292,10 @@ function rowDelPreview(){
      จึงไม่โดนด้วย — ต้องนับ 1 ไม่งั้น preview สัญญาไว้เกินจริง = "ลบแล้วไม่หมด" อีกแบบ */
   const rows=rowDelMode()==='one'?1
     :t.reduce((sum,k)=>sum+rowDelCount(d.m,k,d.id,d.name,d.ym),0);
-  ge('xdPreview').innerHTML=`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน`
+  const ed=d.op==='edit';
+  ge('xdPreview').innerHTML=(ed
+      ?`<div style="font-weight:700;color:#2b6cb0">✏️ จะแก้ไขใน ${t.length} เดือน`
+      :`<div style="font-weight:700;color:#c53030">🗑️ จะลบออกจาก ${t.length} เดือน`)
     +(rows>t.length?` (${rows} แถว)`:'')+`</div>`
     +`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t.map(ymLabel).join(' · ')}</div>`
     +(t.length<d.others.length+1
@@ -3301,6 +3306,7 @@ function rowDelNo(){ge('rowDelModal').classList.remove('open');_rowDel=null;}
 
 async function rowDelYes(){
   const d=_rowDel;if(!d)return;
+  if(d.op==='edit')return rowEditYes();
   const m=d.m;
   const targets=rowDelTargets();
   const others=targets.filter(t=>t!==d.ym);
@@ -3330,6 +3336,169 @@ async function rowDelYes(){
   const fail=await syncMonths(others,'row delete');
   if(CT===12)renderSum();
   toast(`🗑️ ลบ "${d.label}" ออกจาก ${targets.length} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
+}
+
+/* ════════════════════════════════════════════════════
+   แก้ไขรายการข้ามเดือน — ถามแบบเดียวกับปุ่ม ✕ (ใช้ modal ตัวเดียวกัน)
+   ผู้ใช้แก้ช่องไหนก็ได้ในแถวหนึ่ง พอโฟกัสออกจากแถวนั้น ค่อยเทียบกับค่าตอนเข้ามา
+   ถ้ามีอะไรเปลี่ยน และเจอ "รายการเดียวกัน" ในเดือนอื่น (id ตรง หรือชื่อเดิมตรง — เกณฑ์เดียวกับการลบ)
+   จึงถามว่าจะใช้การแก้ไขนี้กับเดือนไหนบ้าง · ไม่เจอในเดือนอื่น = เงียบเหมือนเดิม
+   ถามตอนออกจากแถว ไม่ใช่ทุกช่อง — แก้ชื่อ+ยอด+วันที่พร้อมกันจะได้ถามครั้งเดียว
+   ☑ จัดการแล้ว เป็นสถานะรายเดือน ไม่ถือเป็นการแก้ไขที่ต้องส่งต่อ
+   ════════════════════════════════════════════════════ */
+/* [ฟิลด์ใน array, prefix ของช่องบนจอ, ป้ายที่โชว์ในกล่องยืนยัน] — prefix ว่าง = อ่านจาก array */
+const EDIT_F={
+  a:[['n','an_','ชื่อ'],['v','av_','ยอด'],['dt','adt_','วันที่']],
+  d:[['n','dn_','ชื่อ'],['v','dv_','ยอด'],['dt','ddt_','วันที่'],['pm','dp_','วิธีจ่าย'],['ct','dc_','ประเภทต้นทุน']],
+  o:[['n','on_','ชื่อ'],['v','ov_','ยอด'],['dt','odt_','วันที่']],
+  i:[['n','in_','ชื่อ'],['t','','หน่วย'],['v','iv_','ยอด'],['dt','idt_','วันที่']],
+  p:[['name','pn_','ชื่อ'],['type','py_','ประเภท'],['amount','pv_','ยอดต่อเดือน'],['current_term','pc_','งวดปัจจุบัน'],
+     ['total_term','pt_','จำนวนงวด'],['dt','pdt_','วันที่'],['pm','pp_','วิธีจ่าย'],['note','pnote_','โน้ต']]
+};
+const EDIT_BOX={aList:'a',dList:'d',oList:'o',iList:'i',pList:'p'};
+let _edit=null,_editT=null;
+function rowRead(k,id){
+  const m=LIST_META[k],it=(m.get()||[]).find(x=>x&&x.id===id);if(!it)return null;
+  const o={};
+  EDIT_F[k].forEach(([f,pre])=>{const el=pre&&ge(pre+id);o[f]=String(el?el.value:(it[f]??''));});
+  return o;
+}
+/* แถวที่ event นี้อยู่ — คืน null ถ้าไม่ใช่แถวในกล่องรายการ */
+function rowOf(el){
+  const row=el&&el.closest&&el.closest('[data-list][data-id]');
+  const box=row&&row.parentElement;
+  const k=box&&EDIT_BOX[box.id];
+  return k?{k,id:row.dataset.id}:null;
+}
+document.addEventListener('focusin',e=>{
+  const r=rowOf(e.target);if(!r)return;
+  clearTimeout(_editT);
+  if(_edit&&_edit.k===r.k&&_edit.id===r.id)return;   /* ยังอยู่แถวเดิม — คงค่าตอนเข้ามาครั้งแรกไว้ */
+  if(_edit)editCheck();                               /* ย้ายจากแถวหนึ่งไปอีกแถวโดยตรง */
+  if(CT<0||CT>=12||LIST_META[r.k].lock.includes(r.id)){_edit=null;return;}
+  const before=rowRead(r.k,r.id);
+  _edit=before?{k:r.k,id:r.id,ym:ymk(CT),before}:null;
+});
+/* ออกจากแถว → รอให้โฟกัสลงที่ใหม่ก่อน (ปุ่ม ฿/% และประเภทแผนวาดแถวใหม่แล้วโฟกัสกลับมาเอง)
+   select ที่วาดแถวใหม่ทันที (ประเภทแผน) อาจไม่ยิง focusout เลย จึงดัก change ไว้ด้วย */
+function editSoon(){
+  clearTimeout(_editT);
+  _editT=setTimeout(()=>{
+    const r=rowOf(document.activeElement);
+    if(_edit&&r&&r.k===_edit.k&&r.id===_edit.id)return;
+    editCheck();
+  },250);
+}
+document.addEventListener('focusout',e=>{if(_edit&&rowOf(e.target))editSoon();});
+document.addEventListener('change',e=>{if(_edit&&e.target.tagName==='SELECT'&&rowOf(e.target))editSoon();});
+
+function editCheck(){
+  const s=_edit;_edit=null;clearTimeout(_editT);
+  if(!s||document.querySelector('.modal-overlay.open'))return;   /* กำลังถามเรื่องอื่นอยู่ (เช่นกด ✕) */
+  if(ymk(CT)!==s.ym)return;                                      /* สลับเดือนไปแล้ว — การแก้ไขบันทึกไว้ที่เดือนเดิม */
+  const after=rowRead(s.k,s.id);if(!after)return;                /* แถวถูกลบไปแล้ว */
+  const diff=EDIT_F[s.k].filter(([f])=>s.before[f]!==after[f]);
+  if(!diff.length)return;
+  const m=LIST_META[s.k];
+  const oldName=String(s.before[m.nf]||'').trim();
+  if(!oldName&&!String(after[m.nf]||'').trim())return;            /* แถวที่ยังไม่มีชื่อ — ยังไม่ใช่ "รายการ" */
+  const others=rowDelFind(m,s.id,oldName,s.ym);
+  if(!others.length)return;
+  openRowEdit(m,s,after,diff,others);
+}
+
+/* ข้อความบน modal ที่ต่างกันระหว่างลบกับแก้ไข */
+function rowDlgLook(op){
+  const ed=op==='edit';
+  ge('xdHead').style.background=ed?'#ebf8ff':'#fff5f5';
+  ge('xdHead').style.borderColor=ed?'#bee3f8':'#fed7d7';
+  ge('xdGo').innerHTML=ed?'✏️ ใช้การแก้ไข':'🗑️ ลบ';
+  ge('xdGo').style.background=ed?'linear-gradient(135deg,#2b6cb0,#4299e1)':'linear-gradient(135deg,#9b2c2c,#e53e3e)';
+  ge('xdNo').textContent=ed?'แก้เฉพาะเดือนนี้':'ยกเลิก';
+  ge('xdNote').innerHTML=ed
+    ?'• เดือนนี้บันทึกการแก้ไขไว้แล้ว — ตัวเลือกนี้คือจะ<strong>ใช้การแก้ไขเดียวกันกับเดือนอื่น</strong>ด้วยหรือไม่<br>'
+     +'• แก้เฉพาะช่องที่เปลี่ยน ช่องอื่นของแต่ละเดือนคงเดิม · วันที่และงวดเลื่อนตามระยะเดือนให้เอง<br>'
+     +'• เดือนอื่นที่มีชื่อรายการ (ชื่อเดิม) ตรงกันเป๊ะ ถือเป็นรายการเดียวกัน'
+    :'• ทุกตัวเลือก<strong>บันทึกทันที</strong>และ<strong>ย้อนกลับไม่ได้</strong> — รวมถึง "เฉพาะเดือนนี้"<br>'
+     +'• เดือนอื่นที่มีชื่อรายการตรงกันเป๊ะ ถือเป็นรายการเดียวกัน';
+}
+/* ค่าที่อ่านง่ายสำหรับโชว์ในกล่องยืนยัน */
+function editShow(k,f,v){
+  if(v==='')return'(ว่าง)';
+  if(f==='v'||f==='amount')return fmt(nf(v));
+  if(f==='dt')return isDt(v)?tlThDate(v):v;
+  if(f==='pm')return PM_META[v]?`${PM_META[v].icon} ${PM_META[v].label}`:v;
+  if(f==='ct')return CT_META[v]?`${CT_META[v].icon} ${CT_META[v].label}`:v;
+  if(f==='type')return PLAN_TYPES[planTy(v)]?`${PLAN_TYPES[planTy(v)].icon} ${PLAN_TYPES[planTy(v)].short}`:v;
+  if(f==='t')return v==='%'?'% ของฐาน':'฿ จำนวนคงที่';
+  return v;
+}
+function openRowEdit(m,s,after,diff,others){
+  const oldName=String(s.before[m.nf]||'').trim();
+  _rowDel={op:'edit',m,id:s.id,name:oldName,ym:s.ym,others,after,diff:diff.map(([f])=>f),
+           label:String(after[m.nf]||'').trim()||oldName||'(ไม่ระบุชื่อ)'};
+  rowDlgLook('edit');
+  ge('xdTitle').textContent=`✏️ แก้ไข${m.label}`;
+  ge('xdHead').innerHTML=`${m.icon} <b>${esc(_rowDel.label)}</b>`
+    +diff.map(([f,,lbl])=>{
+      /* ยอดแบ่งลงทุนแบบ % เป็นเปอร์เซ็นต์ ไม่ใช่บาท */
+      const sh=(v,o)=>(m.key==='i'&&f==='v'&&o.t==='%')?(v===''?'(ว่าง)':`${nf(v)}%`):editShow(m.key,f,v);
+      return`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${esc(lbl)}: `
+        +`<span style="color:#a0aec0;text-decoration:line-through">${esc(sh(s.before[f],s.before))}</span> → <b>${esc(sh(after[f],after))}</b></div>`;
+    }).join('')
+    +`<div style="font-size:.73rem;color:#718096;margin-top:2px">${ymLabel(s.ym)}</div>`;
+  ge('xdOnly').style.display='none';
+  ge('xdMulti').style.display='';
+  ge('xdFound').innerHTML=`⚠️ เจอรายการนี้ในอีก <b>${others.length} เดือน</b>ด้วย — จะแก้ไขเดือนไหนบ้าง?`
+    +`<div style="font-size:.78rem;font-weight:400;margin-top:3px">${others.map(ymLabel).join(' · ')}</div>`;
+  ge('xdThisM').textContent=`(${ymLabel(s.ym)})`;
+  ge('xdRestTxt').textContent=`เดือนนี้เป็นต้นไปจนจบปี ${CY}`;
+  ge('xdRestSub').textContent=CT<11?`(${MS[CT]} – ธ.ค.)`:'';
+  ge('xdYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
+  const inCY=others.filter(k=>k.slice(0,4)===String(CY));
+  const later=inCY.filter(k=>k>s.ym).length,earlier=inCY.length-later;
+  ge('xdRow3').style.display=later?'':'none';
+  ge('xdRow4').style.display=earlier?'':'none';
+  ge('xdRow5').style.display=others.length-inCY.length?'':'none';
+  ge('xdAllTxt').textContent=`ทุกเดือนที่พบ — ${others.length+1} เดือน`;
+  /* ค่าเริ่มต้น = จนจบปี (ส่วนใหญ่แก้แล้วอยากให้มีผลต่อไปข้างหน้า) ถ้าไม่มีเดือนถัดไปก็ "เฉพาะเดือนนี้" */
+  (later?ge('xdMode3'):ge('xdMode1')).checked=true;
+  sv('xdN',String(Math.max(1,11-CT||3)));
+  rowDelPreview();
+  ge('rowDelModal').classList.add('open');
+  _blankYm=null;
+  saveM();                       /* เดือนนี้บันทึกไว้ก่อนเลย ไม่ว่าจะเลือกอะไร */
+}
+/* ใส่ค่าที่แก้ลงแถวของเดือนอื่น — เฉพาะช่องที่เปลี่ยน
+   วันที่/งวดปัจจุบันเลื่อนตามระยะเดือน (กติกาเดียวกับปุ่ม 📤 / forwardPlans) */
+function editPut(x,f,after,n){
+  if(f==='dt')x.dt=isDt(after.dt)?shiftDt(after.dt,n):after.dt;
+  else if(f==='current_term')x.current_term=planTerm(planTerm(after.current_term)+n);
+  else if(f==='total_term')x.total_term=planTerm(after.total_term);
+  else if(f==='type')x.type=planTy(after.type);
+  else x[f]=after[f];
+}
+async function rowEditYes(){
+  const d=_rowDel;if(!d)return;
+  const m=d.m,targets=rowDelTargets().filter(t=>t!==d.ym);
+  if(targets.length){
+    if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+    if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  }
+  ge('rowDelModal').classList.remove('open');_rowDel=null;
+  const pr=saveM();
+  if(!targets.length){await pr;toast(`✏️ แก้ไข "${d.label}" เฉพาะเดือนนี้แล้ว`);return;}
+  targets.forEach(t=>{
+    const rec=DB[t];if(!rec)return;
+    const n=ymDelta(d.ym,t);
+    (rec[m.key]||[]).forEach(x=>{if(rowSame(m,x,d.id,d.name))d.diff.forEach(f=>editPut(x,f,d.after,n));});
+  });
+  lsSet(SK,JSON.stringify(DB));
+  if(fbDb)fbPendMark(targets);
+  await pr;
+  const fail=await syncMonths(targets,'row edit');
+  if(CT===12)renderSum();
+  toast(`✏️ แก้ไข "${d.label}" ใน ${targets.length+1} เดือนแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ════════════════════════════════════════════════════
