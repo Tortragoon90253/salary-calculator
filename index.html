@@ -1335,12 +1335,23 @@ let fbDb=null;
 let fbCfg=null;
 let fbDocId='default';
 let fbUnsubscribe=null;
-let fbLastKnownTs=null;
-/* ts + เวลาที่ "เครื่องนี้เขียนขึ้น Firebase เอง" ครั้งล่าสุด — ใช้กรอง echo ของตัวเองตอนวนเขียนหลายเดือน
-   (รายละเอียดเหตุผลอยู่ที่ตัวกรองใน fbStartListener) */
-let fbOwnTs=null,fbOwnAt=0;
-const fbMarkOwn=ts=>{if(ts){fbOwnTs=ts;fbOwnAt=Date.now();}return ts;};
-const FB_ECHO_MS=60000;   /* พ้นช่วงนี้ถือว่าไม่มี echo ค้างแล้ว กลับไปเทียบ ts ตรงๆ แบบเดิม */
+/* doc ที่ "เครื่องนี้เคยโหลดจาก cloud สำเร็จแล้ว" — แยกตาม docId
+   ยังไม่เคย = ข้อมูลในเครื่องอาจเป็นของที่ไม่เคยขึ้น cloud (ใช้แบบ local มาก่อน) → ถามก่อนว่าจะส่งขึ้นไหม
+   เคยแล้ว   = cloud คือของจริง เดือนที่มีแค่ในเครื่อง (ไม่ได้ค้างส่ง) คือเดือนที่เครื่องอื่นลบไปแล้ว → ลบตาม */
+const SKS='sol_v5_fbsynced';
+function fbSyncedAll(){try{return JSON.parse(localStorage.getItem(SKS)||'{}')||{};}catch(e){return {};}}
+function fbSyncedSet(on){
+  const all=fbSyncedAll();
+  if(on)all[fbDocId]=1;else delete all[fbDocId];
+  lsSet(SKS,JSON.stringify(all));
+}
+/* เทียบข้อมูลเดือนแบบไม่สนลำดับ key — Firestore คืน map เรียง key ตามตัวอักษร
+   ส่วน DB ในเครื่องเรียงตามลำดับที่สร้าง JSON.stringify ตรงๆ จึงต่างกันทั้งที่ค่าเหมือนกัน */
+function stableStr(v){
+  if(Array.isArray(v))return '['+v.map(stableStr).join(',')+']';
+  if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stableStr(v[k])).join(',')+'}';
+  return JSON.stringify(v===undefined?null:v);
+}
 /* ── เดือนที่ "ยังเขียนขึ้น cloud ไม่เสร็จ" ──
    Firestore เปิดแบบไม่มี offline persistence คิวเขียนที่รอส่งอยู่แค่ในหน่วยความจำ
    ปิดแท็บ/รีเฟรช/แท็บถูกเบราว์เซอร์ฆ่า ก่อน server ตอบ = คิวหาย ขณะที่ localStorage มีค่าใหม่แล้ว
@@ -1461,7 +1472,8 @@ function setSyncSt(state,msg){
     fb_loading:{txt:'🔄 กำลังโหลด Firebase...',     color:'#90cdf4'},
     fb_saving: {txt:'🔄 กำลังบันทึก Firebase...'+(msg?` (เหลือ ${msg} เดือน)`:''),color:'#fbd38d'},
     fb_pend:   {txt:`⚠️ ยังไม่ขึ้น cloud ${msg} เดือน`,color:'#fbd38d'},
-    fb_ok:     {txt:'🔥 Firebase ซิงค์แล้ว',        color:'#ed8936'},
+    /* โชว์ชื่อ doc ด้วย — สองเครื่องตั้ง Document ID ไม่ตรงกัน = คนละก้อนข้อมูล ข้อมูลจะไม่มีวันตรงกัน */
+    fb_ok:     {txt:`🔥 Firebase ซิงค์แล้ว · ${fbDocId}`,color:'#ed8936'},
     fb_error:  {txt:'❌ Firebase: '+(msg||'error'),  color:'#fc8181'},
     none:      {txt:'',                              color:'transparent'},
   };
@@ -1490,6 +1502,10 @@ function fbInit(cfg){
       projectId:cfg.projectId,
     },FB_APP_NAME);
     fbDb=firebase.firestore(app);
+    /* เครือข่ายบางแบบ (Wi-Fi บริษัท · proxy · แอปแอนตี้ไวรัส · มือถือบางค่าย) ตัดสตรีม WebChannel ทิ้งเงียบๆ
+       อ่าน/เขียนครั้งเดียวผ่าน แต่ realtime listener ไม่เคยได้ข้อมูลใหม่ = แก้จากอีกเครื่องแล้วเครื่องนี้ไม่ขยับ
+       ให้ SDK ตรวจเองแล้วสลับไปใช้ long-polling เมื่อสตรีมใช้ไม่ได้ (ต้องตั้งก่อนเรียกใช้ db ครั้งแรก) */
+    try{fbDb.settings({experimentalAutoDetectLongPolling:true});}catch(e){console.warn('Firestore settings:',e);}
     fbDocId=cfg.docId||'default';
     return true;
   }catch(e){
@@ -1542,18 +1558,9 @@ async function saveFbCfg(){
   showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
   try{
     const result=await fbLoad();
-    fbLoaded=true;           /* fbLoad() ผ่าน = อ่าน cloud สำเร็จ (ไม่มีข้อมูลก็ถือว่าอ่านได้) */
-    const pend=fbApplyPending(result&&result.data);
-    if(result&&result.data){
-      showFbStatus('เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล...','ok');
-      loadAllFromFB(result.data,result.lastSaved);
-    }else{
-      showFbStatus('เชื่อมต่อสำเร็จ! ยังไม่มีข้อมูลใน Firebase','ok');
-      fbLastKnownTs=null;
-      setSyncSt('fb_ok');
-    }
+    showFbStatus(result&&result.data?'เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล...':'เชื่อมต่อสำเร็จ! ยังไม่มีข้อมูลใน Firebase','ok');
+    fbFirstLoad(result);
     fbStartListener();
-    fbFlushPending(pend);
     setTimeout(closeFbCfg,1200);
   }catch(e){
     showFbStatus('เชื่อมต่อไม่ได้: '+e.message+' — ตรวจสอบ Config และ Firestore Rules','err');
@@ -1564,7 +1571,10 @@ function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   /* เลิกใช้ doc นี้แล้ว — ของค้างไม่ควรไปทับ cloud ถ้ากลับมาเชื่อมใหม่อีกนานหลังจากนี้ (ต้องทำก่อนรีเซ็ต fbDocId) */
   fbPendPut({});fbPendSeq={};
-  fbDb=null;fbCfg=null;fbDocId='default';fbLastKnownTs=null;fbLoaded=false;
+  /* หลังจากนี้แก้ในเครื่องอย่างเดียว — ถ้ากลับมาเชื่อม doc เดิม ต้องถามก่อนว่าจะส่งของในเครื่องขึ้นไหม
+     ไม่ใช่ถือว่า cloud ถูกเสมอแล้วลบเดือนที่เพิ่งทำแบบ local ทิ้ง */
+  fbSyncedSet(false);
+  fbDb=null;fbCfg=null;fbDocId='default';fbLoaded=false;
   fbKnownMonths=new Set();pendingRemote=null;
   const cb=ge('conflictBanner');if(cb)cb.style.display='none';
   try{localStorage.removeItem(FB_CFG_KEY);}catch(e){}
@@ -1596,8 +1606,7 @@ function copyFbShareLink(){
 async function fbSave(){
   if(!fbDb)return;
   return fbBusyRun(async()=>{
-  const ts=fbMarkOwn(fbTs());
-  fbLastKnownTs=ts;
+  const ts=fbTs();
   const seq=fbPendMark(Object.keys(DB));
   await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
   fbPendDone(seq);
@@ -1608,8 +1617,7 @@ async function fbSave(){
 async function fbSaveMonth(ym){
   if(!fbDb||!ym)return;
   return fbBusyRun(async()=>{
-  const ts=fbMarkOwn(fbTs());
-  fbLastKnownTs=ts;
+  const ts=fbTs();
   fbKnownMonths.add(ym);
   const seq=fbPendMark([ym]);
   const ref=fbDb.collection('salary_data').doc(fbDocId);
@@ -1632,8 +1640,7 @@ const fbErrNotFound=e=>{
 async function fbDeleteMonth(ym){
   if(!fbDb||!ym)return;
   return fbBusyRun(async()=>{
-  const ts=fbMarkOwn(fbTs());
-  fbLastKnownTs=ts;
+  const ts=fbTs();
   fbKnownMonths.delete(ym);
   const seq=fbPendMark([ym]);
   try{
@@ -1675,7 +1682,7 @@ async function fbFlushPending(yms){
     toast(`⚠️ มีข้อมูลที่แก้ไว้รอบก่อนแต่ยังขึ้น cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลยังอยู่ในเครื่อง จะลองส่งใหม่เมื่อเปิดหน้าครั้งถัดไป`,'te');
   }else{
     setSyncSt('fb_ok');if(lastTs)setBadge(lastTs,'fb');
-    toast(`🔥 ส่งข้อมูลที่ค้างจากรอบก่อนขึ้น cloud แล้ว ${yms.length} เดือน`);
+    toast(`🔥 ส่งข้อมูลในเครื่องขึ้น cloud แล้ว ${yms.length} เดือน`);
   }
 }
 
@@ -1686,33 +1693,76 @@ async function fbLoad(){
   return snap.data();
 }
 
+/* ── โหลด cloud ครั้งแรกของรอบนี้ (เปิดหน้า · ตั้งค่า Firebase ใหม่ · listener ได้ข้อมูลครั้งแรกหลังโหลดหมดเวลา) ──
+   ตอนนี้ DB ยังเป็นของ localStorage อยู่ — ต้องตัดสินใจว่าเดือนที่ "มีแค่ในเครื่อง" จะเอาไงก่อนเอา cloud มาใส่
+   เดิมเอา cloud มาทับเฉพาะเดือนที่ cloud มี เดือนที่มีแค่ในเครื่องค้างอยู่ตลอดกาลแต่ไม่เคยขึ้น cloud
+   (ใช้แบบ local มาก่อนต่อ Firebase · เครื่องอื่นลบเดือนนั้นไปตอนเครื่องนี้ปิดอยู่)
+   = แต่ละเครื่องเห็นข้อมูลไม่เหมือนกัน และไม่มีวันกลับมาตรงกันเอง */
+function fbFirstLoad(result){
+  fbLoaded=true;           /* อ่าน cloud สำเร็จแล้ว (ไม่มีข้อมูลก็ถือว่าอ่านได้) */
+  const data=(result&&result.data&&typeof result.data==='object')?result.data:{};
+  const pend=fbApplyPending(data);   /* ของค้างจากรอบก่อนชนะของ cloud */
+  const localOnly=Object.keys(DB).filter(ym=>!(ym in data)&&!pend.includes(ym)).sort();
+  const withData=localOnly.filter(ym=>recHasData(DB[ym]));
+  let upload=[],decided=true;
+  if(fbSyncedAll()[fbDocId]){
+    /* เคยตรงกับ cloud แล้ว — มีแค่ในเครื่อง = เครื่องอื่นลบทิ้งไปแล้ว */
+    localOnly.forEach(ym=>delete DB[ym]);
+  }else if(withData.length){
+    const list=withData.slice(0,12).map(ymLabel).join(', ')+(withData.length>12?` …อีก ${withData.length-12} เดือน`:'');
+    if(confirm(`เครื่องนี้มีข้อมูล ${withData.length} เดือนที่ยังไม่อยู่บน Firebase (doc "${fbDocId}"):\n${list}\n\n`
+      +`ตกลง = ส่งขึ้น cloud ให้ทุกเครื่องเห็นตรงกัน\nยกเลิก = ยังไม่ส่ง (เก็บไว้ในเครื่องนี้ และจะถามอีกครั้งตอนเปิดครั้งหน้า)`)){
+      upload=withData;
+    }else decided=false;
+  }
+  if(upload.length)fbPendMark(upload);   /* จดก่อนส่ง — ปิดแท็บกลางทางแล้วเปิดใหม่จะส่งต่อให้เอง */
+  if(decided)fbSyncedSet(true);
+  loadAllFromFB(data,result&&result.lastSaved);
+  fbFlushPending([...pend,...upload]);
+}
+
+/* ── รับ snapshot จาก cloud (listener · ดึงซ้ำตอนกลับมาที่แท็บ) ── */
+function fbHandleSnap(snap){
+  if(!fbLoaded){
+    /* โหลดครั้งแรกยังไม่ผ่าน (หมดเวลา/เน็ตหลุดตอนเปิด) — snapshot แรกจาก server คือการโหลดครั้งแรก
+       ข้อมูลจาก cache ไม่นับ เพราะอาจไม่ครบ */
+    if(snap.metadata&&snap.metadata.fromCache)return;
+    fbFirstLoad(snap.exists?snap.data():null);
+    return;
+  }
+  if(!snap.exists){fbKnownMonths=new Set();return;}
+  const d=snap.data();
+  if(!d||!d.data||typeof d.data!=='object')return;
+  fbSyncFromRemote(d.data,d.lastSaved);
+}
+
 /* ติดตั้ง realtime listener — อัปเดตทันทีเมื่อเครื่องอื่นบันทึกข้อมูล */
 function fbStartListener(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   if(!fbDb)return;
-  fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(snap=>{
-    if(!snap.exists){fbKnownMonths=new Set();return;}
-    const d=snap.data();
-    if(!d||!d.data)return;
-    const remoteMonths=new Set(Object.keys(d.data));
-    /* ข้ามถ้า timestamp ตรงกับที่เราโหลดหรือบันทึกไปแล้ว แต่อย่าลืม sync known-months ด้วย
-       เงื่อนไขที่สอง (echoWindow) แก้อาการ "ลบหลายเดือนแล้วไม่หมด":
-       ตอนวนเขียนทีละเดือน (ลบรายการข้ามเดือน / ล้างทั้งปี / ส่งต่อ / ไหลเงินเดือนฐาน)
-       fbLastKnownTs ถูกทับเป็น ts ของรอบล่าสุดไปแล้ว ส่วน Firestore ยุบ snapshot แล้วส่งกลับมาทีหลัง
-       การเทียบ === จึงพลาด แล้วตีความว่า "มีคนแก้จากอีกเครื่อง" → fbSyncFromRemote() เอา DB
-       เวอร์ชันเก่าจาก cloud มาทับ เดือนที่ยังไม่ได้ push จึงได้รายการที่เพิ่งลบกลับคืนมา
-       แล้ววนเขียนขึ้น cloud ซ้ำ = ลบไม่หมด
-       ts รูปแบบ 'YYYY-MM-DD HH:MM:SS.mmm' ความกว้างคงที่ เทียบสตริง = เทียบเวลา
-       จำกัดไว้แค่ 1 นาทีหลังเราเขียนเอง เพื่อไม่ให้เครื่องที่นาฬิกาเดินช้ากว่าถูกเมินถาวร */
-    const echoWindow=fbOwnTs&&(Date.now()-fbOwnAt<FB_ECHO_MS)&&d.lastSaved<=fbOwnTs;
-    if(d.lastSaved&&(d.lastSaved===fbLastKnownTs||echoWindow)){fbKnownMonths=remoteMonths;return;}
-    /* timestamp ใหม่ — มาจากเครื่องอื่น */
-    fbLastKnownTs=d.lastSaved||null;
-    fbSyncFromRemote(d.data,d.lastSaved,remoteMonths);
-  },err=>{
+  fbUnsubscribe=fbDb.collection('salary_data').doc(fbDocId).onSnapshot(fbHandleSnap,err=>{
+    /* listener ที่ error แล้วจะตายถาวร (SDK ไม่ต่อให้เอง) — ปล่อย fbUnsubscribe ว่างไว้ให้ fbResync() ติดใหม่ */
     console.warn('Firebase onSnapshot error:',err);
+    fbUnsubscribe=null;
     setSyncSt('fb_error',err.message);
   });
+}
+
+/* ── ดึงข้อมูลล่าสุดซ้ำเมื่อกลับมาที่แท็บ / เน็ตกลับมา ──
+   มือถือพักแท็บเบื้องหลังนานๆ แล้วการเชื่อมต่อ realtime ค้าง (ไม่ error แต่ก็ไม่ได้อะไรใหม่)
+   หรือ listener ตายไปแล้ว หรือโหลดครั้งแรกไม่ผ่าน — เดิมไม่มีอะไรมาดึงใหม่เลยจนกว่าจะรีเฟรชหน้าเอง */
+let _fbResyncAt=0,_fbResyncing=false;
+async function fbResync(force){
+  if(!fbDb||!fbReady||_fbResyncing)return;
+  if(!force&&Date.now()-_fbResyncAt<5000)return;
+  _fbResyncAt=Date.now();_fbResyncing=true;
+  try{
+    if(!fbUnsubscribe)fbStartListener();
+    const snap=await fbDb.collection('salary_data').doc(fbDocId).get({source:'server'});
+    fbHandleSnap(snap);
+    if(_syncSt==='fb_error'&&!_fbBusy&&!fbHasPending())setSyncSt('fb_ok');   /* ต่อได้แล้ว — ล้างสถานะ error เก่า */
+  }catch(e){console.warn('Firebase resync failed:',e);}
+  finally{_fbResyncing=false;}
 }
 
 function loadAllFromFB(data,lastSaved){
@@ -1723,9 +1773,8 @@ function loadAllFromFB(data,lastSaved){
       normDays(rec);
       DB[ym]=rec;
     });
-    lsSet(SK,JSON.stringify(DB));
   }
-  fbLastKnownTs=lastSaved||null;
+  lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
   setBadge(lastSaved||null,'fb');
   buildYearSel();                 /* cloud อาจมีปีที่ dropdown ยังไม่มีตัวเลือกให้ */
@@ -1733,33 +1782,43 @@ function loadAllFromFB(data,lastSaved){
   toast('🔥 โหลดข้อมูลจาก Firebase สำเร็จ!');
 }
 
-/* อัปเดตข้อมูลจากเครื่องอื่น — refresh form ถ้าไม่ dirty, มิฉะนั้นแสดง banner ให้ user เลือก */
-function fbSyncFromRemote(data,lastSaved,remoteMonths){
+/* อัปเดตข้อมูลจาก cloud — refresh form ถ้าไม่ dirty, มิฉะนั้นแสดง banner ให้ user เลือก
+   เทียบทีละเดือนแทนการเทียบ lastSaved กับ "ts ที่เราเขียนเอง" แบบเดิม
+   · ts มาจากนาฬิกาของแต่ละเครื่อง ถ้าอีกเครื่องนาฬิกาช้ากว่า การเขียนของมันถูกมองเป็น echo ของเราแล้วทิ้ง
+   · snapshot ที่มีการเขียนของเราค้างอยู่ จะได้ lastSaved ของเราทับ ทั้งที่ข้างในมีของเครื่องอื่นปนมาด้วย
+   ทั้งสองกรณีทำให้ "แก้อีกเครื่องแล้วเครื่องนี้ไม่ update"
+   เดือนที่เครื่องนี้ยังเขียนขึ้นไม่เสร็จ (ค้างใน fbPendGet) ให้ค่าในเครื่องชนะเสมอ
+   ไม่งั้น snapshot ที่มาก่อนการเขียนของเราจะเอาของเก่ามาทับ (อาการ "ลบหลายเดือนแล้วไม่หมด" เดิม) */
+function fbSyncFromRemote(data,lastSaved){
   if(!data||typeof data!=='object')return;
-  if(!remoteMonths)remoteMonths=new Set(Object.keys(data));
-  const curYm=ymk(CT);
-  const remoteCur=data[curYm];
-  const localCur=DB[curYm];
-  const curChanged=CT!==12 && JSON.stringify(remoteCur||null)!==JSON.stringify(localCur||null);
-
-  /* merge ทุกเดือนที่ remote ส่งมา */
+  const pend=fbPendGet();
+  const remoteMonths=new Set(Object.keys(data));
+  const changed=[];
   Object.keys(data).forEach(ym=>{
+    if(pend[ym])return;
     const rec=data[ym];
+    if(!rec||typeof rec!=='object')return;
     normDays(rec);
-    DB[ym]=rec;
+    if(stableStr(rec)!==stableStr(DB[ym]||null)){DB[ym]=rec;changed.push(ym);}
   });
-  /* ลบเฉพาะเดือนที่เคยอยู่ใน Firebase แต่หายไป (= มีคนกด reset/delete จากอีกเครื่อง) — ไม่ลบเดือนที่เป็น local-only */
+  /* ลบเฉพาะเดือนที่เคยอยู่ใน Firebase แต่หายไป (= มีคนกด reset/delete จากอีกเครื่อง) — ไม่ลบเดือนที่กำลังส่งขึ้น */
   Object.keys(DB).forEach(ym=>{
-    if(fbKnownMonths.has(ym)&&!remoteMonths.has(ym))delete DB[ym];
+    if(fbKnownMonths.has(ym)&&!remoteMonths.has(ym)&&!pend[ym]){delete DB[ym];changed.push(ym);}
   });
+  /* เดือนที่เรากำลังเขียนขึ้นยังนับว่าอยู่บน cloud — snapshot ถัดไปที่ไม่มีมัน = ถูกลบจากที่อื่นจริง */
+  Object.keys(pend).forEach(ym=>{if(DB[ym])remoteMonths.add(ym);});
   fbKnownMonths=remoteMonths;
+  if(!changed.length)return;      /* echo ของการเขียนเราเอง หรือไม่มีอะไรใหม่ */
+
   lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
-  setBadge(lastSaved||null,'fb');
+  if(lastSaved)setBadge(lastSaved,'fb');
   buildYearSel();                 /* เครื่องอื่นอาจเพิ่มปีใหม่เข้ามา (วาดใหม่เฉพาะตอนช่วงปีเปลี่ยน) */
   updateDots();
 
-  if(curChanged){
+  if(CT===12){renderSum();toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');return;}
+  const curYm=ymk(CT);
+  if(changed.includes(curYm)){
     if(formDirty){
       pendingRemote={ym:curYm};
       showConflictBanner();
@@ -1851,22 +1910,16 @@ async function restore(){
     try{
       const fbTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
       const result=await Promise.race([fbLoad(),fbTimeout]);
-      fbLoaded=true;           /* อ่าน cloud สำเร็จแล้ว — DB ในเครื่องถือว่าครบพอจะเขียนทับได้ */
-      const pend=fbApplyPending(result&&result.data);   /* ของค้างจากรอบก่อนชนะของ cloud */
-      if(result&&result.data){
-        loadAllFromFB(result.data,result.lastSaved);
-        fbStartListener();
-        fbFlushPending(pend);
-        return true;
-      }
-      fbLastKnownTs=null;
-      setSyncSt('fb_ok');
+      fbFirstLoad(result);
       fbStartListener();
-      fbFlushPending(pend);
+      return !!(result&&result.data);
     }catch(e){
-      const msg=e.message==='timeout'?'Firebase หมดเวลาเชื่อมต่อ — ใช้ข้อมูล local แทน':'โหลดไม่ได้ — ใช้ข้อมูล local แทน';
+      const msg=e.message==='timeout'?'Firebase หมดเวลาเชื่อมต่อ — ใช้ข้อมูล local ไปก่อน':'โหลดไม่ได้ — ใช้ข้อมูล local ไปก่อน';
       setSyncSt('fb_error',msg);
       console.warn('Firebase restore failed:',e);
+      /* เดิมหมดเวลาแล้วจบเลย — เครื่องนี้ค้างอยู่กับข้อมูลในเครื่องจนกว่าจะรีเฟรชเอง และไม่รับอัปเดตจากเครื่องอื่นอีก
+         ติด listener ไว้ต่อ snapshot แรกที่มาถึงจะทำหน้าที่โหลดครั้งแรกแทน (fbHandleSnap → fbFirstLoad) */
+      fbStartListener();
     }
   }
 
@@ -5602,7 +5655,10 @@ syncTopbar();
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'&&CT!==12)saveM();
+  else if(document.visibilityState==='visible')fbResync();   /* กลับมาที่แท็บ — ดึงของล่าสุดจากเครื่องอื่น */
 });
+window.addEventListener('online',()=>fbResync(true));
+window.addEventListener('pageshow',e=>{if(e.persisted)fbResync(true);});   /* กลับมาจาก back/forward cache */
 /* ปิดแท็บ/รีเฟรช ตอนที่ยังเขียนขึ้น cloud ไม่เสร็จ — ให้เบราว์เซอร์ถามยืนยันก่อน
    beforeunload มาก่อน visibilitychange จึงสั่ง saveM() ที่นี่เองถ้าฟอร์มยังไม่ได้บันทึก
    ไม่งั้นการเขียนรอบสุดท้ายจะเริ่มหลังด่านนี้ไปแล้ว ไม่มีใครเตือน
