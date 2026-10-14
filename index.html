@@ -187,12 +187,14 @@ td input.mi.m3{border-color:#f6ad55;background:#fffaf0}
 .osb .ost{font-size:.75rem;font-weight:700;margin-bottom:3px}.osb .osm{font-size:1rem;font-weight:800}.osb .osh{font-size:.75rem;color:#718096;margin-top:2px}
 .c15{color:#2b6cb0}.c20{color:#276749}.c30{color:#c05621}
 .btnrow{display:grid;grid-template-columns:1fr 130px;gap:8px;margin-top:4px}
-.savbtn{padding:10px 12px;border:1.5px solid #48bb78;border-radius:9px;background:white;color:#276749;font-size:.88rem;font-weight:700;cursor:pointer;transition:background .15s}
-.savbtn:hover{background:#f0fff4}
+.savbtn{padding:8px 10px;border:1.5px solid #9ae6b4;border-radius:9px;background:#f0fff4;color:#276749;font-size:.8rem;font-weight:700;line-height:1.3;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.savbtn:hover{filter:brightness(.97)}
+.savbtn.dirty{border-color:#fbd38d;background:#fffaf0;color:#b7791f}
+.savbtn.saving{border-color:#90cdf4;background:#ebf8ff;color:#2b6cb0}
+.savbtn.blocked{border-color:#feb2b2;background:#fff5f5;color:#c53030}
 .calcbtn{padding:14px;border:none;border-radius:9px;background:linear-gradient(135deg,#2b6cb0,#4299e1);color:white;font-size:.98rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(66,153,225,.35);letter-spacing:.01em;transition:opacity .15s}
 .calcbtn:hover{opacity:.92}
 .rstbtn{width:100%;padding:8px;border:1.5px solid #cbd5e0;border-radius:9px;background:white;color:#718096;font-size:.85rem;font-weight:600;cursor:pointer;margin-top:6px}
-#savSt{text-align:center;font-size:.82rem;font-weight:600;height:22px;line-height:22px;transition:opacity .6s;opacity:0;margin-top:2px}
 #res{display:none;margin-top:16px}
 .thbox{background:linear-gradient(135deg,#1a365d,#2b6cb0);border-radius:10px;padding:16px 20px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .thbox .thleft .thtitle{font-size:.9rem;color:rgba(255,255,255,.85);font-weight:700;margin-bottom:3px}
@@ -797,9 +799,9 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
 
   <div class="btnrow">
     <button class="calcbtn" onclick="doCalc()">🧮 คำนวณเงินเดือน</button>
-    <button class="savbtn" onclick="saveM(true)">💾 บันทึก</button>
+    <!-- บันทึกอัตโนมัติแล้ว — ปุ่มนี้เป็นตัวบอกสถานะ (กดเพื่อบันทึกทันทีได้ ไม่ต้องรอ) -->
+    <button id="savSt" class="savbtn" onclick="saveM(true)" title="บันทึกอัตโนมัติหลังหยุดพิมพ์ — กดเพื่อบันทึกทันที">✅ บันทึกอัตโนมัติ</button>
   </div>
-  <div id="savSt"></div>
   <button class="rstbtn" onclick="resetM()">🔄 ล้างข้อมูลเดือนนี้</button>
 
   <!-- ── Result ── -->
@@ -2255,6 +2257,23 @@ function refreshFlowTL(){
 }
 let _ckSt;
 function ckAutoSave(){clearTimeout(_ckSt);_ckSt=setTimeout(()=>saveM(),800);}
+/* ── บันทึกอัตโนมัติ ──
+   เดิมสิ่งที่พิมพ์ในช่องต่างๆ บันทึกก็ต่อเมื่อกด 💾 / สลับเดือน / ออกจากหน้า
+   พิมพ์ค้างไว้แล้ววางเครื่อง อีกเครื่องจึงไม่เห็นอะไรเลย — ตอนนี้บันทึกเองหลังหยุดพิมพ์ 1.5 วินาที
+   หน่วงไว้ ไม่บันทึกทุกตัวอักษร (ไม่เขียน Firebase ถี่เกิน) ใช้ตัวจับเวลาเดียวกับ ckAutoSave
+   loadMonth() จึงยกเลิกให้เองตอนสลับเดือน (ไม่งั้นจะไปบันทึกทับเดือนใหม่) */
+const AUTOSAVE_MS=1500;
+function autoSaveSoon(retry){
+  clearTimeout(_ckSt);
+  if(!retry)savPill('dirty');
+  _ckSt=setTimeout(()=>{if(formDirty&&CT!==12)saveM();},retry?3000:AUTOSAVE_MS);
+}
+/* ป้ายสถานะแทนปุ่ม 💾 — dirty = รอบันทึก · saving · saved · blocked = บันทึกไม่ได้ตอนนี้ · idle */
+function savPill(state,txt){
+  const el=ge('savSt');if(!el)return;
+  el.className='savbtn'+(state==='dirty'||state==='saving'||state==='blocked'?' '+state:'');
+  el.textContent=txt||{dirty:'✏️ รอบันทึก…',saving:'💾 กำลังบันทึก…',saved:'✅ บันทึกแล้ว',idle:'✅ บันทึกอัตโนมัติ',blocked:'⚠️ ยังไม่ได้บันทึก'}[state]||'';
+}
 
 /* นับเฉพาะแถวที่มียอดจริง (>0) — แถวเปล่าหรือแถวที่มีแต่ชื่อยังไม่ต้องไปจัดการอะไร
    เกณฑ์เดียวกับที่ผลคำนวณและ context ของ AI ใช้กรอง */
@@ -2669,11 +2688,12 @@ function ymk(mi){return `${CY}-${p2(mi+1)}`;}
 function saveM(fb=false){
   if(CT===12)return;
   /* กัน initial-load race — Firebase ยังโหลดไม่เสร็จ ห้าม save ทับ */
-  if(fbDb&&!fbReady){if(fb)toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(fbDb&&!fbReady){if(fb)toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');if(formDirty){savPill('blocked','⏳ รอโหลด cloud');autoSaveSoon(true);}return;}
   /* มี remote update ค้างอยู่ — ให้ user ตัดสินใจก่อน */
   const ymCur=ymk(CT);
   if(pendingRemote&&pendingRemote.ym===ymCur){
     if(fb){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อนบันทึก');ge('conflictBanner')?.scrollIntoView({behavior:'smooth',block:'center'});}
+    if(formDirty)savPill('blocked','⚠️ รอเลือกข้อมูลที่ขัดแย้ง');
     return;
   }
   /* autosave ห้ามชุบชีวิตเดือนที่เพิ่งล้างไป — กดปุ่ม 💾 เอง (fb=true) ยังบันทึกได้ตามปกติ */
@@ -2706,11 +2726,11 @@ function saveM(fb=false){
   updateDots();
   const pr=persist();             /* คืนออกไปด้วย — คนที่เขียนหลายเดือนต่อจะได้รอให้เดือนนี้เสร็จก่อน
                                      ไม่งั้นสถานะ sync ของเดือนนี้จะมาทับผลลัพธ์ของทั้งชุดทีหลัง */
-  if(fb){
-    const ts=p2(new Date().getHours())+':'+p2(new Date().getMinutes());
-    const el=ge('savSt');el.textContent=`✅ บันทึกแล้ว เวลา ${ts}`;el.style.color='#48bb78';el.style.opacity='1';
-    setTimeout(()=>{el.style.opacity='0';},3000);
-  }
+  clearTimeout(_ckSt);             /* บันทึกไปแล้ว — autosave ที่ตั้งค้างไว้ไม่ต้องยิงซ้ำ */
+  const ts=p2(new Date().getHours())+':'+p2(new Date().getMinutes());
+  if(ymk(CT)===ym)savPill('saving');
+  /* switchTab() บันทึกเดือนเก่าก่อนเปิดเดือนใหม่ — ป้ายต้องไม่ไปขึ้น "บันทึกแล้ว" บนเดือนที่เพิ่งเปิด */
+  Promise.resolve(pr).then(()=>{if(!formDirty&&ymk(CT)===ym&&CT!==12)savPill('saved',`✅ บันทึกแล้ว ${ts}`);},()=>{});
   return pr;
 }
 
@@ -2754,13 +2774,18 @@ function baseFollowingSameBase(fromYm,oldBase){
   return out;
 }
 function ymLabel(ym){const[y,m]=ym.split('-').map(Number);return (MS[m-1]||'?')+' '+y;}
+/* เงินเดือนฐาน "ก่อนแก้" ของเดือนที่เปิดอยู่ — null = เดือนนี้ยังไม่เคยบันทึกตอนเปิดมา
+   ต้องจำแยกไว้ ห้ามอ่านจาก DB: บันทึกอัตโนมัติเขียนค่าใหม่ลง DB ระหว่างพิมพ์ไปก่อนแล้ว
+   พอ onchange ยิง ค่าใน DB = ค่าใหม่ กล่องถามว่าจะไหลไปเดือนถัดไปไหมจะไม่มีวันขึ้น */
+let _baseOld=null;
 /* เรียกเมื่อช่องเงินเดือนฐาน "commit" (blur/enter) — ถามว่าจะไหลไปเดือนถัดไปไหม */
 function onBaseCommit(){
   if(CT<0||CT>=12)return;
-  const ym=ymk(CT);const rec=DB[ym];
-  if(!rec)return;                                  /* เดือนนี้ยังไม่เคยบันทึก — ข้าม */
-  const oldBase=nf(rec.base),newBase=num('fBase');
-  if(!oldBase||!newBase||newBase===oldBase)return; /* ไม่เปลี่ยน หรือค่าว่าง — ข้าม */
+  const ym=ymk(CT);
+  const oldBase=_baseOld,newBase=num('fBase');
+  if(oldBase===null){_baseOld=newBase||null;return;}   /* เดือนนี้ยังไม่เคยบันทึก — ข้าม */
+  if(!oldBase||!newBase||newBase===oldBase){_baseOld=newBase||oldBase;return;} /* ไม่เปลี่ยน หรือค่าว่าง — ข้าม */
+  _baseOld=newBase;                                /* ตอบอะไรก็ตาม ครั้งถัดไปเทียบจากค่านี้ (ยกเลิก = คืนค่าเดิมให้เอง) */
   const targets=baseFollowingSameBase(ym,oldBase);
   if(!targets.length)return;                       /* ไม่มีเดือนถัดไปที่ใช้ค่าเดิม */
   _baseProp={ym,newBase,oldBase,targets};
@@ -2774,7 +2799,9 @@ function basePropCancel(){
   const d=_baseProp;ge('basePropModal').classList.remove('open');_baseProp=null;
   if(!d)return;
   sv('fBase',String(d.oldBase));
+  _baseOld=d.oldBase;
   onBaseChg();
+  formDirty=true;saveM();          /* บันทึกอัตโนมัติอาจเขียนค่าใหม่ลงไปแล้ว — เขียนค่าเดิมกลับ */
 }
 async function basePropYes(){
   const d=_baseProp;ge('basePropModal').classList.remove('open');_baseProp=null;
@@ -2808,10 +2835,11 @@ function loadMonth(mi){
   const ym=ymk(mi);sv('fPrd',ym);buildOT();
   if(_blankYm&&_blankYm!==ym)_blankYm=null;   /* ย้ายเดือนแล้ว — สถานะ "เพิ่งล้าง" หมดอายุ */
   sortResetAll();                            /* ลำดับเดิมของเดือนก่อนใช้กับเดือนนี้ไม่ได้ */
-  ge('res').style.display='none';ge('savSt').style.opacity='0';
+  ge('res').style.display='none';savPill('idle');
   const _tl=ge('flowTL');if(_tl)_tl.innerHTML='';
   formDirty=false;
   const rec=DB[ym];
+  _baseOld=rec?nf(rec.base):null;
   if(rec){
     sv('fBase',rec.base);sv('fSso',rec.sso);sv('fPvd',rec.pvd);
     /* ต่างจาก SSO/กองทุนฯ ข้างล่าง — ช่องนี้ "เคารพการล้างค่า" ตามที่ buildCopyRec() ยึดไว้
@@ -3244,8 +3272,10 @@ function rowDelInfo(m,it){
 /* เขียนผลการลบกลับเข้าฟอร์ม — ถ้ามีแถวหายไปจริง เดือนนี้ก็ไม่ใช่ "เดือนที่เพิ่งล้างแล้วยังไม่แตะ" อีกต่อไป
    (ไม่งั้น autosave จะข้ามการบันทึก แล้วการลบของเดือนนี้หายไปตอนสลับแท็บ) */
 function rowDelApply(m,out){
-  if(out.length!==(m.get()||[]).length)_blankYm=null;
+  const ch=out.length!==(m.get()||[]).length;
+  if(ch)_blankYm=null;
   m.set(out);m.re();
+  if(ch){formDirty=true;autoSaveSoon();}
 }
 /* ลบออกจากฟอร์มเดือนนี้จริงๆ — พฤติกรรมเดิมก่อนมีกล่องยืนยัน */
 function rowDelNow(m,id){rowDelApply(m,m.get().filter(x=>x&&x.id!==id));}
@@ -5675,7 +5705,7 @@ window.addEventListener('beforeunload',e=>{
   ge('mv')?.addEventListener(ev,e=>{
     if(CT===12)return;
     const t=e.target;
-    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA')){formDirty=true;_blankYm=null;}
+    if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA')){formDirty=true;_blankYm=null;autoSaveSoon();}
   });
 });
 
