@@ -695,7 +695,7 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
       <div class="ckbar" id="ckbar_P"></div>
       <div id="pList"></div>
       <button class="addbtn in" onclick="addP()">＋ เพิ่มรายการผ่อน / ประกัน</button>
-      <button class="pfwd-btn" id="pFwdBtn" onclick="openPlanFwd()" style="display:none" title="เดือนที่บันทึกไว้แล้วจะไม่ได้แผนนี้อัตโนมัติ — กดเพื่อส่งไปให้">📤 ส่งแผนนี้ไปเดือนถัดๆ ไป</button>
+      <button class="pfwd-btn" id="pFwdBtn" onclick="openPlanFwd()" style="display:none" title="ส่งแผนไปเดือนถัดๆ ไป — รายการผ่อนส่งครบตามจำนวนงวดที่เหลือ (เดือนที่ยังไม่เคยเปิดจะถูกสร้างให้)">📤 ส่งแผนนี้ไปเดือนถัดๆ ไป</button>
     </div>
   </div>
 
@@ -1087,7 +1087,7 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
     <div class="modal-title">📤 ส่งแผนผ่อน &amp; ประกันไปเดือนถัดๆ ไป</div>
     <div id="pfText" class="modal-sub" style="font-size:.86rem;color:#4a5568;line-height:1.7"></div>
     <div id="pfList" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin:12px 0;font-size:.82rem;font-weight:700;color:#434190;line-height:1.8;max-height:210px;overflow-y:auto"></div>
-    <div style="font-size:.73rem;color:#718096;margin-bottom:16px;line-height:1.6">ส่งไปเฉพาะ<strong>เดือนที่บันทึกไว้แล้ว</strong> เพราะเดือนที่ยังไม่เคยเปิดจะได้แผนนี้อัตโนมัติอยู่แล้ว · รายการเดิมจะถูก<strong>อัปเดตงวด</strong> ไม่สร้างซ้ำ</div>
+    <div id="pfNote" style="font-size:.73rem;color:#718096;margin-bottom:16px;line-height:1.6"></div>
     <div class="modal-btns">
       <button class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="planFwdYes()">✅ ส่งเลย</button>
       <button class="mbtn-cancel" onclick="planFwdNo()">ยกเลิก</button>
@@ -1101,6 +1101,12 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
     <div class="modal-title" id="xfTitle">📤 ส่งรายการนี้ไปเดือนถัดๆ ไป</div>
 
     <div id="xfHead" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+
+    <!-- เฉพาะแผนผ่อน (installment) — ช่วงส่ง = จำนวนงวดที่เหลือพอดี -->
+    <label id="xfRowTerm" style="display:none;align-items:center;gap:9px;border:1px solid #9ae6b4;background:#f0fff4;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+      <input type="radio" name="xfMode" id="xfModeTerm" onchange="rowFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748;line-height:1.5"><strong id="xfTermTxt">ตามจำนวนงวดผ่อนที่เหลือ</strong><span id="xfTermSub" style="display:block;font-size:.75rem;color:#4a5568"></span></span>
+    </label>
 
     <label id="xfRowYear" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
       <input type="radio" name="xfMode" id="xfModeYear" checked onchange="rowFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
@@ -2137,7 +2143,7 @@ function updPlan(){
   const nRec=arr.filter(x=>planTy(x.type)==='recurring'&&planAmt(x)>0).length;
   const cnt=[nIns?`ผ่อน ${nIns} รายการ`:'',nRec?`ประกัน/สะสม ${nRec} รายการ`:''].filter(Boolean).join(' · ');
   const fb=ge('pFwdBtn');
-  if(fb)fb.style.display=(tot>0&&CT>=0&&CT<12&&planFwdTargets(ymk(CT)).length)?'':'none';
+  if(fb)fb.style.display=(tot>0&&CT>=0&&CT<12&&planFwdTargets(ymk(CT),arr).length)?'':'none';
   el.innerHTML=`ภาระผูกพันคงที่เดือนนี้ = <strong class="pln-total-val">${fmt(tot)}</strong>${cnt?` &nbsp;|&nbsp; ${cnt}`:''}`
     +`<br><strong>เงินเหลือใช้จริง (Free Cash Flow)</strong> = <strong class="pln-fcf-val${fcf<0?' neg':''}">${fmt(fcf)}</strong>`
     +`<br><span style="font-size:.7rem">= รับจริง ${fmt(net)} − ผ่อน/ประกัน ${fmt(tot)} − หักคงที่ 🔒 ${fmt(fixDed)} − แบ่งลงทุน ${fmt(inv)}`
@@ -2926,6 +2932,27 @@ function prevRecFor(ym){
 }
 function getPrev(mi){return prevRecFor(ymk(mi));}
 
+/* record ของเดือนที่ยังไม่เคยเปิด — หน้าตาเดียวกับที่ loadM() สร้างให้ตอนเปิดเดือนนั้นครั้งแรก
+   (สาขา else ของ loadMonth: ลอกเงินเดือนฐาน + โครงรายการเปล่า + เดินงวดแผนผ่อนจากเดือนก่อนหน้า)
+   ใช้ตอน 📤 ส่งแผนผ่อน "ตามจำนวนงวด" ซึ่งต้องสร้างเดือนข้างหน้าให้ครบทุกงวด
+   ถ้าแก้กติกาเดือนใหม่ใน loadMonth ต้องแก้ตรงนี้ด้วย ไม่งั้นเดือนที่สร้างล่วงหน้าจะต่างจากเดือนที่เปิดเอง
+   รายการโบนัสไม่ต้องใส่ — loadM() เติมให้เองทุกครั้งที่เปิดเดือนโบนัส */
+function newMonthRec(ym){
+  const pd=payDate(ym),pv=prevRecFor(ym);
+  const rec={base:'',baseDt:pd,sso:'',pvd:'',ssoDt:pd,pvdDt:pd,ssoDn:false,pvdDn:false,
+    wkb:'',wkbDef:_wkbDef,a:anchorDates(defA(),ym,ym,true),d:anchorDates(defD(),ym,ym,true),
+    i:defI(),o:defO(),p:defP(),days:{}};
+  if(!pv)return rec;
+  const s=pv.ym,prev=pv.rec;
+  rec.base=prev.base||'';
+  rec.a=anchorDates(blankItems((prev.a||defA()).filter(x=>x.id!==BONUS_ID)),s,ym,true);
+  rec.d=anchorDates(blankItems((prev.d||defD()).filter(x=>x.id!==BONUS_TAX_ID)),s,ym,true);
+  rec.i=anchorDates(blankItems(prev.i||defI()),s,ym,false);
+  rec.o=anchorDates(blankItems(prev.o||defO()),s,ym,false);
+  rec.p=forwardPlans(prev.p,s,ym).list;
+  return rec;
+}
+
 /* ════════════════════════════════════════════════════
    ลอกรายการทั้งปีจากปีก่อน
    ════════════════════════════════════════════════════ */
@@ -3005,11 +3032,24 @@ function mergePlans(dst,inc){
    ปุ่มนี้จึงเป็นทางแก้แบบชัดเจน: ผู้ใช้สั่งเอง เห็นก่อนว่าจะกระทบเดือนไหน
    ════════════════════════════════════════════════════ */
 let _planFwd=null;
-/* เดือนถัดไปที่ "มี record อยู่แล้ว" — เกณฑ์เดียวกับ rowFwdScan() และด้วยเหตุผลเดียวกัน
-   (เดือนที่มี record แต่ base ว่าง ต้องนับเป็นปลายทาง ไม่งั้นแผนหายไปหนึ่งเดือนกลางทางแบบเงียบๆ
-   เพราะ loadM() ของเดือนนั้นอ่าน rec.p ของตัวเอง ไม่ auto-forward จากเดือนก่อน) */
-function planFwdTargets(fromYm){
-  return Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&DB[k]).sort();
+/* ส่ง/สร้างล่วงหน้าได้ไกลสุดกี่เดือน — ผ่อนบ้าน 360 งวดจะได้ไม่สร้าง record 30 ปีรวดเดียว
+   (เดือนหลังจากนั้นยังได้แผนเองตอนเปิด เพราะ loadM() เดินงวดต่อจากเดือนก่อนหน้าให้) */
+const FWD_MAX=60;
+/* จำนวนงวดที่ยังเหลือหลังเดือนนี้ — recurring ไม่มีวันหมดจึงเป็น 0 (ไม่กำหนดช่วงสร้างเดือน) */
+const planRemain=x=>planTy(x&&x.type)==='installment'
+  ?Math.max(0,planTerm(x.total_term)-planTerm(x.current_term)):0;
+/* ช่วงที่ต้องมีแผนนี้อยู่ = ถึงงวดสุดท้ายของรายการผ่อนที่จบช้าสุด (ไม่เกิน FWD_MAX) */
+const planFwdSpan=arr=>Math.min(FWD_MAX,Math.max(0,...(arr||[]).filter(x=>planAmt(x)>0).map(planRemain)));
+/* ปลายทาง = เดือนถัดไปที่ "มี record อยู่แล้ว" ทั้งหมด + ทุกเดือนจนถึงงวดสุดท้าย (ยังไม่มี = สร้างให้)
+   เดือนที่มี record แล้วนับเป็นปลายทางเสมอแม้ base ว่าง — เกณฑ์เดียวกับ rowFwdScan()
+   ไม่งั้นแผนหายไปหนึ่งเดือนกลางทางแบบเงียบๆ เพราะ loadM() ของเดือนนั้นอ่าน rec.p ของตัวเอง
+   ไม่ auto-forward จากเดือนก่อน · เดือนหลังงวดสุดท้ายที่มี record อยู่ยังต้องเป็นปลายทาง
+   เพื่อถอดรายการที่ผ่อนครบแล้วออก (เผื่อเคยส่งไปรอบก่อน) */
+function planFwdTargets(fromYm,arr){
+  const out=new Set(Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>fromYm&&DB[k]));
+  const span=planFwdSpan(arr);
+  for(let k=1;k<=span;k++)out.add(ymAdd(fromYm,k));
+  return [...out].sort();
 }
 function openPlanFwd(){
   if(CT<0||CT>=12)return;
@@ -3020,15 +3060,24 @@ function openPlanFwd(){
   const ym=ymk(CT);
   const src=((DB[ym]||{}).p||[]).filter(x=>planAmt(x)>0);
   if(!src.length){toast('ยังไม่มีแผนผ่อน/ประกันที่กรอกยอดไว้ในเดือนนี้','te');return;}
-  const targets=planFwdTargets(ym);
+  const targets=planFwdTargets(ym,src);
   if(!targets.length){toast('ไม่มีเดือนถัดไปที่บันทึกไว้ — เดือนใหม่จะได้แผนนี้อัตโนมัติตอนเปิด');return;}
-  const rows=targets.map(t=>{const fw=forwardPlans(src,ym,t);return{ym:t,n:fw.list.length,done:fw.done.length};});
-  _planFwd={ym,src,targets};
-  ge('pfText').innerHTML=`ส่ง <b>${src.length} รายการ</b> จาก <b>${ymLabel(ym)}</b> ไปยัง <b>${targets.length} เดือน</b>ถัดไปที่มีข้อมูลอยู่แล้ว`
+  const create=targets.filter(t=>!DB[t]);
+  const rows=targets.map(t=>{const fw=forwardPlans(src,ym,t);return{ym:t,n:fw.list.length,done:fw.done.length,nw:!DB[t]};});
+  const span=planFwdSpan(src),longest=Math.max(0,...src.map(planRemain));
+  _planFwd={ym,src,targets,end:span?ymAdd(ym,span):''};
+  ge('pfText').innerHTML=`ส่ง <b>${src.length} รายการ</b> จาก <b>${ymLabel(ym)}</b> ไปยัง <b>${targets.length} เดือน</b>ถัดไป`
+    +(span?`<br>รายการผ่อนส่งไป<b>ครบตามจำนวนงวดที่เหลือ</b> — ถึง <b>${ymLabel(ymAdd(ym,span))}</b>`:'')
     +`<br>งวดจะเดินหน้าตามระยะเดือนให้เอง และรายการที่ผ่อนครบก่อนถึงเดือนนั้นจะไม่ถูกส่งไป`;
   ge('pfList').innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px">`
-    +`<span>${ymLabel(r.ym)}</span><span>${r.n?r.n+' รายการ':'<span style="color:#a0aec0">ไม่มีเหลือ</span>'}`
+    +`<span>${ymLabel(r.ym)}${r.nw?' <span style="color:#276749;font-weight:400">🆕 สร้างใหม่</span>':''}</span>`
+    +`<span>${r.n?r.n+' รายการ':'<span style="color:#a0aec0">ไม่มีเหลือ</span>'}`
     +`${r.done?` <span style="color:#c05621;font-weight:400">· ผ่อนครบ ${r.done}</span>`:''}</span></div>`).join('');
+  ge('pfNote').innerHTML=(create.length
+      ?`🆕 <strong>สร้างเดือนที่ยังไม่เคยเปิด ${create.length} เดือน</strong>ให้ — ลอกเงินเดือนฐานและโครงรายการจากเดือนก่อนหน้า (แบบเดียวกับตอนเปิดเอง) ยอดรายการอื่นว่างไว้ให้กรอก<br>`:'')
+    +(longest>FWD_MAX
+      ?`ผ่อนอีก ${longest} งวด — สร้างล่วงหน้าได้สูงสุด ${FWD_MAX} เดือน เดือนหลังจากนั้นจะได้แผนนี้เองตอนเปิด (งวดเดินต่อให้)<br>`:'')
+    +'รายการเดิมจะถูก<strong>อัปเดตงวด</strong> ไม่สร้างซ้ำ';
   ge('planFwdModal').classList.add('open');
 }
 function planFwdNo(){ge('planFwdModal').classList.remove('open');_planFwd=null;}
@@ -3039,18 +3088,28 @@ async function planFwdYes(){
   if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   ge('planFwdModal').classList.remove('open');_planFwd=null;
-  d.targets.forEach(t=>{
-    const rec=DB[t];if(!rec)return;
+  /* targets เรียงจากเก่าไปใหม่ — เดือนที่สร้างใหม่จึงลอกโครงจากเดือนก่อนหน้าที่เพิ่งได้แผนไปแล้ว */
+  /* สร้างเฉพาะเดือนที่ยังอยู่ในช่วงงวด — เดือนท้ายๆ ที่หายไประหว่างกล่องเปิดค้าง (เช่นถูกลบจากอีกเครื่อง)
+     ไม่ต้องชุบกลับมา เพราะแผนผ่อนจบไปก่อนถึงเดือนนั้นแล้ว */
+  let made=0;
+  const sent=d.targets.filter(t=>{
+    if(!DB[t]){
+      if(!d.end||t>d.end)return false;
+      DB[t]=newMonthRec(t);made++;
+    }
+    const rec=DB[t];
     const fw=forwardPlans(d.src,d.ym,t);
     /* รายการที่ผ่อนครบก่อนถึงเดือนนี้ต้องถูกถอดออกด้วย เผื่อเคยส่งไปแล้วรอบก่อน */
     const doneIds=new Set(fw.done.map(x=>x.id));
     rec.p=mergePlans((rec.p||[]).filter(x=>x&&!doneIds.has(x.id)),fw.list);
+    return true;
   });
   lsSet(SK,JSON.stringify(DB));
   updateDots();
-  const fail=await syncMonths(d.targets,'plan propagate');
+  const fail=await syncMonths(sent,'plan propagate');
   if(CT===12)renderSum();
-  toast(`✅ ส่งแผนผ่อน/ประกันไป ${d.targets.length} เดือนถัดไปแล้ว`+syncFailTxt(fail),fail?'te':'ts');
+  toast(`✅ ส่งแผนผ่อน/ประกันไป ${sent.length} เดือนถัดไปแล้ว`+(made?` (สร้างเดือนใหม่ ${made} เดือน)`:'')
+    +syncFailTxt(fail),fail?'te':'ts');
 }
 
 /* ════════════════════════════════════════════════════
@@ -3587,9 +3646,11 @@ async function rowEditYes(){
 /* ════════════════════════════════════════════════════
    ส่งรายการทีละรายการไปเดือนถัดๆ ไป — กลไกกลาง ใช้ร่วมกันทุกกล่องที่มีปุ่ม 📤
    ต่างจากปุ่มส่งแผนผ่อน/ประกันทั้งกล่องตรงที่ผู้ใช้เลือกช่วงเองได้ — ที่เหลือของปี หรือ n เดือน
-   ปลายทาง = เดือนที่ "บันทึกไว้แล้ว" เท่านั้น กติกาเดียวกับ planFwdTargets()/basePropYes()
+   ปลายทาง = เดือนที่ "บันทึกไว้แล้ว" เท่านั้น กติกาเดียวกับ basePropYes()
    เพราะเดือนที่ยังไม่เคยเปิดจะได้โครงรายการนี้เองตอนเปิด (loadM → blankItems)
    ต่างกันแค่ยอดเงินที่ยังว่าง — modal จึงบอกไว้ชัดๆ ไม่ปล่อยให้เงียบ
+   ยกเว้นแผนผ่อน (installment) โหมด "ตามจำนวนงวดที่เหลือ" — ส่งไปครบทุกงวดพอดี
+   เดือนที่ยังไม่เคยเปิดในช่วงนั้นถูกสร้างให้ (newMonthRec) และเดือนหลังงวดสุดท้ายที่ยังมีรายการนี้ค้างถูกถอดออก
    ════════════════════════════════════════════════════ */
 let _rowFwd=null;
 
@@ -3601,10 +3662,14 @@ function ymAdd(ym,n){
   return `${Math.floor(t/12)}-${p2(t%12+1)}`;
 }
 
+/* โหมด "ตามจำนวนงวดผ่อนที่เหลือ" — มีเฉพาะรายการผ่อน (installment) */
+const rowFwdTermMode=()=>!!(_rowFwd&&_rowFwd.term&&ge('xfModeTerm')?.checked);
+
 /* จำนวนเดือนที่เลือกอยู่ — โหมด "ที่เหลือของปี" นับจากเดือนปัจจุบันถึง ธ.ค. */
 function rowFwdSpan(){
   if(!_rowFwd)return 0;
-  if(ge('xfModeN')?.checked)return Math.max(1,Math.min(60,parseInt(gv('xfN'),10)||1));
+  if(rowFwdTermMode())return Math.min(FWD_MAX,_rowFwd.rem);
+  if(ge('xfModeN')?.checked)return Math.max(1,Math.min(FWD_MAX,parseInt(gv('xfN'),10)||1));
   return 11-_rowFwd.mi;
 }
 
@@ -3651,6 +3716,29 @@ function rowPut(m,arr,item,srcYm,dstYm){
 const rowFwdFinished=(m,item,srcYm,list)=>
   (m.key==='p')?(list||[]).filter(t=>!forwardPlans([item],srcYm,t).list.length):[];
 
+/* ผลของโหมดที่เลือกอยู่ — ใช้ร่วมกันทั้ง preview และตอนกดยืนยัน สองฝั่งจึงตรงกันเสมอ
+   write  = เดือนที่มี record แล้ว → เขียน/อัปเดตรายการ
+   create = เดือนที่ยังไม่เคยเปิด → สร้าง record ให้แล้วเขียน (เฉพาะโหมดตามจำนวนงวด)
+   fin    = เดือนที่ผ่อนครบก่อนถึง → ถอดรายการนี้ออกถ้ามีค้าง
+   miss   = เดือนที่ยังไม่เคยเปิดและไม่ได้สร้าง (โหมดอื่น) — ได้โครงเองตอนเปิด */
+function rowFwdCalc(){
+  const d=_rowFwd;if(!d)return null;
+  const span=rowFwdSpan(),term=rowFwdTermMode();
+  const sc=rowFwdScan(d.ym,span);
+  let fin=rowFwdFinished(d.m,d.item,d.ym,sc.hit);
+  /* โหมดตามจำนวนงวด: เดือนหลังงวดสุดท้ายที่ยังมีรายการนี้ค้าง (เช่นเคยส่งไว้ตอนตั้งงวดยาวกว่านี้)
+     ต้องถอดออกด้วย ให้รายการนี้มีอยู่เท่าจำนวนงวดพอดี · ถ้าถูกตัดที่ FWD_MAX ยังไม่ถึงงวดสุดท้าย ห้ามแตะ */
+  if(term&&d.rem<=FWD_MAX){
+    const end=ymAdd(d.ym,span);
+    fin=fin.concat(Object.keys(DB).filter(k=>/^\d{4}-\d{2}$/.test(k)&&k>end&&DB[k]
+      &&(DB[k].p||[]).some(x=>x&&x.id===d.item.id)).sort());
+  }
+  return{span,term,fin,
+    write:sc.hit.filter(t=>!fin.includes(t)),
+    create:term?sc.miss:[],
+    miss:term?[]:sc.miss};
+}
+
 function openRowFwd(kind,id){
   const m=LIST_META[kind];if(!m)return;
   if(CT<0||CT>=12)return;
@@ -3663,7 +3751,10 @@ function openRowFwd(kind,id){
   const it=(((DB[ym]||{})[m.key])||[]).find(x=>x&&x.id===id);
   if(!it){toast('ไม่พบรายการนี้','te');return;}
   if(!String(it[m.nf]||'').trim()){toast('ตั้งชื่อรายการก่อน แล้วค่อยส่งไปเดือนอื่น','te');return;}
-  _rowFwd={m,mi:CT,ym,item:JSON.parse(JSON.stringify(it))};
+  /* แผนผ่อน (installment) ส่งตามจำนวนงวดที่เหลือได้ — และเป็นค่าเริ่มต้นของรายการผ่อน */
+  const term=m.key==='p'&&planTy(it.type)==='installment';
+  const rem=term?planRemain(it):0;
+  _rowFwd={m,mi:CT,ym,item:JSON.parse(JSON.stringify(it)),term,rem};
 
   ge('xfTitle').textContent=`📤 ส่ง${m.label}นี้ไปเดือนถัดๆ ไป`;
   ge('xfHead').innerHTML=`${m.icon} <b>${esc(String(it[m.nf]))}</b>`
@@ -3695,6 +3786,19 @@ function openRowFwd(kind,id){
   if(restOfYear<1)ge('xfModeN').checked=true;else rYear.checked=true;
   sv('xfN',String(Math.max(1,restOfYear||3)));
 
+  ge('xfRowTerm').style.display=term?'flex':'none';
+  if(term){
+    const cur=planTerm(it.current_term),tot=planTerm(it.total_term);
+    ge('xfTermTxt').textContent=rem
+      ?`ตามจำนวนงวดผ่อนที่เหลือ — อีก ${rem} งวด`
+      :'ตามจำนวนงวดผ่อนที่เหลือ';
+    ge('xfTermSub').textContent=rem
+      ?`งวด ${rem>1?`${cur+1}–${tot}`:tot} / ${tot} · ${ymLabel(ymAdd(ym,1))}${rem>1?` ถึง ${ymLabel(ymAdd(ym,rem))}`:''}`
+        +(rem>FWD_MAX?` (สร้างล่วงหน้าได้สูงสุด ${FWD_MAX} เดือน)`:'')
+      :`งวดนี้ (${cur}/${tot}) เป็นงวดสุดท้ายแล้ว`;
+    ge('xfModeTerm').checked=true;
+  }
+
   rowFwdPreview();
   ge('rowFwdModal').classList.add('open');
 }
@@ -3702,29 +3806,41 @@ function openRowFwd(kind,id){
 function rowFwdPreview(){
   const d=_rowFwd;if(!d)return;
   const el=ge('xfPreview'),go=ge('xfGo');
-  const span=rowFwdSpan();
-  if(span<1){
-    el.innerHTML='<div style="color:#c53030;font-weight:700">ไม่มีเดือนถัดไปในปีนี้ — เลือก "ระบุเอง" เพื่อส่งข้ามปี</div>';
+  const c=rowFwdCalc();
+  if(c.span<1&&!c.fin.length){
+    el.innerHTML=c.term
+      ?'<div style="color:#c05621;font-weight:700">🎉 งวดนี้เป็นงวดสุดท้ายแล้ว — ไม่มีงวดเหลือให้ส่งต่อ</div>'
+      :'<div style="color:#c53030;font-weight:700">ไม่มีเดือนถัดไปในปีนี้ — เลือก "ระบุเอง" เพื่อส่งข้ามปี</div>';
     go.disabled=true;return;
   }
-  const sc=rowFwdScan(d.ym,span);
   const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.map(ymLabel).join(' · ')}</div>`;
-  /* แผนผ่อนที่ครบงวดก่อนถึงเดือนปลายทาง จะไม่ถูกส่งไป — ต้องเห็นก่อนกด ไม่ใช่หายเงียบๆ */
-  const fin=rowFwdFinished(d.m,d.item,d.ym,sc.hit);
-  const write=sc.hit.filter(t=>!fin.includes(t));
-  let h=`<div style="font-weight:700;color:#276749">✅ เขียนลง ${write.length} เดือน</div>`;
-  if(write.length)h+=mlist(write);
-  if(fin.length){
-    h+=`<div style="font-weight:700;color:#c05621;margin-top:10px">🎉 ผ่อนครบก่อนถึง ${fin.length} เดือน</div>`+mlist(fin)
-      +`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">งวดสุดท้ายจบก่อนเดือนพวกนี้ จึง<strong>ไม่ถูกส่งไป</strong> (ถ้าเคยส่งไปแล้วรอบก่อน จะถูกถอดออกให้)</div>`;
+  const tip=t=>`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">${t}</div>`;
+  let h='';
+  if(c.write.length||!c.create.length){
+    h+=`<div style="font-weight:700;color:#276749">✅ เขียนลง ${c.write.length} เดือน${c.create.length?'ที่มีอยู่แล้ว':''}</div>`;
+    if(c.write.length)h+=mlist(c.write);
   }
-  if(sc.miss.length){
-    h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ยังไม่เคยเปิด ${sc.miss.length} เดือน</div>`+mlist(sc.miss)
-      +`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">เดือนพวกนี้จะได้โครงรายการนี้เองตอนเปิด แต่<strong>ยอดต้องกรอกเอง</strong> — เปิดแล้วกดปุ่มนี้ซ้ำก็ได้ครบ</div>`;
+  if(c.create.length){
+    h+=`<div style="font-weight:700;color:#276749;margin-top:${h?10:0}px">🆕 สร้างเดือนใหม่ ${c.create.length} เดือน</div>`+mlist(c.create)
+      +tip('เดือนพวกนี้ยังไม่เคยเปิด — สร้างให้พร้อม<strong>เงินเดือนฐานและโครงรายการจากเดือนก่อนหน้า</strong> (แบบเดียวกับตอนเปิดเอง) ยอดรายการอื่นว่างไว้ให้กรอก');
+  }
+  if(c.term&&d.rem>FWD_MAX){
+    h+=tip(`ผ่อนอีก ${d.rem} งวด — สร้างล่วงหน้าได้สูงสุด ${FWD_MAX} เดือน เดือนหลังจากนั้นจะได้รายการนี้เองตอนเปิด (งวดเดินต่อให้)`);
+  }
+  /* แผนผ่อนที่ครบงวดก่อนถึงเดือนปลายทาง จะไม่ถูกส่งไป — ต้องเห็นก่อนกด ไม่ใช่หายเงียบๆ */
+  if(c.fin.length){
+    h+=`<div style="font-weight:700;color:#c05621;margin-top:10px">🎉 ผ่อนครบก่อนถึง ${c.fin.length} เดือน</div>`+mlist(c.fin)
+      +tip(c.term
+        ?'เดือนพวกนี้เลยงวดสุดท้ายไปแล้ว แต่ยังมีรายการนี้ค้างจากการส่งรอบก่อน — <strong>จะถูกถอดออกให้</strong>'
+        :'งวดสุดท้ายจบก่อนเดือนพวกนี้ จึง<strong>ไม่ถูกส่งไป</strong> (ถ้าเคยส่งไปแล้วรอบก่อน จะถูกถอดออกให้)');
+  }
+  if(c.miss.length){
+    h+=`<div style="font-weight:700;color:#b7791f;margin-top:10px">⏭️ ยังไม่เคยเปิด ${c.miss.length} เดือน</div>`+mlist(c.miss)
+      +tip('เดือนพวกนี้จะได้โครงรายการนี้เองตอนเปิด แต่<strong>ยอดต้องกรอกเอง</strong> — เปิดแล้วกดปุ่มนี้ซ้ำก็ได้ครบ');
   }
   el.innerHTML=h;
   /* เปิดปุ่มไว้ถ้ายังมีเดือนที่ "ต้องถอดของเก่าออก" ด้วย ไม่ใช่เฉพาะเดือนที่เขียนใหม่ */
-  go.disabled=!sc.hit.length;
+  go.disabled=!(c.write.length+c.create.length+c.fin.length);
 }
 
 function rowFwdNo(){ge('rowFwdModal').classList.remove('open');_rowFwd=null;}
@@ -3732,25 +3848,34 @@ function rowFwdNo(){ge('rowFwdModal').classList.remove('open');_rowFwd=null;}
 async function rowFwdYes(){
   const d=_rowFwd;if(!d)return;
   const m=d.m;
-  const sc=rowFwdScan(d.ym,rowFwdSpan());
+  const c=rowFwdCalc();
   /* เช็ค race ซ้ำตอนกดยืนยัน แบบเดียวกับ rowDelYes() — สถานะอาจเปลี่ยนระหว่างที่กล่องเปิดค้าง */
   if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
   if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
   ge('rowFwdModal').classList.remove('open');_rowFwd=null;
-  if(!sc.hit.length)return;
   /* แผนผ่อนที่ครบงวดก่อนถึงเดือนไหน จะไม่ถูกเขียนลงเดือนนั้น (rowPut ถอดของเก่าออกให้แทน)
      ข้อความสรุปจึงต้องนับเฉพาะเดือนที่ได้รับจริง ไม่ใช่ทุกเดือนที่แตะ */
-  const fin=rowFwdFinished(m,d.item,d.ym,sc.hit);
-  const wrote=sc.hit.filter(t=>!fin.includes(t));
-  sc.hit.forEach(t=>{const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);});
+  const wrote=c.write.concat(c.create).sort();
+  const touched=wrote.concat(c.fin).sort();
+  if(!touched.length)return;
+  /* เรียงจากเก่าไปใหม่ — เดือนที่สร้างใหม่ลอกโครงจากเดือนก่อนหน้าที่เพิ่งได้รายการนี้ไปแล้ว */
+  const mk=new Set(c.create);
+  touched.forEach(t=>{
+    if(!DB[t]&&mk.has(t))DB[t]=newMonthRec(t);
+    const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);
+  });
   lsSet(SK,JSON.stringify(DB));
-  const fail=await syncMonths(sc.hit,'row propagate');
+  if(c.create.length)updateDots();
+  const fail=await syncMonths(touched.filter(t=>DB[t]),'row propagate');
   if(CT===12)renderSum();
   const nm=String(d.item[m.nf]||'');
-  const skipTxt=fin.length?` · ข้าม ${fin.length} เดือนที่ผ่อนครบก่อนแล้ว`:'';
+  const newTxt=c.create.length?` (สร้างเดือนใหม่ ${c.create.length} เดือน)`:'';
+  const skipTxt=c.fin.length?(c.term
+    ?` · ถอดออกจาก ${c.fin.length} เดือนที่เลยงวดสุดท้าย`
+    :` · ข้าม ${c.fin.length} เดือนที่ผ่อนครบก่อนแล้ว`):'';
   toast(wrote.length
-    ? `✅ ส่ง "${nm}" ไป ${wrote.length} เดือนถัดไปแล้ว${skipTxt}`+syncFailTxt(fail)
-    : `🎉 "${nm}" ผ่อนครบก่อนถึงทุกเดือนที่เลือก — ไม่ได้ส่งไป (ถอดรายการเก่าออกให้แล้ว ${fin.length} เดือน)`+syncFailTxt(fail),
+    ? `✅ ส่ง "${nm}" ไป ${wrote.length} เดือนถัดไปแล้ว${newTxt}${skipTxt}`+syncFailTxt(fail)
+    : `🎉 "${nm}" ผ่อนครบก่อนถึงทุกเดือนที่เลือก — ไม่ได้ส่งไป (ถอดรายการเก่าออกให้แล้ว ${c.fin.length} เดือน)`+syncFailTxt(fail),
     fail?'te':'ts');
 }
 
