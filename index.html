@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>คำนวณเงินเดือน + OT [GS]</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- Chart.js โหลดทีหลังด้วย loadChartLib() — ใช้เฉพาะหน้า 📊 สรุปปี ไม่ต้องบล็อกการเปิดหน้าแรก -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;color:#2d3748;font-size:15px}
@@ -716,7 +717,7 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
     <div class="ch cre">➖ รายการหัก <span class="ch-sub">☑ จัดการแล้ว | 📤 ส่งต่อ | ✕ ลบ</span><button class="sortbtn" id="sb_d" onclick="sortToggle('d',event)" aria-expanded="false" aria-haspopup="true" title="เรียงรายการในกล่องนี้"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.2 1.4v9.2M3.2 1.4 1.4 3.4M3.2 1.4 5 3.4M8.8 10.6V1.4M8.8 10.6 7 8.6M8.8 10.6l1.8-2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> เรียง<span class="sortcur" id="sc_d"></span></button><div class="sortmenu" id="sm_d" role="menu"></div></div>
     <div class="cb">
       <div class="fr" id="fr_sso">
-        <span class="fl"><input type="checkbox" class="ckpt" id="fSsoDn" onchange="tgStatDn('sso',this.checked)" title="ติ๊กเมื่อจัดการรายการนี้แล้ว"><span class="fl-n">ประกันสังคม (5%, สูงสุด 875 บาท)</span> <span class="pm-bank">บัญชี</span></span>
+        <span class="fl"><input type="checkbox" class="ckpt" id="fSsoDn" onchange="tgStatDn('sso',this.checked)" title="ติ๊กเมื่อจัดการรายการนี้แล้ว"><span class="fl-n">ประกันสังคม (5%, สูงสุด <span id="ssoCapLbl">875</span> บาท)</span> <span class="pm-bank">บัญชี</span></span>
         <input type="date" class="dtin" id="fSsoDt" title="วันที่ตัดเงิน — ค่าเริ่มต้นคือวันเงินเดือนออก">
         <input id="fSso" type="number" placeholder="อัตโนมัติ" min="0" class="input-auto" oninput="updInv()">
         <span class="atg">อัตโนมัติ</span>
@@ -1168,6 +1169,12 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
         <span style="font-size:.85rem;color:#2d3748"><strong id="xdRestTxt">เดือนนี้เป็นต้นไปจนจบปี</strong> <span id="xdRestSub" style="color:#718096;font-weight:400"></span></span>
       </label>
 
+      <!-- เดือนนี้เป็นต้นไปทุกเดือนที่พบ ข้ามปีได้ — สำหรับรายการที่ลากยาวข้ามปี เช่น แผนผ่อนหลายปี -->
+      <label id="xdRow6" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+        <input type="radio" name="xdMode" id="xdMode6" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+        <span style="font-size:.85rem;color:#2d3748"><strong id="xdFwdTxt">เดือนนี้เป็นต้นไปทุกเดือนที่พบ</strong> <span style="color:#718096;font-weight:400">(ข้ามปีได้ · ไม่แตะเดือนก่อนหน้า)</span></span>
+      </label>
+
       <label id="xdRow4" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
         <input type="radio" name="xdMode" id="xdMode4" onchange="rowDelPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
         <span style="font-size:.85rem;color:#2d3748"><strong id="xdYearTxt">ตลอดทั้งปีนี้</strong> <span style="color:#718096;font-weight:400">(รวมเดือนก่อนหน้าด้วย)</span></span>
@@ -1235,7 +1242,10 @@ const p2=n=>String(n).padStart(2,'0');
 const normDays=rec=>{
   if(!rec||typeof rec!=='object')return rec;
   if(rec.days&&typeof rec.days==='object'&&!Array.isArray(rec.days)){
-    const nd={};Object.keys(rec.days).forEach(k=>{const v=rec.days[k];if(v&&typeof v==='object')nd[String(k)]=v;});
+    /* ตัดวันที่ว่างทั้งคู่ทิ้งด้วย — ข้อมูลเก่าเคยเก็บครบทุกวัน ความหมายเท่าเดิมทุกประการ
+       ทำทั้งฝั่งในเครื่องและฝั่ง cloud ก่อนเทียบ (fbSyncFromRemote) จึงไม่ถูกมองว่าเป็นการแก้ไข */
+    const nd={};Object.keys(rec.days).forEach(k=>{const v=rec.days[k];
+      if(v&&typeof v==='object'&&(String(v.ac??'').trim()||String(v.o3??'').trim()))nd[String(k)]=v;});
     rec.days=nd;
   }else rec.days={};
   ['a','d','i','o','p'].forEach(k=>{
@@ -1387,7 +1397,7 @@ function fbPendDone(seq){
   Object.keys(seq).forEach(ym=>{if(fbPendSeq[ym]===seq[ym]){delete fbPendSeq[ym];delete p[ym];ch=true;}});
   if(ch){fbPendPut(p);if(_syncSt==='fb_saving')setSyncSt('fb_saving');}   /* อัปเดตจำนวนที่เหลือ */
 }
-const fbHasPending=()=>!!fbDb&&Object.keys(fbPendGet()).length>0;
+const fbHasPending=()=>!!fbDb&&(Object.keys(fbPendGet()).length>0||Object.keys(taxPendGet()).length>0);
 let fbReady=false;  /* true เมื่อพร้อม save (รอ Firebase initial load เสร็จ) */
 /* true เมื่อ "อ่าน" Firebase สำเร็จอย่างน้อยหนึ่งครั้งในรอบนี้ — ต่างจาก fbReady ซึ่งเป็นจริง
    แม้การโหลดจะล้มเหลว (init() ตั้งใน finally เพื่อไม่ให้แอปค้างจนบันทึกอะไรไม่ได้เลย)
@@ -1616,7 +1626,8 @@ async function fbSave(){
   return fbBusyRun(async()=>{
   const ts=fbTs();
   const seq=fbPendMark(Object.keys(DB));
-  await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,lastSaved:ts});
+  /* .set() แทนที่ทั้ง document — ต้องพกค่าลดหย่อนภาษี (taxset) ไปด้วย ไม่งั้นหายจาก cloud */
+  await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,taxset:TAXSET,lastSaved:ts});
   fbPendDone(seq);
   return ts;
   });
@@ -1727,6 +1738,7 @@ function fbFirstLoad(result){
   if(decided)fbSyncedSet(true);
   loadAllFromFB(data,result&&result.lastSaved);
   fbFlushPending([...pend,...upload]);
+  taxSetFromRemote(result&&result.taxset,true);
 }
 
 /* ── รับ snapshot จาก cloud (listener · ดึงซ้ำตอนกลับมาที่แท็บ) ── */
@@ -1740,6 +1752,7 @@ function fbHandleSnap(snap){
   }
   if(!snap.exists){fbKnownMonths=new Set();return;}
   const d=snap.data();
+  if(d)taxSetFromRemote(d.taxset,false);
   if(!d||!d.data||typeof d.data!=='object')return;
   fbSyncFromRemote(d.data,d.lastSaved);
 }
@@ -1768,6 +1781,7 @@ async function fbResync(force){
     if(!fbUnsubscribe)fbStartListener();
     const snap=await fbDb.collection('salary_data').doc(fbDocId).get({source:'server'});
     fbHandleSnap(snap);
+    if(fbLoaded)taxPendFlush();     /* ค่าลดหย่อนที่ค้างจากตอนเน็ตหลุด */
     if(_syncSt==='fb_error'&&!_fbBusy&&!fbHasPending())setSyncSt('fb_ok');   /* ต่อได้แล้ว — ล้างสถานะ error เก่า */
   }catch(e){console.warn('Firebase resync failed:',e);}
   finally{_fbResyncing=false;}
@@ -2420,7 +2434,22 @@ function colP(){return P.map(x=>({
 }));}
 
 /* ── Derived ── */
-function getSso(){const v=gv('fSso');return v!==''?nf(v):Math.min(num('fBase')*.05,875);}
+/* เพดานเงินสมทบประกันสังคมต่อเดือน "ตามปีของงวด" = เพดานค่าจ้าง × 5%
+   เดิมใช้ 875 ตายตัวทุกปี — ข้อมูลปีเก่าจึงหักเกินจริง และเดือนตั้งแต่ปี 2572 หักน้อยเกินจริง
+   ก่อน 2569: 15,000 → 750 · 2569–2571: 17,500 → 875 · 2572–2574: 20,000 → 1,000 · 2575 เป็นต้นไป: 23,000 → 1,150
+   (มติ ครม. 2 ธ.ค. 2568 ปรับเพดานค่าจ้าง 3 ระยะ) — ตัวกลางตัวเดียวของทุกจุดที่คิดประกันสังคมอัตโนมัติ */
+function ssoMax(ym){
+  const y=parseInt(String(ym||'').slice(0,4),10)||new Date().getFullYear();
+  return y<2026?750:y<2029?875:y<2032?1000:1150;
+}
+const ssoAuto=(base,ym)=>Math.min(Math.max(0,nf(base))*.05,ssoMax(ym));
+function getSso(){const v=gv('fSso');return v!==''?nf(v):ssoAuto(num('fBase'),gv('fPrd'));}
+/* ป้ายเพดาน + ค่าที่ระบบจะใช้ในช่องประกันสังคม — ตามปีของเดือนที่เปิดอยู่ */
+function updSsoCap(){
+  const ym=gv('fPrd');
+  const el=ge('fSso');if(el)el.placeholder=ssoAuto(num('fBase'),ym).toFixed(2);
+  const sl=ge('ssoCapLbl');if(sl)sl.textContent=ssoMax(ym).toLocaleString('en-US');
+}
 function getPvd(){const v=gv('fPvd');return v!==''?nf(v):num('fBase')*.07;}
 /* ประเภทต้นทุนของรายการหัก — คงที่ (Fixed cost) / ผันแปร (Variable cost)
    คงที่ = เลี่ยงไม่ได้ในเดือนนั้น ถูกหักออกก่อนถึง Free Cash Flow
@@ -2599,7 +2628,7 @@ function onBonusMthChg(){
 }
 function onBaseChg(){
   const base=num('fBase');
-  ge('fSso').placeholder=Math.min(base*.05,875).toFixed(2);
+  updSsoCap();
   ge('fPvd').placeholder=(base*.07).toFixed(2);
   onBonusMthChg();
   updInv();
@@ -2648,10 +2677,14 @@ async function init(){
     }
   }catch(e){}
   adoptWkbDef();
+  taxSetLoadLocal();taxFormApply(CY);   /* ค่าลดหย่อนภาษีของปีนี้ — ก่อน render อะไรที่คิดภาษี */
   buildYearSel();                 /* หลังโหลด DB แล้ว — ช่วงปีต้องครอบคลุมปีที่มีข้อมูลจริง */
   buildTabs();updateDots();switchTab(CT,true);
   /* จากนั้น sync กับ cloud ใน background — ถ้ามีข้อมูลใหม่จะ re-render อัตโนมัติ */
   try{await restore();adoptWkbDef();}finally{fbReady=true;}
+  /* โหลดไลบรารีกราฟเบื้องหลังตอนเครื่องว่าง — หน้าแรกไม่ต้องรอ แต่พอกดหน้าสรุปปีกราฟก็พร้อมแล้ว */
+  const idle=window.requestIdleCallback||(f=>setTimeout(f,1500));
+  idle(()=>loadChartLib());
 }
 
 function buildTabs(){
@@ -2678,7 +2711,7 @@ function switchTab(idx,skipSave=false){
   if(!skipSave&&CT!==12)saveM();
   CT=idx;
   for(let i=0;i<=12;i++){const t=ge(`tb_${i}`);if(t)t.classList.toggle('on',i===idx);}
-  if(idx===12){ge('mv').style.display='none';ge('sv').style.display='block';renderSum();}
+  if(idx===12){ge('mv').style.display='none';ge('sv').style.display='block';_chartFail=false;renderSum();}
   else{ge('mv').style.display='block';ge('sv').style.display='none';loadM(idx);}
   updAge();
   ge(`tb_${idx}`)?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
@@ -2686,6 +2719,7 @@ function switchTab(idx,skipSave=false){
 function onYrChange(){
   if(CT!==12)saveM();
   CY=parseInt(gv('ySel'));buildTabs();updAge();
+  taxFormApply(CY);               /* ค่าลดหย่อนเก็บแยกตามปี */
   if(CT===12)renderSum();else switchTab(CT,true);
 }
 function ymk(mi){return `${CY}-${p2(mi+1)}`;}
@@ -2708,11 +2742,11 @@ function saveM(fb=false){
   const ym=ymCur;
   const cnt=new Date(CY,CT+1,0).getDate();
   const days={};
+  /* เก็บเฉพาะวันที่กรอก OT จริง — เดิมเก็บครบทุกวันแม้ว่างทั้งคู่ (~20%+ ของขนาดแต่ละเดือน)
+     ทุกตัวอ่าน (loadMonth · otMinutes · AI · Export) ถือว่าวันที่ไม่มีใน days = ว่างอยู่แล้ว */
   for(let d=1;d<=cnt;d++){
-    days[String(d)]={
-      ac:ge(`ota_${d}`)?.value||'',
-      o3:ge(`ot3_${d}`)?.value||''
-    };
+    const ac=ge(`ota_${d}`)?.value||'',o3=ge(`ot3_${d}`)?.value||'';
+    if(String(ac).trim()||String(o3).trim())days[String(d)]={ac,o3};
   }
   DB[ym]={base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
     ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),ssoDn:statDn('sso'),pvdDn:statDn('pvd'),
@@ -2912,6 +2946,7 @@ function loadMonth(mi){
     A=A.filter(x=>x.id!==BONUS_ID);
     D=D.filter(x=>x.id!==BONUS_TAX_ID);
   }
+  updSsoCap();                                /* เพดานประกันสังคมเปลี่ยนตามปี — ทุกสาขาข้างบนต้องได้ป้ายใหม่ */
   /* ล้าง DOM ของเดือนก่อนก่อน render — กัน rA/rD pre-sync ดึงค่าข้ามเดือน */
   ['aList','dList','iList','oList','pList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();rP();
@@ -3350,6 +3385,14 @@ function rowDelCount(m,k,id,name,curYm){
   return (arr||[]).filter(x=>rowSame(m,x,id,name)).length;
 }
 
+/* แถว "เดือนนี้เป็นต้นไปทุกเดือนที่พบ (ข้ามปี)" — โชว์เฉพาะเมื่อมีเดือนถัดไปอยู่นอกปีนี้
+   (ถ้าเดือนถัดไปอยู่ในปีนี้หมด ผลจะเท่ากับ "จนจบปี" พอดี ไม่ต้องมีตัวเลือกซ้ำ) · คืนจำนวนเดือนถัดไปทั้งหมด */
+function xdFwdRow(others,ym,laterInCY){
+  const n=others.filter(k=>k>ym).length;
+  ge('xdRow6').style.display=n>laterInCY?'':'none';
+  ge('xdFwdTxt').textContent=`เดือนนี้เป็นต้นไปทุกเดือนที่พบ — ${n+1} เดือน`;
+  return n;
+}
 function openRowDel(kind,id){
   const m=LIST_META[kind];if(!m)return;
   rowSyncDom(m);                                        /* ต้องมาก่อนทุกการอ่านค่า — ดูหมายเหตุที่ rowSyncDom() */
@@ -3384,9 +3427,10 @@ function openRowDel(kind,id){
     const inCY=others.filter(k=>k.slice(0,4)===String(CY));
     const later=inCY.filter(k=>k>ym).length, earlier=inCY.length-later;
     const outside=others.length-inCY.length;
+    const fwdN=xdFwdRow(others,ym,later);
     ge('xdRow3').style.display=later?'':'none';
     ge('xdRow4').style.display=earlier?'':'none';
-    ge('xdRow5').style.display=outside?'':'none';
+    ge('xdRow5').style.display=outside&&others.length>fwdN?'':'none';
     ge('xdAllTxt').textContent=`ทุกเดือนที่พบ — ${others.length+1} เดือน`;
     ge('xdMode1').checked=true;
     sv('xdN',String(Math.max(1,11-CT||3)));
@@ -3404,6 +3448,7 @@ function rowDelMode(){
   if(ge('xdMode3')?.checked)return'rest';
   if(ge('xdMode4')?.checked)return'year';
   if(ge('xdMode5')?.checked)return'all';
+  if(ge('xdMode6')?.checked)return'fwd';
   return'one';
 }
 /* เดือนที่จะโดนลบตามตัวเลือกที่เลือกอยู่ — เดือนปัจจุบันติดไปด้วยเสมอ */
@@ -3416,6 +3461,7 @@ function rowDelTargets(){
   /* "ทุกเดือนที่พบ" = รายชื่อที่โชว์ในกล่องด้านบนเป๊ะๆ ข้ามปีด้วย — ตัวเลือกอื่นเอื้อมไม่ถึงปีอื่นเลย
      ผู้ใช้ที่เห็น "เจอในอีก 8 เดือน" แล้วสั่งลบ จึงต้องมีทางลบให้หมดจริงตามที่เห็น */
   if(mode==='all'){return[...new Set([d.ym,...d.others])].sort();}
+  if(mode==='fwd'){return[...new Set([d.ym,...d.others.filter(k=>k>d.ym)])].sort();}
   if(mode==='year'){for(let i=0;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(k!==d.ym&&has(k))out.push(k);}}
   else if(mode==='rest'){for(let i=CT+1;i<12;i++){const k=`${CY}-${p2(i+1)}`;if(has(k))out.push(k);}}
   else if(mode==='n'){
@@ -3599,12 +3645,15 @@ function openRowEdit(m,s,after,diff,others){
   ge('xdYearTxt').textContent=`ตลอดทั้งปี ${CY}`;
   const inCY=others.filter(k=>k.slice(0,4)===String(CY));
   const later=inCY.filter(k=>k>s.ym).length,earlier=inCY.length-later;
+  const fwdN=xdFwdRow(others,s.ym,later);
   ge('xdRow3').style.display=later?'':'none';
   ge('xdRow4').style.display=earlier?'':'none';
-  ge('xdRow5').style.display=others.length-inCY.length?'':'none';
+  ge('xdRow5').style.display=(others.length-inCY.length)&&others.length>fwdN?'':'none';
   ge('xdAllTxt').textContent=`ทุกเดือนที่พบ — ${others.length+1} เดือน`;
-  /* ค่าเริ่มต้น = จนจบปี (ส่วนใหญ่แก้แล้วอยากให้มีผลต่อไปข้างหน้า) ถ้าไม่มีเดือนถัดไปก็ "เฉพาะเดือนนี้" */
-  (later?ge('xdMode3'):ge('xdMode1')).checked=true;
+  /* ค่าเริ่มต้น = มีผลต่อไปข้างหน้า (ส่วนใหญ่แก้แล้วอยากให้มีผลกับเดือนถัดๆ ไป ไม่ใช่ย้อนหลัง)
+     มีเดือนถัดไปข้ามปีด้วย (เช่นแผนผ่อนหลายปี) → "เดือนนี้เป็นต้นไปทุกเดือนที่พบ" · มีแค่ในปีนี้ → จนจบปี
+     ไม่มีเดือนถัดไปเลย → "เฉพาะเดือนนี้" */
+  (fwdN>later?ge('xdMode6'):later?ge('xdMode3'):ge('xdMode1')).checked=true;
   sv('xdN',String(Math.max(1,11-CT||3)));
   rowDelPreview();
   ge('rowDelModal').classList.add('open');
@@ -4224,8 +4273,10 @@ function doCalc(){
   const fcf=takeHome-totPlan-fixDed-totInv;
   const finalCash=fcf-varDed;                    /* = สูตรเดิมเป๊ะ: takeHome−totPlan−totInv−otherDed */
   const pv=gv('fPrd');
-  const pt=pv?new Date(pv+'-01').toLocaleDateString('th-TH',{year:'numeric',month:'long'}):'—';
   const[_py,_pm]=pv?pv.split('-').map(Number):[0,0];
+  /* ประกอบชื่อเดือนเอง ไม่ใช้ new Date('YYYY-MM-01') — สตริงแบบนั้นถูกอ่านเป็นเวลา UTC
+     เครื่องที่อยู่โซนเวลาหลัง UTC (เช่น อเมริกา) จะได้วันสุดท้ายของเดือนก่อน = หัวผลคำนวณขึ้นเดือนผิด */
+  const pt=(_py&&_pm>=1&&_pm<=12)?`${MF[_pm-1]} ${_py+543}`:'—';
   ge('resPer').textContent='ประจำเดือน '+pt+(_py?' · '+ageMonthTxt(_py,_pm-1):'');
   ge('rTH').textContent=fmt(takeHome);
   ge('rTH2').textContent=fmt(takeHome);
@@ -5002,6 +5053,112 @@ function doResetM(){
    ★ บุตรคนที่ 2 เป็นต้นไปที่เกิดตั้งแต่ปี 2561 ลดหย่อนได้ 60,000 ไม่ใช่ 30,000
      เดิมคิด 30,000 เท่ากันทุกคน ครอบครัวที่มีลูกตั้งแต่ 2 คนจึงถูกคำนวณภาษีสูงเกินจริง
      บุตรคนแรกไม่เข้าเกณฑ์เสมอ จึงตัดจำนวนที่กรอกไม่ให้เกิน (จำนวนบุตร − 1) */
+/* ════════════════════════════════════════════════════
+   ค่าลดหย่อนภาษี (กล่อง 🧮 คำนวณภาษี) — บันทึกแยกตามปีภาษี + ซิงค์ข้ามเครื่อง
+   เดิมเป็นแค่ช่องบนจอ ไม่ถูกบันทึกที่ไหนเลย รีเฟรชแล้วกลับเป็นค่าเริ่มต้นทุกครั้ง
+   (ตั้งคู่สมรส+บุตร+บิดามารดา+กองทุนรวม 340,000 → เหลือ 60,000) ภาษีในหน้าเดือน
+   และ "ประมาณการตอนยื่นภาษี" ในหน้าสรุปปีจึงสูงเกินจริงเงียบๆ
+   เก็บแยกตามปี เพราะค่าลดหย่อนเปลี่ยนได้ (มีบุตรเพิ่ม · ซื้อกองทุนแต่ละปีไม่เท่ากัน)
+   ปีที่ยังไม่เคยตั้ง ใช้ของปีก่อนหน้าที่ใกล้สุด — ส่วนใหญ่ค่าลดหย่อนเหมือนเดิมทุกปี
+   cloud: ฟิลด์ taxset ของ document เดียวกับข้อมูลรายเดือน (แยกจาก data จึงไม่ปนกับเดือน)
+   ════════════════════════════════════════════════════ */
+const SKT='sol_v5_taxset';
+const SKTP='sol_v5_taxpend';   /* ปีที่แก้แล้วแต่ยังเขียนขึ้น cloud ไม่เสร็จ — แยกตาม docId (กติกาเดียวกับ SKP) */
+const TAX_DEF={self:true,spouse:false,kids:'0',kids60:'0',parents:'0',fund:'0',mode:'total',nonTax:'0'};
+let TAXSET={};
+function taxSetLoadLocal(){
+  try{const o=JSON.parse(localStorage.getItem(SKT)||'{}');TAXSET=(o&&typeof o==='object')?o:{};}
+  catch(e){TAXSET={};}
+}
+/* ค่าของปี y — ปีนั้นไม่มีก็ถอยไปปีก่อนหน้าที่ใกล้สุด ไม่มีอีกค่อยมองปีถัดไป */
+function taxSetFor(y){
+  y=parseInt(y,10);
+  const ys=Object.keys(TAXSET).map(Number).filter(n=>n&&TAXSET[n]&&typeof TAXSET[n]==='object').sort((a,b)=>a-b);
+  const prev=ys.filter(n=>n<=y),next=ys.filter(n=>n>y);
+  const k=prev.length?prev[prev.length-1]:(next.length?next[0]:null);
+  return {...TAX_DEF,...(k!=null?TAXSET[k]:{})};
+}
+function taxFormRead(){
+  return{self:!!ge('tx1')?.checked,spouse:!!ge('tx2')?.checked,
+    kids:gv('tx3')||'0',kids60:gv('tx3b')||'0',parents:gv('tx4')||'0',fund:gv('tx5')||'0',
+    mode:gv('txMode')||'total',nonTax:gv('txNonTax')||'0'};
+}
+/* เขียนค่าของปี y ลงฟอร์ม — คืน true ถ้าบนจอเปลี่ยนจริง */
+function taxFormApply(y){
+  const o=taxSetFor(y);
+  if(stableStr(o)===stableStr(taxFormRead()))return false;
+  const c1=ge('tx1'),c2=ge('tx2');if(c1)c1.checked=!!o.self;if(c2)c2.checked=!!o.spouse;
+  sv('tx3',o.kids);sv('tx3b',o.kids60);sv('tx4',o.parents);sv('tx5',o.fund);sv('txNonTax',o.nonTax);
+  const mo=ge('txMode');if(mo&&[...mo.options].some(x=>x.value===o.mode))mo.value=o.mode;
+  const nr=ge('txNonTaxRow');if(nr)nr.style.display=gv('txMode')==='running'?'block':'none';
+  return true;
+}
+/* ฟอร์มเปลี่ยนตามค่าที่โหลดมา → ตัวเลขที่อิงค่าลดหย่อนต้องคำนวณใหม่ */
+function taxFormRefresh(y){
+  if(!taxFormApply(y))return;
+  if(ge('txPanel')?.style.display!=='none'&&CT!==12)calcTax();
+  if(CT===12)renderTaxYear();
+}
+function taxPendAll(){try{return JSON.parse(localStorage.getItem(SKTP)||'{}')||{};}catch(e){return {};}}
+function taxPendGet(){return Object.assign({},taxPendAll()[fbDocId]);}
+function taxPendSet(y,on){
+  const all=taxPendAll(),p=Object.assign({},all[fbDocId]);
+  if(on)p[y]=1;else delete p[y];
+  if(Object.keys(p).length)all[fbDocId]=p;else delete all[fbDocId];
+  lsSet(SKTP,JSON.stringify(all));
+}
+let _txSeq=0;const _txSt={},_txSeqBy={},_txFly={};
+/* ผู้ใช้แก้ช่องใดก็ได้ในกล่องคำนวณภาษี → เก็บเป็นค่าของปีที่เปิดอยู่ */
+function taxSetSave(){
+  const y=String(CY),o=taxFormRead();
+  if(TAXSET[y]&&stableStr(o)===stableStr({...TAX_DEF,...TAXSET[y]}))return;
+  TAXSET[y]=o;
+  lsSet(SKT,JSON.stringify(TAXSET));
+  if(!fbDb)return;
+  taxPendSet(y,true);                       /* จดก่อนส่ง — ปิดแท็บกลางทางแล้วเปิดใหม่จะส่งต่อให้เอง */
+  /* หน่วงไว้ ไม่เขียนทุกตัวอักษร · ตัวจับเวลาแยกตามปี — แก้สองปีติดกันเร็วๆ ปีแรกต้องไม่ถูกยกเลิก */
+  clearTimeout(_txSt[y]);_txSt[y]=setTimeout(()=>{delete _txSt[y];fbSaveTaxSet(y);},800);
+}
+async function fbSaveTaxSet(y){
+  if(!fbDb||!TAXSET[y])return;
+  const seq=_txSeqBy[y]=++_txSeq;
+  const ref=fbDb.collection('salary_data').doc(fbDocId);
+  _txFly[y]=(_txFly[y]||0)+1;
+  try{
+    await fbBusyRun(async()=>{
+      try{await ref.update({[`taxset.${y}`]:TAXSET[y]});}
+      catch(e){await ref.set({taxset:{[y]:TAXSET[y]}},{merge:true});}   /* ยังไม่มี document */
+    });
+    if(_txSeqBy[y]===seq)taxPendSet(y,false);   /* เขียนใหม่กว่าที่ยังวิ่งอยู่ ต้องไม่ถูกล้างสถานะค้าง */
+  }catch(e){console.warn('tax settings sync failed',y,e);}
+  finally{if(!--_txFly[y])delete _txFly[y];}
+}
+/* ส่งปีที่ค้างขึ้นไปใหม่ (เปิดหน้าใหม่ · กลับมาที่แท็บ · เน็ตกลับมา) */
+function taxPendFlush(){
+  if(!fbDb)return;
+  Object.keys(taxPendGet()).forEach(y=>{
+    if(!TAXSET[y])taxPendSet(y,false);
+    else if(!_txFly[y])fbSaveTaxSet(y);       /* กำลังเขียนอยู่แล้ว — ไม่ต้องยิงซ้ำ */
+  });
+}
+/* รับค่าจาก cloud — ปีที่เครื่องนี้แก้ค้างอยู่ให้ของในเครื่องชนะ (กติกาเดียวกับ fbSyncFromRemote)
+   first = โหลดครั้งแรกของรอบนี้: ปีที่มีแค่ในเครื่อง (ตั้งไว้ก่อนต่อ Firebase) ส่งขึ้นไปด้วย */
+function taxSetFromRemote(remote,first){
+  const rem=(remote&&typeof remote==='object')?remote:{};
+  const pend=taxPendGet();
+  let changed=false;
+  Object.keys(rem).forEach(y=>{
+    const r=rem[y];
+    if(pend[y]||!/^\d{4}$/.test(y)||!r||typeof r!=='object')return;
+    if(stableStr(r)!==stableStr(TAXSET[y]||null)){TAXSET[y]=r;changed=true;}
+  });
+  if(first)Object.keys(TAXSET).forEach(y=>{if(!(y in rem)&&TAXSET[y])taxPendSet(y,true);});
+  if(changed)lsSet(SKT,JSON.stringify(TAXSET));
+  /* ส่งของค้างเฉพาะตอนโหลดครั้งแรก — snapshot ปกติมาถี่ (รวมถึง echo ของการเขียนเราเอง)
+     ถ้าส่งซ้ำทุก snapshot จะได้การเขียนซ้ำซ้อนไม่จำเป็น (fbResync ส่งให้อีกทางอยู่แล้ว) */
+  if(first)taxPendFlush();
+  taxFormRefresh(CY);
+}
 function personalDeduct(){
   const p1=ge('tx1')?.checked?60000:0;
   const p2v=ge('tx2')?.checked?60000:0;
@@ -5091,14 +5248,19 @@ function calcTax(){
     empD=Math.min(projAnnual*.5,100000);
     taxable=Math.max(0,projAnnual-empD-perD-ssoA-pvdA);
     annTax=progTax(taxable);
-    mTax=Math.max(0,(annTax-ytdTax)/remaining);
+    /* เดือนที่ผ่านไปแล้วแต่ไม่มีข้อมูล — ฝั่งรายได้ข้ามไปแล้ว (ตัวหาร = เดือนที่มีข้อมูล) ฝั่งภาษีต้องข้ามให้เท่ากัน
+       เดิมนับว่าเดือนพวกนี้ "ยังไม่ได้หักภาษีเลย" แล้วโยนภาษีทั้งปีมาหารเฉพาะเดือนที่เหลือ
+       เริ่มใช้แอปเดือน ต.ค. จึงถูกแนะนำให้หักเกินจริงราว 4 เท่า ทั้งที่บริษัทหักเดือนก่อนๆ ไปตามปกติแล้ว
+       ถือว่าเดือนที่ขาดถูกหักไปแล้วเดือนละ ภาษีทั้งปี÷12 (เท่ากับที่วิธีนี้ให้ผลเมื่อทุกเดือนรายได้เท่ากัน) */
+    const missTax=annTax/12*missing.length;
+    mTax=Math.max(0,(annTax-ytdTax-missTax)/remaining);
     topR=(BRAK.slice().reverse().find(b=>taxable>b.a)?.r||0)*100;
     for(const b of BRAK){if(taxable<=b.a)break;const seg=Math.min(taxable,b.b)-b.a;const st=seg*b.r;
       if(seg>0&&b.r>0)bRows+=`<div style="display:grid;grid-template-columns:1fr auto auto;gap:4px;font-size:.72rem;padding:2px 0;border-bottom:1px solid #feebc8"><span style="color:#718096">${(b.a/1000).toFixed(0)}K–${b.b===Infinity?'∞':(b.b/1000).toFixed(0)+'K'} (${b.r*100}%)</span><span style="text-align:right">฿${f2(seg)}</span><span style="color:#c53030;font-weight:600;text-align:right">฿${f2(st)}</span></div>`;}
     res.innerHTML=`<div style="background:white;border-radius:8px;border:1px solid #fbd38d;padding:12px;font-size:.78rem">
       <div style="font-weight:700;color:#c05621;margin-bottom:8px;border-bottom:1px solid #feebc8;padding-bottom:6px">📊 วิธีสะสม YTD — ใช้ข้อมูล ${totalMonths} เดือน</div>
       ${ytdRows?`<div style="margin-bottom:10px;padding:8px;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0"><div style="font-size:.71rem;font-weight:700;color:#4a5568;margin-bottom:4px">รายได้เดือนก่อนหน้า (จากที่บันทึกไว้)</div>${ytdRows}</div>`:(cm>1?'':'<div style="font-size:.72rem;color:#a0aec0;margin-bottom:10px;padding:6px;text-align:center;background:#f7fafc;border-radius:6px">เดือนแรกของปี — ไม่มีข้อมูลสะสมก่อนหน้า</div>')}
-      ${missing.length?`<div style="margin-bottom:10px;padding:8px 10px;background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;font-size:.72rem;color:#975a16;line-height:1.7">⚠️ <strong>ยังไม่ได้กรอก ${missing.length} เดือน</strong> — ${esc(missing.join(' · '))}<br>เดือนพวกนี้ถูก<strong>ข้ามไป</strong> ไม่ได้นับเป็นรายได้ 0 · ถ้าเดือนนั้นมีรายได้จริง ให้กรอกก่อนเพื่อให้ประมาณการแม่นขึ้น</div>`:''}
+      ${missing.length?`<div style="margin-bottom:10px;padding:8px 10px;background:#fffaf0;border:1px solid #fbd38d;border-radius:6px;font-size:.72rem;color:#975a16;line-height:1.7">⚠️ <strong>ยังไม่ได้กรอก ${missing.length} เดือน</strong> — ${esc(missing.join(' · '))}<br>เดือนพวกนี้ถูก<strong>ข้ามไป</strong> ไม่ได้นับเป็นรายได้ 0 และ<strong>ถือว่าหักภาษีไปแล้วเดือนละ ภาษีทั้งปี÷12</strong> · กรอกเดือนพวกนี้ (รวมยอดภาษีที่ถูกหักจริง) เพื่อให้ประมาณการแม่นขึ้น</div>`:''}
       ${ytdBonusTax>0?`<div style="margin-bottom:10px;padding:8px 10px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;font-size:.72rem;color:#276749;line-height:1.7">🎁 <strong>ภาษีโบนัส ฿${f2(ytdBonusTax)}</strong> ที่หักไปแล้ว <strong>ไม่ถูกนำมาคิดในนี้</strong> — โบนัสคิดภาษีแบบส่วนเพิ่มแยกต่างหากตอนจ่าย ทั้งรายได้และภาษีของโบนัสจึงถูกกันออกจากฐานสะสมทั้งคู่</div>`:''}
       <div style="display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-bottom:8px">
         <span style="color:#4a5568;font-weight:600">รายได้สะสม ${totalMonths} เดือน (รวมเดือนนี้)</span><span style="font-weight:700;text-align:right">฿${f2(totalYtdInc)}</span>
@@ -5114,10 +5276,11 @@ function calcTax(){
         <span style="color:#718096">อัตราสูงสุดที่ถึง</span><span style="font-weight:700;color:#c05621;text-align:right">${topR}%</span>
         <span style="font-weight:700">ภาษีทั้งปี (ประมาณการ)</span><span style="font-weight:700;color:#c53030;text-align:right">฿${f2(annTax)}</span>
         <span style="color:#718096">ภาษีเงินเดือนที่หักไปแล้ว (${filled} เดือน)</span><span style="color:#718096;text-align:right">−฿${f2(ytdTax)}</span>
+        ${missing.length?`<span style="color:#718096">ประมาณการภาษีของเดือนที่ไม่ได้กรอก (${missing.length} เดือน × ทั้งปี÷12)</span><span style="color:#718096;text-align:right">−฿${f2(missTax)}</span>`:''}
         <span style="color:#718096">เดือนที่เหลือ (รวมเดือนนี้)</span><span style="color:#718096;text-align:right">${remaining} เดือน</span>
       </div>
       <div style="margin-top:10px;background:linear-gradient(135deg,#fff7ed,#feebc8);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-size:.72rem;color:#c05621;margin-bottom:2px">ภาษีหัก ณ ที่จ่าย / เดือนนี้</div><div style="font-size:.68rem;color:#a0aec0">= (ภาษีทั้งปี − หักไปแล้ว) ÷ ${remaining}</div></div>
+        <div><div style="font-size:.72rem;color:#c05621;margin-bottom:2px">ภาษีหัก ณ ที่จ่าย / เดือนนี้</div><div style="font-size:.68rem;color:#a0aec0">= (ภาษีทั้งปี − หักไปแล้ว${missing.length?' − ประมาณการเดือนที่ไม่ได้กรอก':''}) ÷ ${remaining}</div></div>
         <div style="font-size:1.4rem;font-weight:800;color:#c05621">฿${f2(mTax)}</div>
       </div></div>`;
     lastTax=mTax;
@@ -5183,6 +5346,7 @@ function clrTax(){
   ge('tx2').checked=false;ge('tx1').checked=true;
   ['tx3','tx3b','tx4','tx5'].forEach(id=>sv(id,'0'));
   ge('txRes').innerHTML='';lastTax=undefined;
+  taxSetSave();
 }
 
 /* ── Print ──
@@ -5235,6 +5399,8 @@ function doExport(){
       });
     }
   });
+  /* ค่าลดหย่อนภาษีรายปี — ทั้งก้อนเป็น JSON ในคอลัมน์ VAL · MONTH ว่าง ไฟล์นี้เปิดด้วยแอปเวอร์ชันเก่าจึงข้ามแถวนี้ไปเอง */
+  Object.keys(TAXSET).sort().forEach(yr=>{if(TAXSET[yr])rows.push(cr('TAX',yr,'','','',JSON.stringify(TAXSET[yr])));});
   const blob=new Blob(['\uFEFF'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=`salary_backup_${ds}.csv`;a.click();URL.revokeObjectURL(a.href);
@@ -5256,10 +5422,14 @@ function doImport(input){
       const lines=text.split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
       if(!lines.length)throw new Error('ไฟล์ว่างเปล่า');
       const si=lines[0].startsWith('TYPE')?1:0;
-      const tmp={};
+      const tmp={},tmpTax={};
       for(let li=si;li<lines.length;li++){
         const c=parseCSV(lines[li]);if(c.length<6)continue;
         const[type,yr,m,key,name,val,extra,extra2,extra3,extra4,extra5,extra6,extra7]=c;
+        if(type.toUpperCase()==='TAX'){
+          try{const o=JSON.parse(val);if(/^\d{4}$/.test(yr)&&o&&typeof o==='object'&&!Array.isArray(o))tmpTax[yr]={...TAX_DEF,...o};}catch(e){}
+          continue;
+        }
         if(!yr||isNaN(parseInt(m)))continue;
         const ym=`${yr}-${p2(parseInt(m))}`;
         if(!tmp[ym])tmp[ym]={base:'',sso:'',pvd:'',a:[],d:[],i:[],o:[],p:[],days:{}};
@@ -5281,6 +5451,10 @@ function doImport(input){
       const cnt=Object.keys(tmp).length;if(!cnt)throw new Error('ไม่พบข้อมูลในไฟล์');
       Object.keys(tmp).forEach(ym=>normDays(tmp[ym]));
       Object.assign(DB,tmp);
+      if(Object.keys(tmpTax).length){
+        Object.assign(TAXSET,tmpTax);lsSet(SKT,JSON.stringify(TAXSET));
+        Object.keys(tmpTax).forEach(y=>{if(fbDb)taxPendSet(y,true);});   /* fbSave() ด้านล่างพาขึ้น cloud ไปด้วย */
+      }
       adoptWkbDef();
       /* บันทึก localStorage */
       lsSet(SK,JSON.stringify(DB));
@@ -5288,6 +5462,7 @@ function doImport(input){
       /* buildYearSel() ไม่ใช่ ySel.value=CY เฉยๆ — ไฟล์ที่ import อาจมีปีนอกช่วงที่ dropdown มีอยู่
          ตั้ง value ตรงๆ จะได้ selectedIndex=-1 (ช่องปีว่าง) แล้วกลับไปปีนั้นไม่ได้อีกเลย */
       if(first){CY=parseInt(first.split('-')[0]);buildYearSel();buildTabs();}
+      taxFormApply(CY);
       updateDots();switchTab(CT,true);
       toast(`✅ Import สำเร็จ! ${cnt} เดือน`);
       /* sync ทั้งหมด — Firebase ก่อน (priority) ไม่งั้น GS */
@@ -5301,7 +5476,8 @@ function doImport(input){
         }else{
           setSyncSt('fb_saving');
           fbSave()
-            .then(ts=>{setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
+            .then(ts=>{Object.keys(tmpTax).forEach(y=>taxPendSet(y,false));
+              setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
             .catch(e=>setSyncSt('fb_error',e.message));
         }
       }
@@ -5344,7 +5520,7 @@ function computeRec(rec,ym){
   const ot15=hr*1.5*h15,ot20=hr*2.0*h20,ot30=hr*3.0*h30,totOT=ot15+ot20+ot30;
   const totA=(rec.a||[]).reduce((s,x)=>s+nf(x.v),0);
   const totO=(rec.o||[]).reduce((s,x)=>s+nf(x.v),0);   /* รายได้อื่นๆ — ไม่เข้าฐานภาษี */
-  const sso=rec.sso?nf(rec.sso):Math.min(base*.05,875);
+  const sso=rec.sso?nf(rec.sso):ssoAuto(base,ym);
   const pvd=rec.pvd?nf(rec.pvd):base*.07;
   const dArr=rec.d||[];
   const custDed=dArr.reduce((s,x)=>s+nf(x.v),0);
@@ -5387,11 +5563,32 @@ function chartNA(el,msg){
   box.textContent=msg;
   box.style.display='';
 }
+/* Chart.js ใช้เฉพาะหน้า 📊 สรุปปี — เดิมโหลดแบบบล็อกใน <head> (~200KB) ทุกครั้งที่เปิดแอป
+   หน้าแรกจึงต้องรอไลบรารีกราฟทั้งที่ยังไม่ได้ใช้ ตอนนี้โหลดเบื้องหลังหลังหน้าแสดงเสร็จ
+   หรือทันทีที่เปิดหน้าสรุปก่อนโหลดเสร็จ — renderSum() วาดใหม่ให้เองเมื่อไลบรารีมาถึง */
+const CHART_SRC='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+let _chartLoad=null,_chartFail=false;
+function loadChartLib(){
+  if(typeof Chart!=='undefined')return Promise.resolve(true);
+  if(_chartLoad)return _chartLoad;
+  _chartFail=false;
+  _chartLoad=new Promise(res=>{
+    const sc=document.createElement('script');
+    sc.src=CHART_SRC;sc.async=true;
+    sc.onload=()=>res(typeof Chart!=='undefined');
+    /* ล้มเหลว (เน็ตหลุด/โดนบล็อก) — ปล่อยให้ลองใหม่ได้ตอนเปิดหน้าสรุปครั้งถัดไป */
+    sc.onerror=()=>{sc.remove();_chartLoad=null;_chartFail=true;res(false);};
+    document.head.appendChild(sc);
+  });
+  return _chartLoad;
+}
 function mkChart(canvasId,cfg){
   const el=ge(canvasId);if(!el)return null;
   const na=ge('chna_'+canvasId);
   if(typeof Chart==='undefined'){
-    chartNA(el,'📉 แสดงกราฟไม่ได้ — โหลดไลบรารีกราฟจากอินเทอร์เน็ตไม่สำเร็จ (ตัวเลขทั้งหมดยังถูกต้องครบ)');
+    chartNA(el,_chartLoad
+      ?'⏳ กำลังโหลดกราฟ…'
+      :'📉 แสดงกราฟไม่ได้ — โหลดไลบรารีกราฟจากอินเทอร์เน็ตไม่สำเร็จ (ตัวเลขทั้งหมดยังถูกต้องครบ)');
     return null;
   }
   try{
@@ -5416,7 +5613,7 @@ function buildDedCats(){
   for(let i=0;i<12;i++){
     const rec=DB[ymk(i)];if(!rec||!nf(rec.base))continue;
     const base=nf(rec.base);
-    const sso=rec.sso?nf(rec.sso):Math.min(base*.05,875);
+    const sso=rec.sso?nf(rec.sso):ssoAuto(base,ymk(i));
     const pvd=rec.pvd?nf(rec.pvd):base*.07;
     if(sso)add('sso','ประกันสังคม (SSO)',i,sso);
     if(pvd)add('pvd','กองทุนสำรองเลี้ยงชีพ (PVD)',i,pvd);
@@ -5735,6 +5932,10 @@ function fillTlMonSel(){
 }
 
 function renderSum(){
+  /* ไลบรารีกราฟยังไม่มา — เริ่มโหลด วาดตัวเลขไปก่อน แล้ววาดใหม่ทั้งหน้าเมื่อโหลดเสร็จ (ถ้ายังอยู่หน้าสรุป)
+     โหลดไม่สำเร็จ = วาดใหม่ครั้งเดียวเพื่อเปลี่ยนป้าย "กำลังโหลด" เป็นข้อความแจ้ง แล้วหยุด
+     (_chartFail กันไม่ให้วนโหลดซ้ำไม่รู้จบตอนออฟไลน์ — switchTab(12) ล้างธงให้ลองใหม่ทุกครั้งที่เข้าหน้านี้) */
+  if(typeof Chart==='undefined'&&!_chartFail)loadChartLib().then(()=>{if(CT===12)renderSum();});
   ge('sTitle').textContent=`สรุปรายได้ปี ${CY} (พ.ศ. ${CY+543})`;ge('sYr').textContent=CY;updAge();
   let tb=0,ta=0,tot=0,to=0,ti=0,tiv=0,td=0,tth=0,tf=0,ttx=0,twk=0,tlf=0,tpl=0;
   let lbs=[],dInc=[],dTH=[],dFin=[],dDed=[],dH15=[],dH20=[],dH30=[],dAcc=[],run=0;let html='';
@@ -5824,6 +6025,9 @@ window.addEventListener('beforeunload',e=>{
   e.preventDefault();
   e.returnValue='';
 });
+
+/* ค่าลดหย่อนภาษี — แก้ช่องไหนในกล่องคำนวณภาษีก็บันทึกเป็นค่าของปีที่เปิดอยู่ */
+['input','change'].forEach(ev=>ge('txPanel')?.addEventListener(ev,()=>{if(CT!==12)taxSetSave();}));
 
 /* mark dirty เมื่อมีการแก้ใน form (event delegation) */
 ['input','change'].forEach(ev=>{
@@ -6442,7 +6646,7 @@ init();
   รายได้รวม        = ฐาน + ค่าเพิ่มเติมทั้งหมด + ค่า OT + รายได้อื่นๆ(ไม่คิดภาษี)
   ★ "รายได้อื่นๆ (ไม่คิดภาษี)" = รายได้ที่นับเป็นเงินเข้าจริง (อยู่ในรายได้รวม/รับจริง/ฐานคิดลงทุน) แต่ "ไม่" ถูกนำไปคำนวณภาษีเลย เช่น ค่ารักษาพยาบาล เงินช่วยเหลือ รายได้เสริม — ต่างจาก "ค่าเพิ่มเติม/เบี้ย" ที่ถูกคิดภาษี
   รายได้จากการทำงาน (กลุ่มที่คิดภาษี) = ฐาน + ค่าเพิ่มเติม/เบี้ย + ค่า OT   →  หลังหักภาษี = กลุ่มนี้ − ภาษี (ยังไม่หักประกันสังคม/กองทุนฯ)
-  ประกันสังคม(ถ้าไม่กรอกเอง) = min(ฐาน×5%, 875)   กองทุนฯ(ถ้าไม่กรอกเอง) = ฐาน×7%
+  ประกันสังคม(ถ้าไม่กรอกเอง) = min(ฐาน×5%, เพดานตามปีของงวด: ก่อน 2569=750 · 2569–2571=875 · 2572–2574=1,000 · 2575 ขึ้นไป=1,150)   กองทุนฯ(ถ้าไม่กรอกเอง) = ฐาน×7%
   ภาษี = ผลรวมรายการหักที่ "ประเภทต้นทุน = ภาษี" (ฟิลด์ ct="tax" ซึ่งติดมากับแต่ละแถวใน context; แถวเก่าที่ยังไม่มีธงจะเดาจากชื่อที่มีคำว่า ภาษี ให้ครั้งเดียว) · อื่นๆ = รายการหักที่เหลือ แยกเป็น คงที่ (fix) กับ ผันแปร (var)
   ★ การเปลี่ยน "ชื่อ" แถวไม่เปลี่ยนการคำนวณ — ตัวตัดสินคือธงประเภทต้นทุน ไม่ใช่ชื่อ
   รับจริง (takeHome) = รายได้รวม − ประกันสังคม − กองทุนฯ − ภาษี
