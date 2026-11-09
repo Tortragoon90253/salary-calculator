@@ -344,7 +344,7 @@ table.stbl tr.stot td{background:#2d3748;color:white;border-color:#4a5568;font-w
   /* ไทม์ไลน์: ปล่อยให้ viewBox ย่อลงพอดีหน้ากระดาษ แทนการตัดขอบ */
   .flow-scroll{overflow:visible!important}
   .flow-hint{display:none!important}
-  .flow-tip,.fx-cross,.wkb-btn{display:none!important}
+  .flow-tip,.fx-cross,.wkb-btn,.flow-ctl .fwdbtn{display:none!important}
   .fx-svg{width:100%!important;height:auto!important}
   .flow-card{page-break-inside:avoid}
 }
@@ -1130,6 +1130,39 @@ input.tx-num-lg{width:130px;flex:0 0 130px;text-align:right;font-size:.78rem;pad
     <div class="modal-btns">
       <button id="xfGo" class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="rowFwdYes()">✅ ส่งเลย</button>
       <button class="mbtn-cancel" onclick="rowFwdNo()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: งบใช้จ่ายวันหยุด → เดือนถัดๆ ไป · ใช้ทั้งปุ่ม 📤 และตอนแก้ค่าในช่อง (ถามทุกครั้ง) ── -->
+<div id="wkbFwdModal" class="modal-overlay" onclick="if(event.target===this)wkbFwdNo()">
+  <div class="modal-box" style="max-width:470px">
+    <div class="modal-title" id="wfTitle">📤 ส่งงบวันหยุดไปเดือนถัดๆ ไป</div>
+
+    <div id="wfHead" style="background:#faf5ff;border:1px solid #e9d8fd;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem;color:#2d3748;line-height:1.6"></div>
+
+    <label id="wfRowYear" style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer">
+      <input type="radio" name="wfMode" id="wfModeYear" checked onchange="wkbFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748"><strong id="wfYearTxt">ทุกเดือนที่เหลือของปีนี้</strong></span>
+    </label>
+
+    <label style="display:flex;align-items:center;gap:9px;border:1px solid #cbd5e0;border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer">
+      <input type="radio" name="wfMode" id="wfModeN" onchange="wkbFwdPreview()" style="width:auto;margin:0;flex:none;cursor:pointer">
+      <span style="font-size:.85rem;color:#2d3748;display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <strong>ระบุเอง</strong>
+        <input type="number" id="wfN" min="1" max="60" step="1" value="3" onfocus="ge('wfModeN').checked=true;wkbFwdPreview()" oninput="ge('wfModeN').checked=true;wkbFwdPreview()" style="width:74px;text-align:right">
+        <span>เดือนถัดไป</span>
+      </span>
+    </label>
+
+    <div id="wfPreview" style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:.83rem;line-height:1.6"></div>
+
+    <div id="wfNote" style="font-size:.72rem;color:#718096;margin-bottom:16px;line-height:1.7"></div>
+
+    <div class="modal-btns">
+      <button id="wfGo" class="mbtn-save" style="background:linear-gradient(135deg,#2c5282,#434190)" onclick="wkbFwdYes()">✅ ส่งเลย</button>
+      <button id="wfNo" class="mbtn-cancel" onclick="wkbFwdNo()">ยกเลิก</button>
+      <button id="wfUndo" class="mbtn-clear" style="display:none" onclick="wkbFwdUndo()">↩︎ ยกเลิก (ไม่เปลี่ยนอะไร)</button>
     </div>
   </div>
 </div>
@@ -4438,8 +4471,14 @@ function adoptWkbDef(){
     lsSet(WKBD_KEY,_wkbDef);
   }
 }
-/* กรอกค่าใหม่ = ตั้งเฉพาะเดือนนี้ (ถ้าเท่ากับค่าเริ่มต้นก็ถือว่าไม่ได้ override) */
-function setWkb(v){_wkb=String(v??'').trim();setTimeout(doCalc,0);}
+/* กรอกค่าใหม่ = ใช้กับเดือนนี้ทันที (ถ้าเท่ากับค่าเริ่มต้นก็ถือว่าไม่ได้ override)
+   แล้วถามทุกครั้งว่าจะใช้กับเดือนถัดๆ ไปด้วยไหม — กติกาเดียวกับเงินเดือนฐาน/แก้ไขรายการ
+   เปิดกล่องหลัง doCalc() วาดการ์ดใหม่เสร็จ (และบันทึกเดือนนี้แล้ว) จึงไม่ถอดช่องกรอกกลางคัน */
+function setWkb(v){
+  const old=_wkb,val=String(v??'').trim();
+  _wkb=val;
+  setTimeout(()=>{doCalc();if(val!==old&&num('fBase')>0)openWkbFwd('edit',old);},0);
+}
 /* เลื่อนขั้นค่าปัจจุบันเป็นค่าเริ่มต้นถาวร แล้วประทับลงทุกเดือนที่บันทึกไว้ ให้ทุกเครื่องเห็นตรงกัน
    ★ ต้องซิงค์ "ทุกเดือนที่ประทับ" ขึ้น cloud ด้วย ไม่ใช่ปล่อยให้ doCalc→saveM จัดการ
    เพราะ persist() เรียก fbSaveMonth() ของเดือนที่เปิดอยู่เดือนเดียว อีก 11 เดือนบน cloud
@@ -4455,7 +4494,161 @@ async function setWkbDefault(){
   doCalc();                       /* วาดการ์ดใหม่หลัง event ของปุ่มจบแล้ว จึงไม่ถอดปุ่มกลางคัน */
   toast(`⭐ จำงบวันหยุด ${_wkbDef?'฿'+_wkbDef+'/วัน':'(ว่าง)'} เป็นค่าเริ่มต้นแล้ว`+syncFailTxt(fail),fail?'te':'ts');
 }
-function resetWkbToDefault(){_wkb=_wkbDef;setTimeout(doCalc,0);}
+/* ↩︎ กลับไปใช้ค่าเริ่มต้น ก็คือการแก้ค่าเดือนนี้เหมือนกัน — ผ่านทางเดียวกับการพิมพ์ จึงถามด้วย */
+function resetWkbToDefault(){setWkb(_wkbDef);}
+
+/* ════════════════════════════════════════════════════
+   งบใช้จ่ายวันหยุด → เดือนถัดๆ ไป (modal wkbFwdModal)
+   📤 ข้างช่องงบ = ส่งค่าของเดือนนี้ไปเดือนถัดๆ ไป — ตัวเลือกเดียวกับ 📤 ของรายการอื่น (ที่เหลือของปี / n เดือน)
+   แก้ค่าในช่อง (หรือกด ↩︎) = กล่องเดียวกัน แต่ถามว่าจะใช้ค่าใหม่กับเดือนถัดๆ ไปด้วยไหม
+     ปุ่มรอง "เฉพาะเดือนนี้" = พฤติกรรมเดิม · "↩︎ ยกเลิก" = คืนค่าเดิม ไม่เปลี่ยนอะไร
+   ปลายทาง:
+     • เดือนที่มี record แล้ว → เขียนค่าใหม่ เฉพาะเดือนที่ค่าที่ใช้จริงต่างจากเดิม (เท่ากันอยู่แล้วไม่แตะ)
+     • เดือนที่ยังไม่เคยเปิด → ตอนเปิดจะได้ "ค่าเริ่มต้น" ไม่ใช่ค่าของเดือนก่อนหน้า (loadMonth: _wkb=_wkbDef)
+       ถ้าค่าที่ส่งต่างจากค่าเริ่มต้นจึงต้องสร้าง record ให้ (newMonthRec — แบบเดียวกับส่งแผนผ่อนตามงวด)
+       ไม่งั้นส่งไปแล้ว พอเปิดเดือนนั้นกลับเจอค่าเริ่มต้น = ส่งไม่ถึงแบบเงียบๆ
+   ════════════════════════════════════════════════════ */
+let _wkbFwd=null;
+/* ค่าที่เก็บลง rec.wkb — กติกาเดียวกับ saveM(): เท่าค่าเริ่มต้น = '' (ตามค่าเริ่มต้น) · ว่าง = '0' (ตั้งใจไม่มีงบ) */
+const wkbStore=v=>v===_wkbDef?'':(v===''?'0':v);
+/* ค่าที่ใช้จริงของเดือน ym — เดือนที่ยังไม่เคยเปิดจะได้ค่าเริ่มต้น */
+const wkbOf=ym=>DB[ym]?(DB[ym].wkb||_wkbDef):_wkbDef;
+const wkbAmt=v=>String(v??'').trim()===''?'(ว่าง)':tlAmt(nf(v));
+const wkbShow=v=>String(v??'').trim()===''?'(ว่าง · ไม่มีงบ)':`${tlAmt(nf(v))}/วัน`;
+
+function wkbFwdSpan(){
+  const d=_wkbFwd;if(!d)return 0;
+  if(ge('wfModeN')?.checked)return Math.max(1,Math.min(FWD_MAX,parseInt(gv('wfN'),10)||1));
+  return 11-d.mi;
+}
+/* ผลของตัวเลือกที่เลือกอยู่ — ใช้ร่วมกันทั้ง preview และตอนกดยืนยัน สองฝั่งจึงตรงกันเสมอ
+   write = เดือนที่มีอยู่แล้วและค่าต่างจากนี้ · create = ยังไม่เคยเปิดและจะได้ค่าเริ่มต้นที่ต่างจากนี้
+   same  = เป็นค่านี้อยู่แล้ว (รวมเดือนที่ยังไม่เปิดซึ่งค่าเริ่มต้นเท่ากัน) — ไม่แตะ */
+function wkbFwdCalc(){
+  const d=_wkbFwd;if(!d)return null;
+  const span=wkbFwdSpan(),nv=nf(d.val);
+  const write=[],create=[],same=[];
+  for(let k=1;k<=span;k++){
+    const t=ymAdd(d.ym,k);
+    if(DB[t])(nf(wkbOf(t))!==nv?write:same).push(t);
+    else(nv!==nf(_wkbDef)?create:same).push(t);
+  }
+  return{span,write,create,same};
+}
+
+/* op: 'send' = กดปุ่ม 📤 · 'edit' = เพิ่งแก้ค่าในช่อง (old = ค่าก่อนแก้) */
+function openWkbFwd(op,old){
+  if(CT<0||CT>=12)return;
+  if(document.querySelector('.modal-overlay.open'))return;   /* กำลังถามเรื่องอื่นอยู่ */
+  const ed=op==='edit';
+  if(!ed){
+    if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+    if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+    _blankYm=null;
+    saveM();                      /* commit ค่าที่ยังค้างในฟอร์ม — ส่งของที่เห็นบนจอจริงๆ */
+  }
+  const ym=ymk(CT),val=_wkb;
+  _wkbFwd={op,mi:CT,ym,val,old};
+
+  ge('wfTitle').textContent=ed?'🗓️ ใช้งบวันหยุดใหม่กับเดือนถัดไปด้วยไหม?':'📤 ส่งงบวันหยุดไปเดือนถัดๆ ไป';
+  const sub=t=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${t}</div>`;
+  ge('wfHead').innerHTML=`🗓️ งบใช้จ่ายวันหยุด${ed?'':` <b>${esc(wkbShow(val))}</b>`}`
+    +(ed?sub(`<span style="color:#a0aec0;text-decoration:line-through">${esc(wkbShow(old))}</span> → <b>${esc(wkbShow(val))}</b>`):'')
+    +`<div style="font-size:.73rem;color:#718096;margin-top:2px">${ed?`${ymLabel(ym)} · บันทึกเดือนนี้แล้ว`:`จาก ${ymLabel(ym)}`}</div>`;
+  ge('wfNote').innerHTML=(ed?'• เดือนนี้บันทึกค่าใหม่ไว้แล้ว — ตัวเลือกนี้คือจะ<strong>ใช้ค่าเดียวกันกับเดือนถัดๆ ไป</strong>ด้วยหรือไม่<br>':'')
+    +'• ส่งเฉพาะ<strong>งบต่อวัน</strong> — จำนวนวันหยุดและยอดรวมของแต่ละเดือนคำนวณจากปฏิทินของเดือนนั้นเอง<br>'
+    +'• เดือนที่ตั้งงบไว้ต่างจากนี้จะถูก<strong>เขียนทับ</strong> · เดือนที่เป็นค่านี้อยู่แล้วไม่ถูกแตะ'
+    +(val!==_wkbDef?'<br>• อยากให้<strong>ทุกเดือน</strong>ใช้ค่านี้ตลอด (รวมเดือนที่ยังไม่เปิด) → ใช้ปุ่ม <strong>⭐ จำเป็นค่าเริ่มต้นตลอด</strong> แทน':'');
+
+  /* ธ.ค. ไม่มีเดือนเหลือในปีแล้ว — ปิดตัวเลือกแรก แล้วเด้งไปโหมดระบุจำนวนเดือนแทน (เหมือน 📤 ของรายการ) */
+  const restOfYear=11-CT;
+  const rYear=ge('wfModeYear'),rowYear=ge('wfRowYear');
+  rYear.disabled=restOfYear<1;
+  rowYear.style.opacity=restOfYear<1?'.45':'';
+  rowYear.style.cursor=restOfYear<1?'default':'pointer';
+  ge('wfYearTxt').textContent=restOfYear<1
+    ?`ไม่มีเดือนเหลือในปี ${CY} แล้ว`
+    :`ทุกเดือนที่เหลือของปี ${CY} — ${MS[CT+1]} ถึง ธ.ค. (${restOfYear} เดือน)`;
+  if(restOfYear<1)ge('wfModeN').checked=true;else rYear.checked=true;
+  sv('wfN',String(Math.max(1,restOfYear||3)));
+
+  ge('wfGo').textContent=ed?'✅ ใช้กับเดือนที่เลือกด้วย':'✅ ส่งเลย';
+  ge('wfNo').textContent=ed?'เฉพาะเดือนนี้':'ยกเลิก';
+  ge('wfUndo').style.display=ed?'':'none';
+
+  wkbFwdPreview();
+  ge('wkbFwdModal').classList.add('open');
+}
+
+function wkbFwdPreview(){
+  const d=_wkbFwd;if(!d)return;
+  const el=ge('wfPreview'),go=ge('wfGo');
+  const c=wkbFwdCalc();
+  if(c.span<1){
+    el.innerHTML='<div style="color:#c53030;font-weight:700">ไม่มีเดือนถัดไปในปีนี้ — เลือก "ระบุเอง" เพื่อส่งข้ามปี</div>';
+    go.disabled=true;return;
+  }
+  const mlist=arr=>`<div style="font-size:.78rem;color:#4a5568;margin-top:3px">${arr.join(' · ')}</div>`;
+  const tip=t=>`<div style="font-size:.72rem;color:#718096;margin-top:5px;line-height:1.6">${t}</div>`;
+  let h='';
+  if(c.write.length){
+    h+=`<div style="font-weight:700;color:#276749">✅ เปลี่ยนเป็น ${esc(wkbShow(d.val))} — ${c.write.length} เดือน</div>`
+      +mlist(c.write.map(t=>`${ymLabel(t)} <span style="color:#a0aec0">(เดิม ${esc(wkbAmt(wkbOf(t)))})</span>`));
+  }
+  if(c.create.length){
+    h+=`<div style="font-weight:700;color:#276749;margin-top:${h?10:0}px">🆕 สร้างเดือนใหม่ ${c.create.length} เดือน</div>`
+      +mlist(c.create.map(ymLabel))
+      +tip(`เดือนพวกนี้ยังไม่เคยเปิด — ถ้าไม่สร้างไว้ ตอนเปิดจะได้ค่าเริ่มต้น (${esc(wkbAmt(_wkbDef))}) แทน `
+        +'จึงสร้างให้พร้อม<strong>เงินเดือนฐานและโครงรายการจากเดือนก่อนหน้า</strong> (แบบเดียวกับตอนเปิดเอง) ยอดรายการอื่นว่างไว้ให้กรอก');
+  }
+  if(c.same.length){
+    h+=`<div style="font-weight:700;color:#718096;margin-top:${h?10:0}px">＝ เป็น ${esc(wkbShow(d.val))} อยู่แล้ว ${c.same.length} เดือน</div>`
+      +mlist(c.same.map(ymLabel))
+      +(c.same.some(t=>!DB[t])?tip('รวมเดือนที่ยังไม่เคยเปิด — ตอนเปิดจะได้ค่าเริ่มต้นซึ่งเท่ากันอยู่แล้ว'):'');
+  }
+  if(!c.write.length&&!c.create.length)h+=tip('ทุกเดือนที่เลือกใช้ค่านี้อยู่แล้ว — ไม่มีอะไรต้องเปลี่ยน');
+  el.innerHTML=h;
+  go.disabled=!(c.write.length+c.create.length);
+}
+
+/* ส่ง: ยกเลิก · แก้ไข: "เฉพาะเดือนนี้" — ค่าใหม่บันทึกไว้แล้วตั้งแต่ตอนแก้ ไม่ต้องทำอะไรเพิ่ม */
+function wkbFwdNo(){
+  const d=_wkbFwd;ge('wkbFwdModal').classList.remove('open');_wkbFwd=null;
+  if(d&&d.op==='edit')toast(`🗓️ ตั้งงบวันหยุด ${wkbShow(d.val)} เฉพาะ ${ymLabel(d.ym)} แล้ว`);
+}
+/* แก้ไข: ↩︎ ยกเลิก — คืนค่าเดิม (doCalc บันทึกให้เอง) */
+function wkbFwdUndo(){
+  const d=_wkbFwd;ge('wkbFwdModal').classList.remove('open');_wkbFwd=null;
+  if(!d||d.op!=='edit'||ymk(CT)!==d.ym)return;
+  _wkb=d.old;
+  setTimeout(doCalc,0);
+}
+async function wkbFwdYes(){
+  const d=_wkbFwd;if(!d)return;
+  const c=wkbFwdCalc();
+  /* เช็ค race ตอนกดยืนยัน แบบเดียวกับ rowFwdYes() — สถานะอาจเปลี่ยนระหว่างที่กล่องเปิดค้าง */
+  if(fbDb&&!fbReady){toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');return;}
+  if(pendingRemote){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อน');return;}
+  ge('wkbFwdModal').classList.remove('open');_wkbFwd=null;
+  const touched=c.write.concat(c.create).sort();
+  if(!touched.length)return;
+  _blankYm=null;
+  const pr=saveM();               /* commit เดือนนี้ด้วย ไม่งั้นของบนจอกับ DB ไม่ตรงกัน */
+  /* เรียงจากเก่าไปใหม่ — เดือนที่สร้างใหม่ลอกโครงจากเดือนก่อนหน้าที่เพิ่งถูกสร้างไปแล้ว */
+  const st=wkbStore(d.val),mk=new Set(c.create);
+  touched.forEach(t=>{
+    if(!DB[t]&&mk.has(t))DB[t]=newMonthRec(t);
+    if(DB[t])DB[t].wkb=st;
+  });
+  lsSet(SK,JSON.stringify(DB));
+  if(fbDb)fbPendMark(touched);
+  if(c.create.length)updateDots();
+  await pr;                       /* รอเดือนนี้เสร็จก่อน ไม่งั้นสถานะ sync ของเดือนนี้มาทับผลของทั้งชุด */
+  const fail=await syncMonths(touched,'wkb propagate');
+  if(CT===12)renderSum();
+  toast(`✅ ${d.op==='edit'?'ใช้':'ส่ง'}งบวันหยุด ${wkbShow(d.val)} กับ ${touched.length} เดือนถัดไปแล้ว`
+    +(c.create.length?` (สร้างเดือนใหม่ ${c.create.length} เดือน)`:'')+syncFailTxt(fail),fail?'te':'ts');
+}
 
 /* รวบรวมรายการเงินเข้า/ออกทั้งหมดพร้อมวันที่
    รายการที่ผู้ใช้ยังไม่กรอกวันที่จะไปอยู่ undated ไม่ถูกทิ้งเงียบๆ */
@@ -4828,10 +5021,11 @@ function renderFlowTimeline(c,opts){
       ${(interactive||wkb>0)?`<div class="flow-ctl">🗓️ งบใช้จ่ายวันหยุด
         ${interactive
           ? `<input type="number" class="fx-wkb" value="${esc(_wkb)}" min="0" placeholder="0" onchange="setWkb(this.value)"> บาท/วัน (เสาร์–อาทิตย์ ตั้งแต่วันเงินเดือนออก)`
+            +`<button class="fwdbtn" onclick="openWkbFwd('send')" title="ส่งงบวันหยุดนี้ไปเดือนถัดๆ ไป">📤</button>`
           : `<strong>${tlAmt(wkb)}</strong> บาท/วัน (เสาร์–อาทิตย์ ตั้งแต่วันเงินเดือนออก)`}
         ${!interactive?'' : _wkb===_wkbDef
           ? `<span class="wkb-tag wkb-def" title="ค่านี้ถูกจำไว้และใช้กับทุกเดือน">⭐ ค่าเริ่มต้นตลอด</span>`
-          : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 เฉพาะเดือนนี้</span>`
+          : `<span class="wkb-tag wkb-ovr" title="เดือนนี้ตั้งต่างจากค่าเริ่มต้น">📌 ต่างจากค่าเริ่มต้น</span>`
             +`<button class="wkb-btn" onclick="setWkbDefault()">⭐ จำเป็นค่าเริ่มต้นตลอด</button>`
             +`<button class="wkb-btn gh" onclick="resetWkbToDefault()">↩︎ กลับไปใช้ ${_wkbDef?tlAmt(nf(_wkbDef)):'(ว่าง)'}</button>`}
         ${wkb>0?`<span class="flow-ctl-sum">${wkDays} วันหยุดทั้งงวด (${tlThDate(payShow)} → ก่อน ${tlThDate(serDt(sPayNext))}) × ${tlAmt(wkb)} = <strong>${tlAmt(wkAcc)}</strong>${wkSkip?` · <span class="wkb-skip">ข้าม ${wkSkip} วันหยุดก่อนเงินเดือนออก</span>`:''}
