@@ -1403,6 +1403,91 @@ function stableStr(v){
   if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stableStr(v[k])).join(',')+'}';
   return JSON.stringify(v===undefined?null:v);
 }
+/* ════════════════════════════════════════════════════
+   รวมข้อมูลเดือนแบบ 3 ทาง (3-way merge)
+   เดิมทุกการบันทึกเขียน "ทั้งเดือน" ทับ cloud — เครื่องที่ถือข้อมูลเก่าอยู่ (listener ค้าง · แท็บพักอยู่เบื้องหลัง
+   · เปิดใหม่แล้วมีของค้างส่ง) บันทึกเมื่อไหร่ สิ่งที่อีกเครื่องเพิ่งแก้หายทั้งเดือน ต้องกลับไปกรอกใหม่ซ้ำๆ
+   ตอนนี้เทียบกับ base = ฉบับบน cloud ที่ข้อมูลในเครื่องแตกออกมา แล้วเอาเฉพาะ "สิ่งที่เครื่องนี้แก้" ไปลงบนของล่าสุด
+   · ช่องที่แก้ฝั่งเดียว → เอาฝั่งที่แก้ · แก้ทั้งสองฝั่งต่างกัน → ฝั่งที่กำลังบันทึก (pl) ชนะ
+   · รายการในกล่อง (มี id) รวมทีละแถว/ทีละช่อง · แถวที่อีกฝั่งลบโดยฝั่งนี้ไม่ได้แตะ → ลบตาม
+   · ตาราง OT (days) รวมทีละวัน
+   FB_UNK = ไม่รู้ base (ของค้างจากโค้ดรุ่นก่อน) → ไม่ทิ้งแถวไหน และให้ cloud ชนะเมื่อขัดกัน
+   ════════════════════════════════════════════════════ */
+const FB_UNK='?';
+const isPlainObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+const isEmptyV=v=>v===undefined||v===null||v===''||v===false||(Array.isArray(v)&&!v.length)||(isPlainObj(v)&&!Object.keys(v).length);
+function idArr(a){
+  if(!Array.isArray(a))return false;
+  const s=new Set();
+  for(const x of a){if(!isPlainObj(x)||typeof x.id!=='string'||!x.id||s.has(x.id))return false;s.add(x.id);}
+  return true;
+}
+function mergeVal(b,l,r,pl){
+  const sl=stableStr(l),sr=stableStr(r);
+  if(sl===sr)return l;
+  const unk=b===FB_UNK;
+  if(!unk){const sb=stableStr(b);if(sl===sb)return r;if(sr===sb)return l;}
+  if(isPlainObj(l)&&isPlainObj(r)){
+    const out={},bo=isPlainObj(b)?b:{};
+    new Set([...Object.keys(l),...Object.keys(r)]).forEach(k=>{
+      const v=mergeVal(unk?FB_UNK:bo[k],l[k],r[k],pl);
+      if(v!==undefined)out[k]=v;
+    });
+    return out;
+  }
+  if(idArr(l)&&idArr(r))return mergeIdArr(unk?FB_UNK:(idArr(b)?b:[]),l,r,pl);
+  /* ทั้งสองฝั่ง "เพิ่ม" ค่าเดียวกันขึ้นมาเอง (base ไม่มี) — ฝั่งหนึ่งมักเป็นแค่โครงเปล่าที่ loadM() เติมให้
+     (แถวโบนัส · ช่องวันที่ · แผนที่ส่งต่อจากเดือนก่อน) เอาฝั่งที่มีค่าจริง ไม่ใช่ทับด้วยช่องว่าง */
+  if(unk||b===undefined||b===null){
+    const el=isEmptyV(l),er=isEmptyV(r);
+    if(el&&!er)return r;
+    if(er&&!el)return l;
+  }
+  return pl?l:r;
+}
+function mergeIdArr(b,l,r,pl){
+  const unk=b===FB_UNK;
+  const mb=new Map(unk?[]:b.map(x=>[x.id,x])),ml=new Map(l.map(x=>[x.id,x])),mr=new Map(r.map(x=>[x.id,x]));
+  const keep=new Map();
+  new Set([...ml.keys(),...mr.keys()]).forEach(id=>{
+    if(ml.has(id)&&mr.has(id)){keep.set(id,mergeVal(unk?FB_UNK:mb.get(id),ml.get(id),mr.get(id),pl));return;}
+    const v=ml.has(id)?ml.get(id):mr.get(id);
+    /* อีกฝั่งลบแถวนี้ไป และฝั่งที่ยังมีอยู่ไม่ได้แก้อะไร → ลบตาม · ถูกแก้ด้วย = เก็บไว้ (ของที่เพิ่งแก้ต้องไม่หาย) */
+    if(!unk&&mb.has(id)&&stableStr(v)===stableStr(mb.get(id)))return;
+    keep.set(id,v);
+  });
+  /* ลำดับ: ฝั่งที่จัดลำดับใหม่ (เทียบ base) เป็นหลัก แล้วแทรกแถวที่อีกฝั่งเพิ่มไว้ต่อจากแถวที่อยู่ก่อนหน้ามัน */
+  const ids=a=>a.map(x=>x.id);
+  const rel=(a,ref)=>{const s=new Set(ref);return a.filter(id=>s.has(id));};
+  const lMoved=unk?pl:stableStr(rel(ids(l),ids(b)))!==stableStr(rel(ids(b),ids(l)));
+  const pri=lMoved?ids(l):ids(r),sec=lMoved?ids(r):ids(l);
+  const order=pri.filter(id=>keep.has(id));
+  sec.forEach((id,i)=>{
+    if(!keep.has(id)||order.includes(id))return;
+    let at=0;
+    for(let j=i-1;j>=0;j--){const k=order.indexOf(sec[j]);if(k>=0){at=k+1;break;}}
+    order.splice(at,0,id);
+  });
+  return order.map(id=>keep.get(id));
+}
+/* ── base ของแต่ละเดือน = stableStr ของฉบับบน cloud ที่ DB ในเครื่องอิงอยู่ ──
+   อัปเดตเมื่อรับ snapshot (เฉพาะเดือนที่ไม่ได้ค้างส่ง) และหลังเขียนของเราเองสำเร็จ
+   เก็บลง localStorage ด้วย (แยกตาม docId) — เปิดหน้าใหม่แล้วมีเดือนค้างส่ง / โหลด cloud หมดเวลา ก็ยังรวมได้ถูก
+   null = ยังไม่รู้เลย · ไม่มี key ของเดือน = รู้ว่าบน cloud ไม่มีเดือนนั้น · FB_UNK = ไม่รู้เฉพาะเดือนนั้น */
+const SKB='sol_v5_fbbase';
+let fbBase=null;
+function fbBaseRead(){
+  try{const all=JSON.parse(localStorage.getItem(SKB)||'{}')||{};const m=all[fbDocId];return isPlainObj(m)?m:null;}
+  catch(e){return null;}
+}
+function fbBaseWrite(){
+  let all={};try{all=JSON.parse(localStorage.getItem(SKB)||'{}')||{};}catch(e){}
+  if(fbBase)all[fbDocId]=fbBase;else delete all[fbDocId];
+  /* เขียนไม่ลง (พื้นที่เต็ม) — base เก่าที่ค้างอยู่อันตรายกว่าไม่มี base: ลบทิ้งให้รอบหน้าถือว่าไม่รู้ */
+  if(!lsSet(SKB,JSON.stringify(all))){try{localStorage.removeItem(SKB);}catch(e){}}
+}
+const fbBaseOf=ym=>fbBase?fbBase[ym]:FB_UNK;
+const fbBaseParse=s=>s===FB_UNK?FB_UNK:(s===undefined?undefined:JSON.parse(s));
 /* ── เดือนที่ "ยังเขียนขึ้น cloud ไม่เสร็จ" ──
    Firestore เปิดแบบไม่มี offline persistence คิวเขียนที่รอส่งอยู่แค่ในหน่วยความจำ
    ปิดแท็บ/รีเฟรช/แท็บถูกเบราว์เซอร์ฆ่า ก่อน server ตอบ = คิวหาย ขณะที่ localStorage มีค่าใหม่แล้ว
@@ -1444,7 +1529,9 @@ let formDirty=false;  /* true เมื่อมีการแก้ใน form
    พอ switchTab() เรียก saveM() อัตโนมัติ เดือนที่เพิ่งลบไปก็ถูกเขียนกลับเข้า DB ทันที
    (จุดบนแท็บติดกลับมา + ถูก sync ขึ้น cloud) = ล้างแล้วเหมือนไม่ได้ล้าง */
 let _blankYm=null;
-let pendingRemote=null;  /* { ym } — มี remote update ค้างให้ user ตัดสินใจ */
+/* เดิม = มี remote update ค้างให้ user เลือกผ่านแถบขัดแย้ง — ตอนนี้รวมให้อัตโนมัติแล้ว (fbLocalApply/saveM)
+   จึงเป็น null เสมอ ด่านเช็คตามปุ่มต่างๆ ยังคงไว้ได้โดยไม่มีผล */
+let pendingRemote=null;
 
 /* ── Defaults ── */
 const defA=()=>[
@@ -1603,7 +1690,7 @@ async function saveFbCfg(){
     showFbStatus('ไม่สามารถ init Firebase ได้ — ตรวจสอบ API Key และ Project ID','err');
     return;
   }
-  fbCfg=cfg;
+  fbCfg=cfg;fbBase=fbBaseRead();   /* doc อาจเปลี่ยน — base ต้องเป็นของ doc ใหม่ */
   fbReady=false;fbLoaded=false;  /* บล็อก save ระหว่างโหลด */
   lsSet(FB_CFG_KEY,JSON.stringify(cfg));
   showFbStatus('กำลังทดสอบการเชื่อมต่อ...','info');
@@ -1622,6 +1709,7 @@ function clearFbCfg(){
   if(fbUnsubscribe){fbUnsubscribe();fbUnsubscribe=null;}
   /* เลิกใช้ doc นี้แล้ว — ของค้างไม่ควรไปทับ cloud ถ้ากลับมาเชื่อมใหม่อีกนานหลังจากนี้ (ต้องทำก่อนรีเซ็ต fbDocId) */
   fbPendPut({});fbPendSeq={};
+  fbBase=null;fbBaseWrite();     /* ต่อกลับมาใหม่ = ไม่รู้ว่า cloud เปลี่ยนไปเท่าไหร่แล้ว */
   /* หลังจากนี้แก้ในเครื่องอย่างเดียว — ถ้ากลับมาเชื่อม doc เดิม ต้องถามก่อนว่าจะส่งของในเครื่องขึ้นไหม
      ไม่ใช่ถือว่า cloud ถูกเสมอแล้วลบเดือนที่เพิ่งทำแบบ local ทิ้ง */
   fbSyncedSet(false);
@@ -1654,33 +1742,36 @@ function copyFbShareLink(){
   }
 }
 
-async function fbSave(){
-  if(!fbDb)return;
-  return fbBusyRun(async()=>{
-  const ts=fbTs();
-  const seq=fbPendMark(Object.keys(DB));
-  /* .set() แทนที่ทั้ง document — ต้องพกค่าลดหย่อนภาษี (taxset) ไปด้วย ไม่งั้นหายจาก cloud */
-  await fbDb.collection('salary_data').doc(fbDocId).set({data:DB,taxset:TAXSET,lastSaved:ts});
-  fbPendDone(seq);
-  return ts;
-  });
+/* ── คิวเขียนรายเดือน ──
+   เขียนทีละงาน ตามลำดับที่สั่ง — แต่ละงานอ่าน DB[ym] "ตอนถึงคิว" (ไม่ใช่ตอนสั่ง) จึงได้ค่าล่าสุดเสมอ
+   และ base ที่ใช้รวมเป็นของงานก่อนหน้าที่เสร็จแล้ว (สองงานเดือนเดียวกันวิ่งซ้อนกัน = รวมผิด แถวที่ลบไปฟื้นกลับ)
+   สั่งเดือนเดิมซ้ำระหว่างที่ยังรอคิว = ใช้รอบเดียวกัน ไม่เขียนซ้ำ */
+let _fbQ=Promise.resolve();
+const _fbQd=new Map();
+/* เดือนที่เครื่องนี้ "สร้างจากโครง" (เปิดดูเดือนใหม่ · 📤 ส่งไปเดือนที่ยังไม่เคยเปิด · AI) → stableStr ของโครงนั้น
+   ถ้าอีกเครื่องสร้างเดือนเดียวกันไว้แล้ว (เครื่องนี้ยังไม่รู้) ใช้โครงเป็น base ของการรวม
+   = เอาเฉพาะสิ่งที่เติมลงไปจริง (แถวที่ส่งมา / ช่องที่กรอก) ไปลงบนของจริงบน cloud ไม่ใช่เอาโครงเปล่า/ฐานเงินเดือนเก่าไปทับ */
+const _fbTpl=new Map();
+const fbTplMark=(ym,rec)=>{if(fbDb&&rec)_fbTpl.set(ym,stableStr(rec));};
+function fbQueueMonth(ym){
+  if(_fbQd.has(ym))return _fbQd.get(ym);
+  _fbBusy++;
+  const p=_fbQ.then(async()=>{
+    _fbQd.delete(ym);
+    const seq={[ym]:fbPendSeq[ym]};
+    const ts=await fbCommitMonth(ym);
+    fbPendDone(seq);
+    return ts;
+  }).finally(()=>{_fbBusy--;});
+  _fbQd.set(ym,p);
+  _fbQ=p.catch(()=>{});
+  return p;
 }
-
 async function fbSaveMonth(ym){
   if(!fbDb||!ym)return;
-  return fbBusyRun(async()=>{
-  const ts=fbTs();
   fbKnownMonths.add(ym);
-  const seq=fbPendMark([ym]);
-  const ref=fbDb.collection('salary_data').doc(fbDocId);
-  try{
-    await ref.update({[`data.${ym}`]:DB[ym],lastSaved:ts});
-  }catch(e){
-    await ref.set({data:{[ym]:DB[ym]},lastSaved:ts},{merge:true});
-  }
-  fbPendDone(seq);
-  return ts;
-  });
+  fbPendMark([ym]);
+  return fbQueueMonth(ym);
 }
 
 /* "ไม่มี document ให้ลบ" = งานเสร็จอยู่แล้ว · error อื่น (สิทธิ์ / เน็ต / โควตา) คือความล้มเหลวจริง
@@ -1691,19 +1782,55 @@ const fbErrNotFound=e=>{
 };
 async function fbDeleteMonth(ym){
   if(!fbDb||!ym)return;
-  return fbBusyRun(async()=>{
-  const ts=fbTs();
   fbKnownMonths.delete(ym);
-  const seq=fbPendMark([ym]);
-  try{
-    await fbDb.collection('salary_data').doc(fbDocId).update({
-      [`data.${ym}`]:firebase.firestore.FieldValue.delete(),
-      lastSaved:ts
-    });
-  }catch(e){if(!fbErrNotFound(e))throw e;}   /* doc ไม่มีอยู่ — ถือว่าเสร็จ */
-  fbPendDone(seq);
-  return ts;
+  fbPendMark([ym]);
+  return fbQueueMonth(ym);
+}
+
+/* งานจริงของคิว — ในเครื่องไม่มีเดือนนี้ = ลบบน cloud · มี = เขียนแบบรวม (transaction)
+   transaction อ่านของล่าสุดบน cloud → เทียบ base → ไม่มีใครแตะ = เขียนของเราตรงๆ · มีคนแก้ = รวม 3 ทางแล้วค่อยเขียน
+   ถ้ามีเครื่องอื่นเขียนแทรกระหว่างอ่านกับเขียน Firestore จะสั่งรอบใหม่ให้เอง (อ่านใหม่ รวมใหม่) */
+async function fbCommitMonth(ym){
+  const ref=fbDb.collection('salary_data').doc(fbDocId);
+  const ts=fbTs();
+  if(!DB[ym]){
+    try{await ref.update({[`data.${ym}`]:firebase.firestore.FieldValue.delete(),lastSaved:ts});}
+    catch(e){if(!fbErrNotFound(e))throw e;}   /* doc ไม่มีอยู่ — ถือว่าเสร็จ */
+    _fbTpl.delete(ym);
+    if(fbBase){delete fbBase[ym];fbBaseWrite();}
+    return ts;
+  }
+  const used=JSON.parse(JSON.stringify(DB[ym])),sUsed=stableStr(used);
+  let bs=fbBaseOf(ym),tpl=false;
+  if(bs===undefined&&_fbTpl.has(ym)){bs=_fbTpl.get(ym);tpl=true;}
+  const base=fbBaseParse(bs);
+  let out=used;
+  await fbDb.runTransaction(async tx=>{
+    const snap=await tx.get(ref);
+    const doc=snap.exists?(snap.data()||{}):null;
+    const cloud=(doc&&isPlainObj(doc.data)&&isPlainObj(doc.data[ym]))?doc.data[ym]:undefined;
+    const sCloud=stableStr(cloud===undefined?null:cloud);
+    if(tpl&&cloud===undefined)out=used;                                          /* สร้างเดือนใหม่จริงๆ */
+    else if(bs!==FB_UNK&&sCloud===(bs===undefined?'null':bs))out=used;           /* ไม่มีใครแตะตั้งแต่เราโหลดมา */
+    else out=mergeVal(base,used,cloud,bs!==FB_UNK);
+    if(out===undefined||stableStr(out)===sCloud)return;                         /* cloud ตรงอยู่แล้ว (หรืออีกเครื่องลบไป) */
+    if(!snap.exists)tx.set(ref,{data:{[ym]:out},lastSaved:ts},{merge:true});
+    else tx.update(ref,{[`data.${ym}`]:out,lastSaved:ts});
   });
+  _fbTpl.delete(ym);
+  const sOut=out===undefined?null:stableStr(out);
+  if(fbBase){if(out===undefined)delete fbBase[ym];else fbBase[ym]=sOut;fbBaseWrite();}
+  if(sOut!==sUsed&&DB[ym]){
+    /* ผลรวมมีของจากอีกเครื่องด้วย — เอากลับมาใส่ในเครื่อง (ระหว่างรอ server ผู้ใช้อาจแก้ต่อไปแล้ว → รวมอีกชั้น
+       แล้วงานถัดไปในคิวจะเขียนส่วนที่เพิ่งแก้ขึ้นไปเอง) */
+    const cur=DB[ym],moved=stableStr(cur)!==sUsed;
+    const next=out===undefined?(moved?cur:undefined)
+      :(moved?mergeVal(used,cur,out,true):JSON.parse(JSON.stringify(out)));
+    if(next===undefined){delete DB[ym];fbKnownMonths.delete(ym);}
+    else{normDays(next);DB[ym]=next;}
+    fbLocalApply([ym],null,true);
+  }
+  return ts;
 }
 
 /* ก่อนเอาข้อมูล cloud ไปใส่ DB — เดือนที่ค้างจากรอบก่อนให้ใช้ค่าในเครื่อง (localStorage) แทน
@@ -1718,8 +1845,9 @@ function fbApplyPending(data){
   });
   return yms;
 }
-/* ส่งเดือนที่ค้างขึ้น cloud ซ้ำ — มีในเครื่อง = เขียน · ไม่มี = ลบ */
-async function fbFlushPending(yms){
+/* ส่งเดือนที่ค้างขึ้น cloud ซ้ำ — มีในเครื่อง = เขียน (รวมกับของบน cloud) · ไม่มี = ลบ
+   quiet = ลองส่งซ้ำเบื้องหลัง (กลับมาที่แท็บ / เน็ตกลับมา) ไม่ต้องเด้ง toast ตอนสำเร็จ */
+async function fbFlushPending(yms,quiet){
   if(!fbDb||!yms||!yms.length)return;
   setSyncSt('fb_saving');
   let fail=0,lastTs=null;
@@ -1731,11 +1859,23 @@ async function fbFlushPending(yms){
   });
   if(fail){
     setSyncSt('fb_error',`ซิงค์ค้าง ${fail} เดือน`);
-    toast(`⚠️ มีข้อมูลที่แก้ไว้รอบก่อนแต่ยังขึ้น cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลยังอยู่ในเครื่อง จะลองส่งใหม่เมื่อเปิดหน้าครั้งถัดไป`,'te');
+    if(!quiet)toast(`⚠️ มีข้อมูลที่แก้ไว้แต่ยังขึ้น cloud ไม่สำเร็จ ${fail} เดือน — ข้อมูลยังอยู่ในเครื่อง จะลองส่งใหม่เองเมื่อเน็ตกลับมา`,'te');
+    fbRetrySoon();
   }else{
     setSyncSt('fb_ok');if(lastTs)setBadge(lastTs,'fb');
-    toast(`🔥 ส่งข้อมูลในเครื่องขึ้น cloud แล้ว ${yms.length} เดือน`);
+    if(!quiet)toast(`🔥 ส่งข้อมูลในเครื่องขึ้น cloud แล้ว ${yms.length} เดือน`);
   }
+}
+/* เดือนที่ยังค้างส่ง (เขียนล้มเหลว / เน็ตหลุด) — เดิมรอจนเปิดหน้าใหม่ถึงจะส่งอีกครั้ง ระหว่างนั้นอีกเครื่องไม่เห็นเลย */
+function fbRetryPending(){
+  if(!fbDb||!fbLoaded||_fbBusy)return;     /* มีงานเขียนวิ่งอยู่ — เดี๋ยวมันจัดการเอง/ล้มแล้วค่อยลองรอบหน้า */
+  const yms=Object.keys(fbPendGet());
+  if(yms.length)fbFlushPending(yms,true);
+}
+let _fbRetryT=null;
+function fbRetrySoon(){
+  if(_fbRetryT)return;
+  _fbRetryT=setTimeout(()=>{_fbRetryT=null;if(document.visibilityState!=='hidden')fbResync(true);},20000);
 }
 
 async function fbLoad(){
@@ -1753,7 +1893,13 @@ async function fbLoad(){
 function fbFirstLoad(result){
   fbLoaded=true;           /* อ่าน cloud สำเร็จแล้ว (ไม่มีข้อมูลก็ถือว่าอ่านได้) */
   const data=(result&&result.data&&typeof result.data==='object')?result.data:{};
-  const pend=fbApplyPending(data);   /* ของค้างจากรอบก่อนชนะของ cloud */
+  /* base ใหม่ = cloud ตอนนี้ ยกเว้นเดือนที่ค้างส่งจากรอบก่อน — ของในเครื่องแตกมาจาก base เดิมที่จำไว้
+     ถ้าเอา cloud ตอนนี้เป็น base ของเดือนค้าง สิ่งที่อีกเครื่องแก้ระหว่างนั้นจะดูเหมือน "เราลบทิ้ง" แล้วโดนทับ */
+  const pendKeys=Object.keys(fbPendGet()),prevBase=fbBase,nb={};
+  Object.keys(data).forEach(ym=>{if(!pendKeys.includes(ym)&&isPlainObj(data[ym]))nb[ym]=stableStr(data[ym]);});
+  pendKeys.forEach(ym=>{const b=prevBase?prevBase[ym]:FB_UNK;if(b!==undefined)nb[ym]=b;});
+  fbBase=nb;fbBaseWrite();
+  const pend=fbApplyPending(data);   /* เดือนค้างจากรอบก่อน: โชว์ของในเครื่องไปก่อน แล้ว fbFlushPending รวมกับ cloud ให้ */
   const localOnly=Object.keys(DB).filter(ym=>!(ym in data)&&!pend.includes(ym)).sort();
   const withData=localOnly.filter(ym=>recHasData(DB[ym]));
   let upload=[],decided=true;
@@ -1814,9 +1960,9 @@ async function fbResync(force){
     if(!fbUnsubscribe)fbStartListener();
     const snap=await fbDb.collection('salary_data').doc(fbDocId).get({source:'server'});
     fbHandleSnap(snap);
-    if(fbLoaded)taxPendFlush();     /* ค่าลดหย่อนที่ค้างจากตอนเน็ตหลุด */
+    if(fbLoaded){taxPendFlush();fbRetryPending();}   /* ค่าลดหย่อน / เดือนที่ค้างจากตอนเน็ตหลุด */
     if(_syncSt==='fb_error'&&!_fbBusy&&!fbHasPending())setSyncSt('fb_ok');   /* ต่อได้แล้ว — ล้างสถานะ error เก่า */
-  }catch(e){console.warn('Firebase resync failed:',e);}
+  }catch(e){console.warn('Firebase resync failed:',e);if(fbHasPending())fbRetrySoon();}
   finally{_fbResyncing=false;}
 }
 
@@ -1849,10 +1995,14 @@ function fbSyncFromRemote(data,lastSaved){
   const pend=fbPendGet();
   const remoteMonths=new Set(Object.keys(data));
   const changed=[];
+  let baseCh=false;
   Object.keys(data).forEach(ym=>{
     if(pend[ym])return;
     const rec=data[ym];
     if(!rec||typeof rec!=='object')return;
+    /* ก่อน normDays — base ต้องตรงกับ cloud เป๊ะ · เดือนที่บน cloud ไม่ได้เปลี่ยนตั้งแต่ที่รู้ล่าสุด ไม่ต้องแตะ
+       (ในเครื่องอาจจัดรูปไว้ต่างจาก cloud นิดหน่อย เช่นแถวโบนัสที่ loadM เติม — ไม่ใช่ของใหม่จากอีกเครื่อง) */
+    if(fbBase){const s=stableStr(rec);if(fbBase[ym]===s&&DB[ym])return;fbBase[ym]=s;baseCh=true;}
     normDays(rec);
     if(stableStr(rec)!==stableStr(DB[ym]||null)){DB[ym]=rec;changed.push(ym);}
   });
@@ -1860,50 +2010,52 @@ function fbSyncFromRemote(data,lastSaved){
   Object.keys(DB).forEach(ym=>{
     if(fbKnownMonths.has(ym)&&!remoteMonths.has(ym)&&!pend[ym]){delete DB[ym];changed.push(ym);}
   });
+  if(fbBase){
+    Object.keys(fbBase).forEach(ym=>{if(!remoteMonths.has(ym)&&!pend[ym]){delete fbBase[ym];baseCh=true;}});
+    if(baseCh)fbBaseWrite();
+  }
   /* เดือนที่เรากำลังเขียนขึ้นยังนับว่าอยู่บน cloud — snapshot ถัดไปที่ไม่มีมัน = ถูกลบจากที่อื่นจริง */
   Object.keys(pend).forEach(ym=>{if(DB[ym])remoteMonths.add(ym);});
   fbKnownMonths=remoteMonths;
   if(!changed.length)return;      /* echo ของการเขียนเราเอง หรือไม่มีอะไรใหม่ */
-
-  lsSet(SK,JSON.stringify(DB));
   setSyncSt('fb_ok');
+  fbLocalApply(changed,lastSaved,false);
+}
+
+/* DB ในเครื่องเปลี่ยนเพราะของจากอีกเครื่อง (snapshot / ผลรวมหลังเขียน) — เก็บลงเครื่องแล้ววาดจอใหม่
+   เดือนที่เปิดอยู่: ยังไม่ได้พิมพ์อะไร → โหลดใหม่ทันที (คงช่องที่โฟกัสอยู่ไว้)
+   กำลังพิมพ์ค้าง → ไม่วาดทับมือ บันทึกอัตโนมัติรอบถัดไป (saveM) จะรวมของใหม่กับที่พิมพ์แล้ววาดให้เอง
+   เดิมกรณีนี้ขึ้นแถบให้เลือก "ใช้ข้อมูลใหม่ / เก็บที่แก้ไว้" ซึ่งไม่ว่าเลือกอะไรก็มีฝั่งหนึ่งหาย
+   และระหว่างที่ยังไม่เลือก การบันทึกถูกบล็อก สลับเดือนออกไป = สิ่งที่พิมพ์หายเงียบๆ */
+function fbLocalApply(changed,lastSaved,merged){
+  lsSet(SK,JSON.stringify(DB));
   if(lastSaved)setBadge(lastSaved,'fb');
   buildYearSel();                 /* เครื่องอื่นอาจเพิ่มปีใหม่เข้ามา (วาดใหม่เฉพาะตอนช่วงปีเปลี่ยน) */
   updateDots();
-
-  if(CT===12){renderSum();toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');return;}
+  const msg=merged?'🔄 รวมกับข้อมูลที่อีกเครื่องแก้ไว้แล้ว':'🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!';
+  if(CT===12){renderSum();toast(msg);return;}
   const curYm=ymk(CT);
-  if(changed.includes(curYm)){
-    if(formDirty){
-      pendingRemote={ym:curYm};
-      showConflictBanner();
-      toast('⚠️ มีข้อมูลใหม่ของเดือนนี้จากอีกเครื่อง');
-    }else{
-      const resWasShown=ge('res').style.display!=='none';
-      loadM(CT);
-      if(resWasShown)ge('res').style.display='block';
-      toast('🔄 อัปเดตข้อมูลเดือนนี้จากอีกเครื่อง');
-    }
+  if(!changed.includes(curYm)){if(!merged)toast(msg);return;}
+  if(formDirty&&formChanged()){
+    autoSaveSoon();
+    toast('🔄 มีข้อมูลใหม่ของเดือนนี้จากอีกเครื่อง — จะรวมกับที่กำลังแก้ให้อัตโนมัติ');
     return;
   }
-  toast('🔄 ซิงค์ข้อมูลจาก Firebase อัตโนมัติ!');
+  reloadFormKeepFocus();
+  toast(merged?msg:'🔄 อัปเดตข้อมูลเดือนนี้จากอีกเครื่อง');
 }
-
-function showConflictBanner(){
-  const el=ge('conflictBanner');if(!el)return;
-  el.innerHTML='⚠️ มีข้อมูลใหม่ของเดือนนี้จากอีกเครื่อง — <button onclick="acceptRemote()">ใช้ข้อมูลใหม่</button> <button onclick="dismissRemote()">เก็บที่แก้ไว้</button>';
-  el.style.display='flex';
-}
-function acceptRemote(){
-  pendingRemote=null;
-  const el=ge('conflictBanner');if(el)el.style.display='none';
+function reloadFormKeepFocus(){
+  const a=document.activeElement,mv=ge('mv');
+  const id=(a&&a.id&&mv&&mv.contains(a))?a.id:null;
+  let s=null,e=null;
+  try{if(id&&typeof a.selectionStart==='number'){s=a.selectionStart;e=a.selectionEnd;}}catch(_){}
+  const resWasShown=ge('res').style.display!=='none';
   loadM(CT);
-  toast('✅ โหลดข้อมูลใหม่จาก cloud');
-}
-function dismissRemote(){
-  pendingRemote=null;
-  const el=ge('conflictBanner');if(el)el.style.display='none';
-  toast('ℹ️ ยังใช้ข้อมูลที่แก้ไว้ — บันทึกจะเขียนทับของอีกเครื่อง');
+  if(resWasShown)ge('res').style.display='block';
+  if(!id)return;
+  const el=ge(id);if(!el||document.activeElement===el)return;
+  try{el.focus({preventScroll:true});}catch(_){}
+  try{if(s!=null)el.setSelectionRange(s,e);}catch(_){}
 }
 
 /* ════════════════════════════════════════════════════
@@ -1927,6 +2079,7 @@ async function persist(){
     }catch(e){
       setSyncSt('fb_error',e.message);
       console.warn('Firebase save failed:',e);
+      fbRetrySoon();             /* เดือนนี้ยังจดค้างอยู่ — ลองส่งซ้ำเอง ไม่ต้องรอเปิดหน้าใหม่ */
     }
     return;
   }
@@ -1945,7 +2098,7 @@ async function restore(){
       if(parsed.k&&parsed.p){
         const cfg={apiKey:parsed.k,projectId:parsed.p,docId:parsed.d||'default'};
         fbCfg=cfg;
-        fbInit(cfg);
+        fbInit(cfg);fbBase=fbBaseRead();
         lsSet(FB_CFG_KEY,JSON.stringify(cfg));
         history.replaceState(null,'',location.href.split('#')[0]);
         toast('🔗 โหลด Firebase Config จาก Link สำเร็จ!','ts');
@@ -1956,7 +2109,7 @@ async function restore(){
   /* โหลด Firebase config จาก localStorage ก่อน */
   try{
     const raw=localStorage.getItem(FB_CFG_KEY);
-    if(raw&&!fbDb){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);}
+    if(raw&&!fbDb){const cfg=JSON.parse(raw);fbCfg=cfg;fbInit(cfg);fbBase=fbBaseRead();}
   }catch(e){fbDb=null;}
 
   /* 1. ลอง Firebase ก่อน (priority สูงสุด) */
@@ -2309,7 +2462,7 @@ function refreshFlowTL(){
   const sc2=box.querySelector('.flow-scroll');if(sc2)sc2.scrollLeft=sx;
 }
 let _ckSt;
-function ckAutoSave(){clearTimeout(_ckSt);_ckSt=setTimeout(()=>saveM(),800);}
+function ckAutoSave(){clearTimeout(_ckSt);_ckSt=setTimeout(()=>saveM('auto'),800);}
 /* ── บันทึกอัตโนมัติ ──
    เดิมสิ่งที่พิมพ์ในช่องต่างๆ บันทึกก็ต่อเมื่อกด 💾 / สลับเดือน / ออกจากหน้า
    พิมพ์ค้างไว้แล้ววางเครื่อง อีกเครื่องจึงไม่เห็นอะไรเลย — ตอนนี้บันทึกเองหลังหยุดพิมพ์ 1.5 วินาที
@@ -2319,7 +2472,7 @@ const AUTOSAVE_MS=1500;
 function autoSaveSoon(retry){
   clearTimeout(_ckSt);
   if(!retry)savPill('dirty');
-  _ckSt=setTimeout(()=>{if(formDirty&&CT!==12)saveM();},retry?3000:AUTOSAVE_MS);
+  _ckSt=setTimeout(()=>{if(formDirty&&CT!==12)saveM('auto');},retry?3000:AUTOSAVE_MS);
 }
 /* ป้ายสถานะแทนปุ่ม 💾 — dirty = รอบันทึก · saving · saved · blocked = บันทึกไม่ได้ตอนนี้ · idle */
 function savPill(state,txt){
@@ -2741,7 +2894,7 @@ function updateDots(){
   }
 }
 function switchTab(idx,skipSave=false){
-  if(!skipSave&&CT!==12)saveM();
+  if(!skipSave&&CT!==12)saveM('auto');
   CT=idx;
   for(let i=0;i<=12;i++){const t=ge(`tb_${i}`);if(t)t.classList.toggle('on',i===idx);}
   if(idx===12){ge('mv').style.display='none';ge('sv').style.display='block';_chartFail=false;renderSum();}
@@ -2750,7 +2903,7 @@ function switchTab(idx,skipSave=false){
   ge(`tb_${idx}`)?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
 function onYrChange(){
-  if(CT!==12)saveM();
+  if(CT!==12)saveM('auto');
   CY=parseInt(gv('ySel'));buildTabs();updAge();
   taxFormApply(CY);               /* ค่าลดหย่อนเก็บแยกตามปี */
   if(CT===12)renderSum();else switchTab(CT,true);
@@ -2758,30 +2911,17 @@ function onYrChange(){
 function ymk(mi){return `${CY}-${p2(mi+1)}`;}
 
 /* ── SAVE ── */
-function saveM(fb=false){
-  if(CT===12)return;
-  /* กัน initial-load race — Firebase ยังโหลดไม่เสร็จ ห้าม save ทับ */
-  if(fbDb&&!fbReady){if(fb)toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');if(formDirty){savPill('blocked','⏳ รอโหลด cloud');autoSaveSoon(true);}return;}
-  /* มี remote update ค้างอยู่ — ให้ user ตัดสินใจก่อน */
-  const ymCur=ymk(CT);
-  if(pendingRemote&&pendingRemote.ym===ymCur){
-    if(fb){toast('⚠️ กรุณาตัดสินใจเรื่องข้อมูลที่ขัดแย้งก่อนบันทึก');ge('conflictBanner')?.scrollIntoView({behavior:'smooth',block:'center'});}
-    if(formDirty)savPill('blocked','⚠️ รอเลือกข้อมูลที่ขัดแย้ง');
-    return;
-  }
-  /* autosave ห้ามชุบชีวิตเดือนที่เพิ่งล้างไป — กดปุ่ม 💾 เอง (fb=true) ยังบันทึกได้ตามปกติ */
-  if(!fb&&_blankYm===ymCur&&!formDirty&&!DB[ymCur])return;
-  A=colA();D=colD();I=colI();O=colO();P=colP();
-  const ym=ymCur;
+/* record ของเดือนที่เปิดอยู่ ตามที่เห็นบนจอ — ไม่แตะ state ใดๆ (เรียกเทียบได้ทุกเมื่อ) */
+function formRec(a,d,i,o,p){
   const cnt=new Date(CY,CT+1,0).getDate();
   const days={};
   /* เก็บเฉพาะวันที่กรอก OT จริง — เดิมเก็บครบทุกวันแม้ว่างทั้งคู่ (~20%+ ของขนาดแต่ละเดือน)
      ทุกตัวอ่าน (loadMonth · otMinutes · AI · Export) ถือว่าวันที่ไม่มีใน days = ว่างอยู่แล้ว */
-  for(let d=1;d<=cnt;d++){
-    const ac=ge(`ota_${d}`)?.value||'',o3=ge(`ot3_${d}`)?.value||'';
-    if(String(ac).trim()||String(o3).trim())days[String(d)]={ac,o3};
+  for(let dd=1;dd<=cnt;dd++){
+    const ac=ge(`ota_${dd}`)?.value||'',o3=ge(`ot3_${dd}`)?.value||'';
+    if(String(ac).trim()||String(o3).trim())days[String(dd)]={ac,o3};
   }
-  DB[ym]={base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
+  return {base:gv('fBase'),baseDt:gv('fBaseDt'),sso:gv('fSso'),pvd:gv('fPvd'),
     ssoDt:gv('fSsoDt'),pvdDt:gv('fPvdDt'),ssoDn:statDn('sso'),pvdDn:statDn('pvd'),
     /* '' ในฟิลด์ wkb แปลว่า "ใช้ค่าเริ่มต้น" (ตัวอ่านทุกตัวใช้ rec.wkb||_wkbDef)
        เดือนที่ผู้ใช้ตั้งใจ "ไม่มีงบวันหยุด" จึงเก็บเป็น '' ไม่ได้ — มันไปชนกับความหมายแรก
@@ -2790,11 +2930,67 @@ function saveM(fb=false){
        เก็บเป็น '0' แทน: ค่าเท่ากันทุกการคำนวณ (nf('0')===nf('')===0) แต่เป็นสตริง truthy
        จึงรอดด่าน ||_wkbDef ของตัวอ่านทุกตัวโดยไม่ต้องแก้ที่อื่นและไม่ต้อง migrate ข้อมูลเก่า */
     wkb:(_wkb===_wkbDef?'':(_wkb===''?'0':_wkb)),wkbDef:_wkbDef,
-    a:JSON.parse(JSON.stringify(A)),
-    d:JSON.parse(JSON.stringify(D)),
-    i:JSON.parse(JSON.stringify(I)),
-    o:JSON.parse(JSON.stringify(O)),
-    p:JSON.parse(JSON.stringify(P)),days};
+    a:JSON.parse(JSON.stringify(a)),
+    d:JSON.parse(JSON.stringify(d)),
+    i:JSON.parse(JSON.stringify(i)),
+    o:JSON.parse(JSON.stringify(o)),
+    p:JSON.parse(JSON.stringify(p)),days};
+}
+/* ── ฟอร์มตอนเปิดเดือน ──
+   _formSnap   = ฟอร์มตอนโหลดเสร็จ/บันทึกล่าสุด (เทียบว่าผู้ใช้แก้อะไรจริงไหม)
+   _formDbSnap = DB[ym] ที่ฟอร์มนั้นโหลดมา (เทียบว่าระหว่างนั้นมีของใหม่จากอีกเครื่องเข้ามาไหม) */
+let _formYm=null,_formSnap=null,_formDbSnap=null;
+function formSnapTake(){
+  _formYm=ymk(CT);
+  _formSnap=stableStr(formRec(colA(),colD(),colI(),colO(),colP()));
+  _formDbSnap=stableStr(DB[_formYm]===undefined?null:DB[_formYm]);
+}
+const formChanged=()=>CT===12||_formYm!==ymk(CT)||stableStr(formRec(colA(),colD(),colI(),colO(),colP()))!==_formSnap;
+/* mode: true = กดปุ่ม 💾 เอง · 'auto' = บันทึกเบื้องหลัง (หยุดพิมพ์ · สลับเดือน/ปี · ออกจากแอป · ปิดหน้า)
+         ไม่ส่ง = ปุ่มอื่นในแอปที่ต้องการให้ DB ตรงกับจอก่อนทำงานต่อ (📤 · ลบข้ามเดือน · คำนวณ · Export …) */
+function saveM(mode){
+  const fb=mode===true,auto=mode==='auto';
+  if(CT===12)return;
+  /* กัน initial-load race — Firebase ยังโหลดไม่เสร็จ ห้าม save ทับ */
+  if(fbDb&&!fbReady){if(fb)toast('⏳ กำลังโหลดจาก cloud — รอสักครู่');if(formDirty){savPill('blocked','⏳ รอโหลด cloud');autoSaveSoon(true);}return;}
+  const ymCur=ymk(CT);
+  /* autosave ห้ามชุบชีวิตเดือนที่เพิ่งล้างไป — กดปุ่ม 💾 เอง (fb=true) ยังบันทึกได้ตามปกติ */
+  if(!fb&&_blankYm===ymCur&&!formDirty&&!DB[ymCur])return;
+  A=colA();D=colD();I=colI();O=colO();P=colP();
+  const ym=ymCur;
+  let rec=formRec(A,D,I,O,P);
+  const sForm=stableStr(rec),dbNow=DB[ym];
+  const sDb=stableStr(dbNow===undefined?null:dbNow);
+  const mine=_formYm===ym;
+  /* ★ ไม่ได้แก้อะไรบนจอเลยตั้งแต่เปิดเดือนนี้ = ห้ามเขียนขึ้น cloud
+     เดิมสลับแท็บ / ออกจากแอป / เปลี่ยนปี บันทึกทั้งเดือนทุกครั้ง ถ้าเครื่องนี้ถือข้อมูลเก่าอยู่
+     (realtime ค้างตอนแอปอยู่เบื้องหลัง) ของเก่าบนจอจะไปทับสิ่งที่อีกเครื่องเพิ่งแก้ = ต้องกลับมากรอกใหม่
+     และบนมือถือการเขียนรอบนั้นมักค้างส่งไม่จบ แล้วไปโผล่ทับของใหม่ตอนเปิดแอปรอบหน้าอีกต่อหนึ่ง */
+  if(mine&&sForm===_formSnap){
+    formDirty=false;clearTimeout(_ckSt);
+    if(dbNow){
+      /* ปุ่มอื่นที่อ่าน DB ต่อ: ให้ DB เท่ากับจอ (แถวโบนัส/แผนที่ loadM เติมให้) — ในเครื่องเท่านั้น ไม่ส่ง cloud
+         จอเก่ากว่า DB (เพิ่งได้ของใหม่จากอีกเครื่อง) = ห้ามเอาจอไปทับ */
+      if(!auto&&!fb&&sDb===_formDbSnap&&sDb!==sForm){DB[ym]=rec;_formDbSnap=sForm;lsSet(SK,JSON.stringify(DB));}
+      if(ymk(CT)===ym)savPill('idle');
+      if(fb){fbResync(true);toast('✅ ข้อมูลเดือนนี้บันทึกไว้แล้ว');}   /* ส่งของค้าง (ถ้ามี) + ดึงของล่าสุด */
+      return Promise.resolve();
+    }
+    /* เดือนที่ยังไม่มี record และผู้ใช้ไม่ได้กรอกอะไร — แค่เปิดผ่าน (สลับแท็บ/ออกจากแอป) ไม่สร้าง record
+       เดิมสร้างจากโครงเดือนก่อนทุกครั้งที่เปิดผ่าน: เดือนที่อีกเครื่องเพิ่งล้างไปจึงกลับมาเอง (พร้อมเงินเดือนฐานเดิม)
+       เปิดอีกครั้งก็ได้โครงเดิมจาก loadM() อยู่แล้ว · ปุ่มอื่นในแอป (คำนวณ · 📤 · 💾) ยังสร้างให้ตามเดิม */
+    if(auto){if(ymk(CT)===ym)savPill('idle');return Promise.resolve();}
+  }else{
+    /* ระหว่างที่พิมพ์อยู่ มีของใหม่จากอีกเครื่องเข้ามาแทนที่ DB แล้ว — รวม: เอาเฉพาะช่องที่แก้บนจอลงบนของใหม่ */
+    if(mine&&sDb!==_formDbSnap)rec=mergeVal(JSON.parse(_formDbSnap)??undefined,rec,dbNow,true);
+  }
+  /* เดือนใหม่ที่ยังไม่เคยมี record: โครงที่ loadM() เติมให้ตอนเปิด (_formSnap) คือ base ของการรวม */
+  if(!dbNow&&mine&&!DB[ym])fbTplMark(ym,JSON.parse(_formSnap));
+  DB[ym]=rec;
+  const reload=stableStr(rec)!==sForm;   /* ผลรวมมีของจากอีกเครื่อง — จอต้องเห็นด้วย */
+  /* base ของจอ = สิ่งที่จอโชว์อยู่ตอนนี้ (ไม่ใช่ผลรวม) — ถ้ายังไม่ได้วาดใหม่แล้วผู้ใช้พิมพ์ต่อ
+     รอบหน้าจะรวมอีกครั้ง แทนที่จะมองว่าของจากอีกเครื่องคือสิ่งที่ผู้ใช้ลบทิ้ง */
+  _formYm=ym;_formSnap=sForm;_formDbSnap=sForm;
   formDirty=false;
   updateDots();
   const pr=persist();             /* คืนออกไปด้วย — คนที่เขียนหลายเดือนต่อจะได้รอให้เดือนนี้เสร็จก่อน
@@ -2802,6 +2998,8 @@ function saveM(fb=false){
   clearTimeout(_ckSt);             /* บันทึกไปแล้ว — autosave ที่ตั้งค้างไว้ไม่ต้องยิงซ้ำ */
   const ts=p2(new Date().getHours())+':'+p2(new Date().getMinutes());
   if(ymk(CT)===ym)savPill('saving');
+  if(reload&&!auto)reloadFormKeepFocus();
+  else if(reload&&ymk(CT)===ym)setTimeout(()=>{if(ymk(CT)===ym&&!formDirty)reloadFormKeepFocus();},0);
   /* switchTab() บันทึกเดือนเก่าก่อนเปิดเดือนใหม่ — ป้ายต้องไม่ไปขึ้น "บันทึกแล้ว" บนเดือนที่เพิ่งเปิด */
   Promise.resolve(pr).then(()=>{if(!formDirty&&ymk(CT)===ym&&CT!==12)savPill('saved',`✅ บันทึกแล้ว ${ts}`);},()=>{});
   return pr;
@@ -2983,6 +3181,7 @@ function loadMonth(mi){
   /* ล้าง DOM ของเดือนก่อนก่อน render — กัน rA/rD pre-sync ดึงค่าข้ามเดือน */
   ['aList','dList','iList','oList','pList'].forEach(id=>{const el=ge(id);if(el)el.innerHTML='';});
   rA();rD();rO();rI();rP();
+  formSnapTake();                             /* จอตอนนี้ = ฐานสำหรับเช็คว่าผู้ใช้แก้อะไรจริงไหม */
   /* แจ้งหลัง render เสร็จ เพื่อให้ผู้ใช้เห็นรายการที่เหลือพร้อมกับข้อความ */
   if(_planDone.length){announcePlansDone(_planDone);_planDone=[];}
 }
@@ -3163,7 +3362,7 @@ async function planFwdYes(){
   const sent=d.targets.filter(t=>{
     if(!DB[t]){
       if(!d.end||t>d.end)return false;
-      DB[t]=newMonthRec(t);made++;
+      DB[t]=newMonthRec(t);fbTplMark(t,DB[t]);made++;
     }
     const rec=DB[t];
     const fw=forwardPlans(d.src,d.ym,t);
@@ -3943,7 +4142,7 @@ async function rowFwdYes(){
   /* เรียงจากเก่าไปใหม่ — เดือนที่สร้างใหม่ลอกโครงจากเดือนก่อนหน้าที่เพิ่งได้รายการนี้ไปแล้ว */
   const mk=new Set(c.create);
   touched.forEach(t=>{
-    if(!DB[t]&&mk.has(t))DB[t]=newMonthRec(t);
+    if(!DB[t]&&mk.has(t)){DB[t]=newMonthRec(t);fbTplMark(t,DB[t]);}
     const rec=DB[t];if(rec)rec[m.key]=rowPut(m,rec[m.key],d.item,d.ym,t);
   });
   lsSet(SK,JSON.stringify(DB));
@@ -4637,7 +4836,7 @@ async function wkbFwdYes(){
   /* เรียงจากเก่าไปใหม่ — เดือนที่สร้างใหม่ลอกโครงจากเดือนก่อนหน้าที่เพิ่งถูกสร้างไปแล้ว */
   const st=wkbStore(d.val),mk=new Set(c.create);
   touched.forEach(t=>{
-    if(!DB[t]&&mk.has(t))DB[t]=newMonthRec(t);
+    if(!DB[t]&&mk.has(t)){DB[t]=newMonthRec(t);fbTplMark(t,DB[t]);}
     if(DB[t])DB[t].wkb=st;
   });
   lsSet(SK,JSON.stringify(DB));
@@ -5229,6 +5428,7 @@ function doResetM(){
   rA();rD();rO();rI();rP();buildOT();reOT();updateDots();
   formDirty=false;
   _blankYm=ym;
+  formSnapTake();
   sortResetAll();   /* ไม่ได้ผ่าน loadM() — ต้องล้างสถานะเรียงเอง ไม่งั้น "ลำดับเดิม" ชี้ไปแถวที่ถูกล้างไปแล้ว */
   /* บันทึก localStorage */
   lsSet(SK,JSON.stringify(DB));
@@ -5647,7 +5847,7 @@ function doImport(input){
       Object.assign(DB,tmp);
       if(Object.keys(tmpTax).length){
         Object.assign(TAXSET,tmpTax);lsSet(SKT,JSON.stringify(TAXSET));
-        Object.keys(tmpTax).forEach(y=>{if(fbDb)taxPendSet(y,true);});   /* fbSave() ด้านล่างพาขึ้น cloud ไปด้วย */
+        Object.keys(tmpTax).forEach(y=>{if(fbDb)taxPendSet(y,true);});   /* taxPendFlush() ด้านล่างพาขึ้น cloud ไปด้วย */
       }
       adoptWkbDef();
       /* บันทึก localStorage */
@@ -5661,18 +5861,19 @@ function doImport(input){
       toast(`✅ Import สำเร็จ! ${cnt} เดือน`);
       /* sync ทั้งหมด — Firebase ก่อน (priority) ไม่งั้น GS */
       if(fbDb){
-        /* fbSave() ใช้ .set() = แทนที่ทั้ง document ไม่ใช่ merge
-           ถ้ายังไม่เคยอ่าน cloud สำเร็จในรอบนี้ DB ในมือคือของ localStorage ล้วน
-           เขียนขึ้นไปเมื่อไหร่ เดือนที่มีอยู่แต่บน cloud หายถาวรทันที — ยอมไม่ซิงค์ดีกว่า */
+        /* ยังไม่เคยอ่าน cloud สำเร็จในรอบนี้ = ยังไม่รู้ว่าบน cloud มีอะไร — ยอมไม่ซิงค์ดีกว่าเดาแล้วรวมผิด */
         if(!fbLoaded){
           setSyncSt('fb_error','ยังอ่าน cloud ไม่สำเร็จ — งดเขียนทับ');
           toast('⚠️ Import ลงเครื่องเรียบร้อย แต่ยังอ่าน Firebase ไม่สำเร็จ จึงยังไม่เขียนขึ้น cloud (กันข้อมูลบนคลาวด์หาย) — รีเฟรชหน้าให้โหลด cloud ผ่านก่อน แล้ว Import ซ้ำอีกครั้ง','te');
         }else{
-          setSyncSt('fb_saving');
-          fbSave()
-            .then(ts=>{Object.keys(tmpTax).forEach(y=>taxPendSet(y,false));
-              setSyncSt('fb_ok');setBadge(ts||null,'fb');toast(`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`);})
-            .catch(e=>setSyncSt('fb_error',e.message));
+          /* เขียนเฉพาะเดือนที่อยู่ในไฟล์ ทีละเดือนผ่านคิวเดียวกับการบันทึกปกติ — เดิมใช้ .set() แทนที่ทั้ง document
+             ซึ่งเอาทุกเดือนในเครื่องนี้ (ที่อาจเก่ากว่า cloud) ไปทับของเครื่องอื่นด้วย */
+          syncMonths(Object.keys(tmp).sort(),'import').then(fail=>{
+            taxPendFlush();
+            if(!fail)setBadge(fbTs(),'fb');
+            toast(fail?`⚠️ Import ลงเครื่องแล้ว แต่ซิงค์ขึ้น cloud ไม่สำเร็จ ${fail} เดือน — เช็คการเชื่อมต่อแล้วสั่งซ้ำ`
+              :`🔥 Sync ${cnt} เดือนไป Firebase แล้ว`,fail?'te':'ts');
+          });
         }
       }
     }catch(err){toast('❌ '+err.message,'te');}
@@ -6204,7 +6405,7 @@ if(window.ResizeObserver)new ResizeObserver(syncTopbar).observe(ge('topbar'));
 syncTopbar();
 
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'&&CT!==12)saveM();
+  if(document.visibilityState==='hidden'&&CT!==12)saveM('auto');
   else if(document.visibilityState==='visible')fbResync();   /* กลับมาที่แท็บ — ดึงของล่าสุดจากเครื่องอื่น */
 });
 window.addEventListener('online',()=>fbResync(true));
@@ -6214,7 +6415,7 @@ window.addEventListener('pageshow',e=>{if(e.persisted)fbResync(true);});   /* �
    ไม่งั้นการเขียนรอบสุดท้ายจะเริ่มหลังด่านนี้ไปแล้ว ไม่มีใครเตือน
    ออกไปทั้งที่ยังค้างก็ไม่หาย — เดือนที่ค้างถูกจดไว้ เปิดครั้งหน้าจะส่งค่าในเครื่องขึ้นไปใหม่ */
 window.addEventListener('beforeunload',e=>{
-  if(formDirty&&CT!==12)saveM();
+  if(formDirty&&CT!==12)saveM('auto');
   if(!fbHasPending())return;
   e.preventDefault();
   e.returnValue='';
@@ -7741,7 +7942,7 @@ init();
     if(!rec){
       const pv=prevRecFor(ym);
       rec={base:(pv&&pv.rec.base)||'',baseDt:payDate(ym),sso:'',pvd:'',a:[],d:[],i:[],o:[],days:{}};
-      DB[ym]=rec;
+      DB[ym]=rec;fbTplMark(ym,rec);
     }
     rec.a=rec.a||[];rec.d=rec.d||[];rec.i=rec.i||[];rec.o=rec.o||[];rec.days=rec.days||{};
     if(f.base!=null)rec.base=String(r(f.base));
